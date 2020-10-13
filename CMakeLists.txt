@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.9.1)
 
-project(femib)
+project(femib LANGUAGES CUDA CXX)
 
-add_compile_options(-Wall -Wextra -pedantic -Werror)
 set(SRC_DIR src)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -19,9 +18,10 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
 add_subdirectory(${SRC_DIR}/affine)
+add_subdirectory(${SRC_DIR}/cuda)
 
 add_executable(femib ${SRC_DIR}/main.cpp)
-target_link_libraries(femib affine)
+target_link_libraries(femib affine cuda)
 
 enable_testing ()
 add_subdirectory(test)
