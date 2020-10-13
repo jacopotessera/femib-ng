@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.9.1)
 
 project(femib)
 
+add_compile_options(-Wall -Wextra -pedantic -Werror)
 set(SRC_DIR src)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -23,5 +24,4 @@ add_executable(femib ${SRC_DIR}/main.cpp)
 target_link_libraries(femib affine)
 
 enable_testing ()
-add_subdirectory (test)
-add_subdirectory (doctest)
+add_subdirectory(test)
