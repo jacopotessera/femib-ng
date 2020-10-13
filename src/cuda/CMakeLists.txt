@@ -10,7 +10,18 @@ if(NOT DEFINED CMAKE_CUDA_STANDARD)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 endif()
 
-set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
-
 add_library(cuda SHARED cuda.cu)
+
+find_package (spdlog)
+if(spdlog_FOUND)
+    message("spdlog found.")
+    target_link_libraries (cuda spdlog::spdlog)
+elseif(NOT spdlog_FOUND)
+	message(FATAL_ERROR "
+FATAL:
+	spdlog Not Found.
+")
+endif()
+
+set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 

@@ -1,11 +1,14 @@
 #include <iostream>
 
 #include "cuda.h"
+#include "spdlog/spdlog.h"
 #include "mini-book.h"
 
+
 void femib::cuda::printSize() {
-	std::cout << "[CUDA stack size] found to be " << getStackSize() << std::endl;
-	std::cout << "[CUDA heap  size] found to be " << getHeapSize()  << std::endl;
+	spdlog::set_pattern("[%Y-%m-%dT%T] [%l] [%@@%!] %v");
+	SPDLOG_INFO("[CUDA stack size] found to be {}", getStackSize());
+	SPDLOG_INFO("[CUDA heap  size] found to be {}", getHeapSize());
 }
 
 int femib::cuda::getStackSize() {
