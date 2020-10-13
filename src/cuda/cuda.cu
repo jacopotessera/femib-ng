@@ -41,16 +41,21 @@ void femib::cuda::setHeapSize(int heapSize) {
 	cudaDeviceSetLimit(cudaLimitMallocHeapSize,heapSize*sizeof(double));
 }
 
-double* femib::cuda::copyToDevice(double x) {
-	double *X;
-    HANDLE_ERROR(cudaMalloc((void**)&X,sizeof(double)));
-    HANDLE_ERROR(cudaMemcpy(X,&x,sizeof(double),cudaMemcpyHostToDevice));
+template<typename T>
+T* femib::cuda::copyToDevice(T x) {
+	T *X;
+    HANDLE_ERROR(cudaMalloc((void**)&X,sizeof(T)));
+    HANDLE_ERROR(cudaMemcpy(X,&x,sizeof(T),cudaMemcpyHostToDevice));
     return X;
 }
 
-double femib::cuda::copyToHost(double *X) {
-	double x;
-	HANDLE_ERROR(cudaMemcpy(&x,X,sizeof(double),cudaMemcpyDeviceToHost));
+template<typename T>
+T femib::cuda::copyToHost(T *X) {
+	T x;
+	HANDLE_ERROR(cudaMemcpy(&x,X,sizeof(T),cudaMemcpyDeviceToHost));
 	return x;
 }
+
+template double* femib::cuda::copyToDevice<double>(double x);
+template double femib::cuda::copyToHost<double>(double *x);
 

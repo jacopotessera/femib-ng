@@ -11,8 +11,8 @@ TEST_CASE("testing cuda") {
 	WARN(femib::cuda::getHeapSize() == FEMIB_CUDA_HEAP_SIZE);
 	
 	double x = 10;
-	double *X = femib::cuda::copyToDevice(x);
-	double y = femib::cuda::copyToHost(X);
+	double *X = femib::cuda::copyToDevice<double>(x);
+	double y = femib::cuda::copyToHost<double>(X);
 	CHECK(x == y);
 }
 

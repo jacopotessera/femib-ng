@@ -11,8 +11,10 @@ namespace femib::cuda {
 	int getHeapSize();
 	void setStackSize(int stackSize);
 	void setHeapSize(int heapSize);
-	double* copyToDevice(double x);
-	double copyToHost(double *X);
+	template<typename T>
+	T* copyToDevice(T x);
+	template<typename T>
+	T copyToHost(T *X);
 }
 
 #endif
