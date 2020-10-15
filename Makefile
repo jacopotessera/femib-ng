@@ -1,4 +1,4 @@
-.PHONY: clean prepare cmake
+.PHONY: clean prepare cmake lib
 
 clean:
 	rm -rf build/
@@ -22,9 +22,9 @@ lib:
 	echo 'elseif(NOT spdlog_FOUND)' >> src/$(LIB)/CMakeLists.txt
 	echo '        message(FATAL_ERROR "' >> src/$(LIB)/CMakeLists.txt
 	echo 'FATAL:' >> src/$(LIB)/CMakeLists.txt
-	echo'        spdlog Not Found.' >> src/$(LIB)/CMakeLists.txt
-	echo'	")' >> src/$(LIB)/CMakeLists.txt
-	echo'endif()' >> src/$(LIB)/CMakeLists.txt
+	echo '        spdlog Not Found.' >> src/$(LIB)/CMakeLists.txt
+	echo '	")' >> src/$(LIB)/CMakeLists.txt
+	echo 'endif()' >> src/$(LIB)/CMakeLists.txt
 	echo '' >> src/$(LIB)/CMakeLists.txt
 	touch src/$(LIB)/$(LIB).cpp
 	touch src/$(LIB)/$(LIB).hpp
