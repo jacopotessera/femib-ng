@@ -21,5 +21,8 @@ TEST_CASE("testing affine") {
 
 	CHECK(y(0) == 3);
 	CHECK(y(1) == 0);
+
+	dvec z = affine_inv(t, y);
+	CHECK(x == z);
 }
 
