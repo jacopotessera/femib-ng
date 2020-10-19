@@ -17,11 +17,13 @@ endif()
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
-add_subdirectory(${SRC_DIR}/affine)
-add_subdirectory(${SRC_DIR}/cuda)
 
 add_executable(femib ${SRC_DIR}/main.cpp)
 target_link_libraries(femib affine cuda)
 
 enable_testing ()
 add_subdirectory(test)
+
+add_subdirectory(${SRC_DIR}/affine)
+add_subdirectory(${SRC_DIR}/cuda)
+add_subdirectory(${SRC_DIR}/gauss)
