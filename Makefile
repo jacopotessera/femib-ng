@@ -50,7 +50,8 @@ lib:
 	echo '#include "$(LIB_CPP)"' > $(LIB_TEST_CPP)
 	echo '#include "spdlog/spdlog.h"' > $(LIB_TEST_CPP)
 	#TEST CMAKE
-	awk '/^add_custom_target /{$0=$0 " $(LIB)_test)"}1' $(LIB_TEST_CMAKE)
+	sed -i '/add_custom_target /s/)$$//' $(LIB_TEST_CMAKE)
+	sed -i '/add_custom_target /s/$$/ $(LIB)_test)/' $(LIB_TEST_CMAKE)
 	echo '' >> $(LIB_TEST_CMAKE)
 	echo 'include_directories (../src/$(LIB))' >> $(LIB_TEST_CMAKE)
 	echo 'add_executable ($(LIB)_test $(LIB)_TEST.cpp)' >> $(LIB_TEST_CMAKE)
