@@ -9,7 +9,7 @@ LIB_HPP := $(LIB_SRC_DIR)/$(LIB).hpp
 LIB_CPP := $(LIB_SRC_DIR)/$(LIB).cpp
 LIB_TEST_CPP := $(TEST_DIR)/$(LIB)_test.cpp
 LIB_TEST_CMAKE := $(TEST_DIR)/$(CMAKE_LISTS_TXT)
-LIB_UPPERCASE := LOWER_VAR  = $(shell echo $(LIB) | tr a-z A-Z)
+LIB_UPPERCASE := $(shell echo $(LIB) | tr a-z A-Z)
 
 clean:
 	rm -rf build/
@@ -39,22 +39,22 @@ lib:
 	echo 'endif()' >> src/$(LIB)/CMakeLists.txt
 	#LIB HPP
 	touch $(LIB_HPP)
-	echo '#ifndef $(LIB_UPPERCASE)_HPP_INCLUDED_' > $(LIB_TEST_HPP)
-	echo '#define $(LIB_UPPERCASE)_HPP_INCLUDED_' >> $(LIB_TEST_HPP)
-	echo 'namespace femib::$(LIB) {' >> $(LIB_TEST_HPP)
-	echo '' >> $(LIB_TEST_HPP)
-	echo '}' >> $(LIB_TEST_HPP)
-	echo '#endif' >> $(LIB_TEST_HPP)
+	echo '#ifndef $(LIB_UPPERCASE)_HPP_INCLUDED_' > $(LIB_HPP)
+	echo '#define $(LIB_UPPERCASE)_HPP_INCLUDED_' >> $(LIB_HPP)
+	echo 'namespace femib::$(LIB) {' >> $(LIB_HPP)
+	echo '' >> $(LIB_HPP)
+	echo '}' >> $(LIB_HPP)
+	echo '#endif' >> $(LIB_HPP)
 	#LIB CPP
 	touch $(LIB_CPP)
-	echo '#include "$(LIB_CPP)"' > $(LIB_TEST_CPP)
-	echo '#include "spdlog/spdlog.h"' > $(LIB_TEST_CPP)
+	echo '#include "$(LIB_HPP)"' > $(LIB_CPP)
+	echo '#include "spdlog/spdlog.h"' > $(LIB_CPP)
 	#TEST CMAKE
 	sed -i '/add_custom_target /s/)$$//' $(LIB_TEST_CMAKE)
 	sed -i '/add_custom_target /s/$$/ $(LIB)_test)/' $(LIB_TEST_CMAKE)
 	echo '' >> $(LIB_TEST_CMAKE)
 	echo 'include_directories (../src/$(LIB))' >> $(LIB_TEST_CMAKE)
-	echo 'add_executable ($(LIB)_test $(LIB)_TEST.cpp)' >> $(LIB_TEST_CMAKE)
+	echo 'add_executable ($(LIB)_test $(LIB)_test.cpp)' >> $(LIB_TEST_CMAKE)
 	echo 'target_compile_features ($(LIB)_test PRIVATE cxx_std_17)' >> $(LIB_TEST_CMAKE)
 	echo 'target_link_libraries ($(LIB)_test $(LIB) doctest::doctest)' >> $(LIB_TEST_CMAKE)
 	echo 'add_test (NAME $(LIB)_test COMMAND $(LIB)_test)' >> $(LIB_TEST_CMAKE)
