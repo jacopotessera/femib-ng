@@ -21,6 +21,9 @@ cmake: clean prepare
 	cmake -H. -Bbuild
 
 lib:
+	#CMAKE
+	echo 'add_subdirectory($${SRC_DIR}/$(LIB))' >> $(CMAKE_LISTS_TXT)
+
 	mkdir -p $(LIB_SRC_DIR)
 	#LIB CMAKE
 	touch $(LIB_CMAKE)
