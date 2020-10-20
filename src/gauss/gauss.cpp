@@ -1,28 +1,14 @@
-#include <vector>
+#include "gauss.hpp"
+
 #include <functional>
 
-template<typename T=float, int d=2>
-struct dvec {
-	
-};
-
 template<typename T, int d>
-struct node {
-	T weight;
-	dvec<T,d> node;
-};
-
-template<typename T, int d>
-struct rule {
-	std::vector<node<T,d>> nodes;
-};
-
-template<typename T, int d>
-T integrate(const rule<T,d> rule, std::function<T(dvec<T,d>)> &f) { 
+T femib::gauss::integrate(const femib::gauss::rule<T,d> rule, std::function<T(femib::gauss::dvec<T,d>)> &f) { 
 	T integral = 0;
-        for(node<T,d> node : rule) {
+        for(femib::gauss::node<T,d> node : rule.nodes) {
 		integral += node.weight*f(node.node);
 	}
 	return integral;
 }
 
+template float femib::gauss::integrate<float,2>(const femib::gauss::rule<float,2> rule, std::function<float(femib::gauss::dvec<float,2>)> &f);

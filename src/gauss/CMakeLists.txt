@@ -11,4 +11,3 @@ FATAL:
         spdlog Not Found.
 	")
 endif()
-
