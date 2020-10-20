@@ -11,4 +11,5 @@ T femib::gauss::integrate(const femib::gauss::rule<T,d> rule, std::function<T(fe
 	return integral;
 }
 
-template float femib::gauss::integrate<float,2>(const femib::gauss::rule<float,2> rule, std::function<float(femib::gauss::dvec<float,2>)> &f);
+template
+float femib::gauss::integrate<float,2>(const femib::gauss::rule<float,2> rule, std::function<float(femib::gauss::dvec<float,2>)> &f);
