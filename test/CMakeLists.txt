@@ -1,4 +1,3 @@
-# Prepare "Catch" library for other executables
 find_package (doctest REQUIRED)
 
 add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test)

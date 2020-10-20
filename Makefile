@@ -21,8 +21,9 @@ cmake: clean prepare
 	cmake -H. -Bbuild
 
 format:
-	find ./ -type f -name "*.[c,h]pp"  -not -path "./build/*" | xargs clang-format -i
+	#find ./ -type f -name "*.[c,h]pp"  -not -path "./build/*" | xargs clang-format -i
 	#find ./ -type f -name "*.[cu,h]"  -not -path "./build/*" | xargs clang-format -i
+	find ./ -type f -name "*.[c,h]pp"  -not -path "./build/*" | xargs clang-tidy -system-headers=0 -p build/compile_commands.json -header-filter=src/*
 
 lib:
 	#CMAKE
