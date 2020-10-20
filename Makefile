@@ -1,4 +1,4 @@
-.PHONY: clean prepare cmake lib
+.PHONY: clean prepare cmake format lib
 
 CMAKE_LISTS_TXT := CMakeLists.txt
 SRC_DIR := src
@@ -19,6 +19,10 @@ prepare:
 
 cmake: clean prepare
 	cmake -H. -Bbuild
+
+format:
+	find ./ -type f -name "*.[c,h]pp"  -not -path "./build/*" | xargs clang-format -i
+	#find ./ -type f -name "*.[cu,h]"  -not -path "./build/*" | xargs clang-format -i
 
 lib:
 	#CMAKE
