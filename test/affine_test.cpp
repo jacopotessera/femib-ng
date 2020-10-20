@@ -3,26 +3,17 @@
 #include "affine.hpp"
 
 TEST_CASE("testing affine") {
-	dvec p1;
-	p1 << 1,2;
-	dvec p2;
-	p2 << 3,0;
-	dvec p3;
-	p3 << 2,4;
+	dvec vertex_1 = {1.0, 2.0};
+	dvec vertex_2 = {3.0, 0.0};
+	dvec vertex_3 = {2.0, 4.0};
+	std::vector<dvec> triangle = {vertex_1, vertex_2, vertex_3};
 
-	dvec x;
-	x << 1,0;
+	dvec point_x = {1.0, 0.0};
+	dvec point_y = affine(triangle, point_x);
+	CHECK(point_y(0) == 3);
+	CHECK(point_y(1) == 0);
 
-	std::vector<dvec> t;
-	t.push_back(p1);
-	t.push_back(p2);
-	t.push_back(p3);
-	dvec y = affine(t, x);
-
-	CHECK(y(0) == 3);
-	CHECK(y(1) == 0);
-
-	dvec z = affine_inv(t, y);
-	CHECK(x == z);
+	dvec point_z = affine_inv(triangle, point_y);
+	CHECK(point_x == point_z);
 }
 
