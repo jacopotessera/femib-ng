@@ -47,7 +47,7 @@ lib:
 	echo '#endif' >> $(LIB_HPP)
 	#LIB CPP
 	touch $(LIB_CPP)
-	echo '#include "$(LIB_HPP)"' > $(LIB_CPP)
+	echo '#include "$(LIB).hpp"' > $(LIB_CPP)
 	echo '#include "spdlog/spdlog.h"' > $(LIB_CPP)
 	#TEST CMAKE
 	sed -i '/add_custom_target /s/)$$//' $(LIB_TEST_CMAKE)
@@ -62,7 +62,7 @@ lib:
 	touch $(LIB_TEST_CPP)
 	echo '#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN' > $(LIB_TEST_CPP)
 	echo '#include <doctest/doctest.h>' >> $(LIB_TEST_CPP)
-	echo '#include "$(LIB_HPP)"' >> $(LIB_TEST_CPP)
+	echo '#include "../$(LIB_HPP)"' >> $(LIB_TEST_CPP)
 	echo '' >> $(LIB_TEST_CPP)
 	echo 'TEST_CASE("testing $(LIB)") {' >> $(LIB_TEST_CPP)
 	echo '    CHECK(true);' >> $(LIB_TEST_CPP)
