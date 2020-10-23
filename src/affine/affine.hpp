@@ -16,4 +16,3 @@ dmat affineB(const dtrian &t);
 dvec affineb(const dtrian &t);
 
 #endif
-

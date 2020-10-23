@@ -18,13 +18,13 @@ prepare:
 	mkdir -p build
 
 cmake: clean prepare
-	cmake -H. -Bbuild
+	cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Debug
 
 format:
-	#find ./ -type f -name "*.[c,h]pp"  -not -path "./build/*" | xargs clang-format -i
-	#find ./ -type f -name "*.[cu,h]"  -not -path "./build/*" | xargs clang-format -i
-	#find ./ -type f -name "*.[c,h]pp"  -not -path "./build/*" | xargs clang-tidy -system-headers=0 -p build/compile_commands.json -header-filter=src/*
-	find ./ -type f -name "*.[c,h]pp"  -not -path "./build/*" | xargs oclint-0.15 -p build/compile_commands.json -disable-rule=ShortVariableName -enable-clang-static-analyzer
+	find ./ -type f -name "*.[c,h]pp" -not -path "./build/*" | xargs clang-format -i
+	find ./ -type f -name "*.[cu,h]" -not -path "./build/*" | xargs clang-format -i
+	find ./ -type f -name "*.[c,h]pp" -not -path "./build/*" | xargs oclint-0.15 -p build/compile_commands.json -disable-rule=ShortVariableName #-enable-clang-static-analyzer
+	find ./ -type f -name "*.[cu,h]" -not -path "./build/*" | xargs oclint-0.15 -p build/compile_commands.json -disable-rule=ShortVariableName #-enable-clang-static-analyzer
 
 lib:
 	#CMAKE
