@@ -22,14 +22,18 @@ TEST_CASE("testing affine") {
   std::vector<std::vector<float>> coeff = {
       {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.5, 0.5},
       {0.3, 0.4, 0.3}, {1.3, 5.4, 3.3}, {0.7, 0.2, 0.1}};
-  std::vector<dvec> triangle = {{1.0, 2.0}, {3.0, 0.0}, {2.0, 4.0}};
+  std::vector<std::vector<dvec>> triangles = {
+      {{1.0, 2.0}, {3.0, 0.0}, {2.0, 4.0}},
+      {{12.0, 2.0}, {33.0, 10.0}, {-22.0, 34.3}}};
 
-  for (std::vector<float> c : coeff) {
-    dvec point = base_linear_combination(c);
-    dvec transformed_point = affine(triangle, point);
-    dvec inv_transformed_point = affine_inv(triangle, transformed_point);
-    CHECK((transformed_point - linear_combination(triangle, c)).norm() <=
-          EPSILON);
-    CHECK((inv_transformed_point - point).norm() <= EPSILON);
+  for (std::vector<dvec> triangle : triangles) {
+    for (std::vector<float> c : coeff) {
+      dvec point = base_linear_combination(c);
+      dvec transformed_point = affine(triangle, point);
+      dvec inv_transformed_point = affine_inv(triangle, transformed_point);
+      CHECK((transformed_point - linear_combination(triangle, c)).norm() <=
+            EPSILON * transformed_point.norm());
+      CHECK((inv_transformed_point - point).norm() <= EPSILON * 1);
+    }
   }
 }
