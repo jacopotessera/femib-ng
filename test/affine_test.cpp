@@ -1,18 +1,35 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "affine.hpp"
+#include <algorithm>
 #include <doctest/doctest.h>
 
+std::vector<dvec> base_triangle = {{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}};
+
+dvec linear_combination(const std::vector<dvec> &triangle,
+                        const std::vector<float> &a) {
+  return (1 / (a[0] + a[1] + a[2])) *
+         (a[0] * triangle[0] + a[1] * triangle[1] + a[2] * triangle[2]);
+};
+
+dvec base_linear_combination(const std::vector<float> &a) {
+  return linear_combination(base_triangle, a);
+};
+
+float EPSILON = std::numeric_limits<float>::epsilon();
+
 TEST_CASE("testing affine") {
-  dvec vertex_1 = {1.0, 2.0};
-  dvec vertex_2 = {3.0, 0.0};
-  dvec vertex_3 = {2.0, 4.0};
-  std::vector<dvec> triangle = {vertex_1, vertex_2, vertex_3};
 
-  dvec point_x = {1.0, 0.0};
-  dvec point_y = affine(triangle, point_x);
-  CHECK(point_y(0) == 3);
-  CHECK(point_y(1) == 0);
+  std::vector<std::vector<float>> coeff = {
+      {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.5, 0.5},
+      {0.3, 0.4, 0.3}, {1.3, 5.4, 3.3}, {0.7, 0.2, 0.1}};
+  std::vector<dvec> triangle = {{1.0, 2.0}, {3.0, 0.0}, {2.0, 4.0}};
 
-  dvec point_z = affine_inv(triangle, point_y);
-  CHECK(point_x == point_z);
+  for (std::vector<float> c : coeff) {
+    dvec point = base_linear_combination(c);
+    dvec transformed_point = affine(triangle, point);
+    dvec inv_transformed_point = affine_inv(triangle, transformed_point);
+    CHECK((transformed_point - linear_combination(triangle, c)).norm() <=
+          EPSILON);
+    CHECK((inv_transformed_point - point).norm() <= EPSILON);
+  }
 }
