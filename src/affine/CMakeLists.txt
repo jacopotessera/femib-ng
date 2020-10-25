@@ -4,7 +4,7 @@ add_compile_options(-Wall -Wextra -pedantic -Werror)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
 add_library(affine SHARED affine.cpp)
-
+target_link_libraries(affine types)
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 # Check for libray, if found print message, include dirs and link libraries.
 if(Eigen3_FOUND)

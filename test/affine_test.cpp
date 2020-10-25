@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <doctest/doctest.h>
 
+typedef femib::types::dvec<float, 2> dvec;
+typedef femib::types::dtrian<float, 2> dtrian;
+
 std::vector<dvec> base_triangle = {{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}};
 
 dvec linear_combination(const std::vector<dvec> &triangle,
@@ -19,7 +22,7 @@ float EPSILON = std::numeric_limits<float>::epsilon();
 
 TEST_CASE("testing affine") {
 
-  std::vector<std::vector<float>> coeff = {
+  std::vector<std::vector<float>> coefficients = {
       {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.5, 0.5},
       {0.3, 0.4, 0.3}, {1.3, 5.4, 3.3}, {0.7, 0.2, 0.1}};
   std::vector<std::vector<dvec>> triangles = {
@@ -27,10 +30,11 @@ TEST_CASE("testing affine") {
       {{12.0, 2.0}, {33.0, 10.0}, {-22.0, 34.3}}};
 
   for (std::vector<dvec> triangle : triangles) {
-    for (std::vector<float> c : coeff) {
+    for (std::vector<float> c : coefficients) {
       dvec point = base_linear_combination(c);
-      dvec transformed_point = affine(triangle, point);
-      dvec inv_transformed_point = affine_inv(triangle, transformed_point);
+      dvec transformed_point = affine<float, 2>(triangle, point);
+      dvec inv_transformed_point =
+          affine_inv<float, 2>(triangle, transformed_point);
       CHECK((transformed_point - linear_combination(triangle, c)).norm() <=
             EPSILON * transformed_point.norm());
       CHECK((inv_transformed_point - point).norm() <= EPSILON * 1);

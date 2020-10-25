@@ -2,24 +2,37 @@
 
 #include <Eigen/Dense>
 
-dvec affine(const dtrian &t, const dvec &x) {
-  dvec y = affineB(t) * x + affineb(t);
+template <typename T, int d>
+femib::types::dvec<T, d> affine(const femib::types::dtrian<T, d> &t,
+                                const femib::types::dvec<T, d> &x) {
+  femib::types::dvec<T, d> y = affineB(t) * x + affineb(t);
   return y;
 }
 
-dvec affine_inv(const dtrian &t, const dvec &x) {
-  dvec y = affineB(t).inverse() * (x - affineb(t));
+template <typename T, int d>
+femib::types::dvec<T, d> affine_inv(const femib::types::dtrian<T, d> &t,
+                                    const femib::types::dvec<T, d> &x) {
+  femib::types::dvec<T, d> y = affineB(t).inverse() * (x - affineb(t));
   return y;
 }
 
-dmat affineB(const dtrian &t) {
-  dmat B;
+template <typename T, int d>
+femib::types::dmat<T, d> affineB(const femib::types::dtrian<T, d> &t) {
+  femib::types::dmat<T, d> B;
   B << t[1](0) - t[0](0), t[2](0) - t[0](0), t[1](1) - t[0](1),
       t[2](1) - t[0](1);
   return B;
 }
 
-dvec affineb(const dtrian &t) {
-  dvec b = t[0];
+template <typename T, int d>
+femib::types::dvec<T, d> affineb(const femib::types::dtrian<T, d> &t) {
+  femib::types::dvec<T, d> b = t[0];
   return b;
 }
+
+template femib::types::dvec<float, 2>
+affine<float, 2>(const femib::types::dtrian<float, 2> &t,
+                 const femib::types::dvec<float, 2> &x);
+template femib::types::dvec<float, 2>
+affine_inv<float, 2>(const femib::types::dtrian<float, 2> &t,
+                     const femib::types::dvec<float, 2> &x);
