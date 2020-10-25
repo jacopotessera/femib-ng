@@ -24,7 +24,7 @@ SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}")
 SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_COVERAGE_LINK_FLAGS}")
 
 add_executable(femib ${SRC_DIR}/main.cpp)
-target_link_libraries(femib affine cuda)
+target_link_libraries(femib)
 
 include(CodeCoverage)
 append_coverage_compiler_flags()

@@ -11,3 +11,13 @@ FATAL:
         spdlog Not Found.
 	")
 endif()
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+if(Eigen3_FOUND)
+    message("Eigen3 found.")
+    target_link_libraries (gauss Eigen3::Eigen)
+elseif(NOT Eigen3_FOUND)
+        message(FATAL_ERROR "
+FATAL:
+        Eigen3 Not Found.
+")
+endif()
