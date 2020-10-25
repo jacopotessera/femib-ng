@@ -33,11 +33,10 @@ TEST_CASE("testing affine") {
     for (std::vector<float> c : coefficients) {
       dvec point = base_linear_combination(c);
       dvec transformed_point = affine<float, 2>(triangle, point);
-      dvec inv_transformed_point =
-          affine_inv<float, 2>(triangle, transformed_point);
+      dvec inv_transf_point = affine_inv<float, 2>(triangle, transformed_point);
       CHECK((transformed_point - linear_combination(triangle, c)).norm() <=
             EPSILON * transformed_point.norm());
-      CHECK((inv_transformed_point - point).norm() <= EPSILON * 1);
+      CHECK((inv_transf_point - point).norm() <= EPSILON * 1);
     }
   }
 }
