@@ -22,7 +22,7 @@ cmake: clean prepare
 
 format:
 	find ./ -type f -regextype egrep  -regex ".*\.(cpp|hpp|cu|h)"  -not -path "./build/*" | xargs clang-format -i
-	find ./ -type f -regextype egrep  -regex ".*\.(cpp|hpp|cu|h)"  -not -path "./build/*" | xargs oclint-0.15 -p build/compile_commands.json -disable-rule=ShortVariableName #-enable-clang-static-analyzer
+	find ./ -type f -regextype egrep  -regex ".*\.(cpp|hpp|cu|h)"  -not -path "./build/*" | xargs oclint-0.15 -p build/compile_commands.json -disable-rule=ShortVariableName 
 
 lib:
 	#CMAKE
