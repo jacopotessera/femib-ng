@@ -9,6 +9,7 @@ namespace femib::types {
 template <typename T, int d> using dvec = Eigen::Matrix<T, d, 1>;
 template <typename T, int d> using dmat = Eigen::Matrix<T, d, d>;
 template <typename T, int d> using dtrian = std::vector<dvec<T, d>>;
+template <typename T, int d> using mesh = std::vector<dtrian<T, d>>;
 
 } // namespace femib::types
 #endif

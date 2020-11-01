@@ -42,7 +42,17 @@ lib:
 	echo '        message(FATAL_ERROR "' >> src/$(LIB)/CMakeLists.txt
 	echo 'FATAL:' >> src/$(LIB)/CMakeLists.txt
 	echo '        spdlog Not Found.' >> src/$(LIB)/CMakeLists.txt
-	echo '	")' >> src/$(LIB)/CMakeLists.txt
+	echo '")' >> src/$(LIB)/CMakeLists.txt
+	echo 'endif()' >> src/$(LIB)/CMakeLists.txt
+	echo 'find_package (Eigen3 3.3 REQUIRED NO_MODULE)' >> src/$(LIB)/CMakeLists.txt
+	echo 'if(Eigen3_FOUND)' >> src/$(LIB)/CMakeLists.txt
+	echo 'message("Eigen3 found.")' >> src/$(LIB)/CMakeLists.txt
+	echo 'target_link_libraries ($(LIB) Eigen3::Eigen)' >> src/$(LIB)/CMakeLists.txt
+	echo 'elseif(NOT Eigen3_FOUND)' >> src/$(LIB)/CMakeLists.txt
+	echo '        message(FATAL_ERROR "' >> src/$(LIB)/CMakeLists.txt
+	echo 'FATAL:' >> src/$(LIB)/CMakeLists.txt
+	echo '        Eigen3 Not Found.' >> src/$(LIB)/CMakeLists.txt
+	echo '")' >> src/$(LIB)/CMakeLists.txt
 	echo 'endif()' >> src/$(LIB)/CMakeLists.txt
 	#LIB HPP
 	touch $(LIB_HPP)

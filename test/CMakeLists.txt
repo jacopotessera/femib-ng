@@ -1,6 +1,6 @@
 find_package (doctest REQUIRED)
 
-add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test)
+add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test)
 
 include_directories (../src/affine)
 add_executable (affine_test affine_test.cpp)
@@ -25,3 +25,9 @@ add_executable (types_test types_test.cpp)
 target_compile_features (types_test PRIVATE cxx_std_17)
 target_link_libraries (types_test types doctest::doctest)
 add_test (NAME types_test COMMAND types_test)
+
+include_directories (../src/mesh)
+add_executable (mesh_test mesh_test.cpp)
+target_compile_features (mesh_test PRIVATE cxx_std_17)
+target_link_libraries (mesh_test mesh doctest::doctest)
+add_test (NAME mesh_test COMMAND mesh_test)

@@ -1,6 +1,7 @@
 #include "affine.hpp"
 
 #include <Eigen/Dense>
+#include <cmath>
 
 template <typename T, int d>
 femib::types::dvec<T, d> affine(const femib::types::dtrian<T, d> &t,
@@ -30,9 +31,14 @@ femib::types::dvec<T, d> affineb(const femib::types::dtrian<T, d> &t) {
   return b;
 }
 
+template <typename T, int d> T affineBdet(const femib::types::dtrian<T, d> &t) {
+  return abs(affineB(t).determinant());
+}
+
 template femib::types::dvec<float, 2>
 affine<float, 2>(const femib::types::dtrian<float, 2> &t,
                  const femib::types::dvec<float, 2> &x);
 template femib::types::dvec<float, 2>
 affine_inv<float, 2>(const femib::types::dtrian<float, 2> &t,
                      const femib::types::dvec<float, 2> &x);
+template float affineBdet<float, 2>(const femib::types::dtrian<float, 2> &t);
