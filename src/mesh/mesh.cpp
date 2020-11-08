@@ -24,7 +24,7 @@ T femib::mesh::integrate(const femib::gauss::rule<T, d> &rule,
   return integral;
 }
 
-template float femib::mesh::integrate<float,2>(
+template float femib::mesh::integrate<float, 2>(
     const femib::gauss::rule<float, 2> &rule,
     const std::function<float(femib::types::dvec<float, 2>)> &f,
     const femib::types::mesh<float, 2> &mesh);

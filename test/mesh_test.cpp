@@ -1,7 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "../src/types/types.hpp"
 #include "../src/gauss/gauss.hpp"
 #include "../src/mesh/mesh.hpp"
+#include "../src/types/types.hpp"
 #include <doctest/doctest.h>
 
 float EPSILON = std::numeric_limits<float>::epsilon();
@@ -13,37 +13,33 @@ TEST_CASE("testing mesh") {
   femib::gauss::rule<float, 2> rule = {{node1, node2, node3}};
 
   femib::types::mesh<float, 2> mesh = {
-	  // P
-	  {
-		{0.0,0.0},{1.0,0.0},{1.0,1.0},{0.0,1.0},{0.5,0.5}
-	  },
-	  // T
-	  {
-		{0,1,4},{1,2,4},{2,3,4},{3,0,4}
+      // P
+      {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
+      // T
+      {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}
 
-	  },
-	  // E
-	  {
-		  0,1,2,3
-	  }
-  };
+      },
+      // E
+      {0, 1, 2, 3}};
 
-	  //,{{{0.0,0.0},{1.0,0.0},{0.5,0.5}},{{1.0,0.0},{1.0,1.0},{0.5,0.5}},
-//{{1.0,1.0},{0.0,1.0},{0.5,0.5}},{{0.0,1.0},{0.0,0.0},{0.5,0.5}}},{}};
-{
-  std::function<float(femib::types::dvec<float, 2>)> f =
-      [](femib::types::dvec<float, 2> x) { return 1; };
-  float area = femib::mesh::integrate<float, 2>(rule, f, mesh);
-  CHECK(std::fabs(area - 1.0 ) <= EPSILON);
-}{
-  std::function<float(femib::types::dvec<float, 2>)> f =
-      [](femib::types::dvec<float, 2> x) { return x(0) + x(1); };
-  float integral = femib::mesh::integrate<float, 2>(rule, f, mesh);
-  CHECK(std::fabs(integral - 1.0 ) <= EPSILON);
-}{
-  std::function<float(femib::types::dvec<float, 2>)> f =
-      [](femib::types::dvec<float, 2> x) { return x(0) + x(1) + 1; };
-  float integral = femib::mesh::integrate<float, 2>(rule, f, mesh);
-  CHECK(std::fabs(integral - 2.0 ) <= EPSILON);
-}
+  //,{{{0.0,0.0},{1.0,0.0},{0.5,0.5}},{{1.0,0.0},{1.0,1.0},{0.5,0.5}},
+  //{{1.0,1.0},{0.0,1.0},{0.5,0.5}},{{0.0,1.0},{0.0,0.0},{0.5,0.5}}},{}};
+  {
+    std::function<float(femib::types::dvec<float, 2>)> f =
+        [](femib::types::dvec<float, 2> x) { return 1; };
+    float area = femib::mesh::integrate<float, 2>(rule, f, mesh);
+    CHECK(std::fabs(area - 1.0) <= EPSILON);
+  }
+  {
+    std::function<float(femib::types::dvec<float, 2>)> f =
+        [](femib::types::dvec<float, 2> x) { return x(0) + x(1); };
+    float integral = femib::mesh::integrate<float, 2>(rule, f, mesh);
+    CHECK(std::fabs(integral - 1.0) <= EPSILON);
+  }
+  {
+    std::function<float(femib::types::dvec<float, 2>)> f =
+        [](femib::types::dvec<float, 2> x) { return x(0) + x(1) + 1; };
+    float integral = femib::mesh::integrate<float, 2>(rule, f, mesh);
+    CHECK(std::fabs(integral - 2.0) <= EPSILON);
+  }
 }
