@@ -9,18 +9,19 @@ namespace femib::types {
 
 template <typename T, int d> using dvec = Eigen::Matrix<T, d, 1>;
 template <typename T, int d> using dmat = Eigen::Matrix<T, d, d>;
+template <typename T, int d, int e> using rmat = Eigen::Matrix<T, d, e>;
 template <typename T, int d> using dtrian = std::vector<dvec<T, d>>;
 template <int d> using ditrian = Eigen::Matrix<int, d + 1, 1>;
 
-template <typename T, int d> struct xDx {
-  dvec<T, d> x;
-  dmat<T, d> dx;
+template <typename T, int d, int e> struct xDx {
+  dvec<T, e> x;
+  rmat<T, d, e> dx;
 };
 
-template <typename T, int d> struct F {
-  std::function<dvec<T, d>(dvec<T, d>)> x;
-  std::function<dmat<T, d>(dvec<T, d>)> dx;
-  xDx<T, d> operator()(const dvec<T, d> &x) {
+template <typename T, int d, int e> struct F {
+  std::function<dvec<T, e>(dvec<T, d>)> x;
+  std::function<rmat<T, d, e>(dvec<T, d>)> dx;
+  xDx<T, d, e> operator()(const dvec<T, d> &x) {
     return {this->x(x), this->dx(x)};
   };
 };
