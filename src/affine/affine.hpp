@@ -15,6 +15,8 @@ femib::types::dvec<T, d> affine_inv(const femib::types::dtrian<T, d> &t,
 template <typename T, int d>
 femib::types::dmat<T, d> affineB(const femib::types::dtrian<T, d> &t);
 template <typename T, int d>
+femib::types::dmat<T, d> affineBinv(const femib::types::dtrian<T, d> &t);
+template <typename T, int d>
 femib::types::dvec<T, d> affineb(const femib::types::dtrian<T, d> &t);
 template <typename T, int d> T affineBdet(const femib::types::dtrian<T, d> &t);
 
