@@ -9,6 +9,7 @@ namespace femib::finite_element_space {
   struct finite_element_space {
 	  femib::finite_element::finite_element<T,d,e> finite_element;
 	  femib::types::mesh<T,d> mesh;
+	  femib::types::nodes<T,d> nodes;
   };
 
 }

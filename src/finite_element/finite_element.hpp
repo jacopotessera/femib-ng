@@ -14,6 +14,10 @@ template <typename T, int d, int e> using F = femib::types::F<T, d, e>;
 template <typename T, int d, int e> struct finite_element {
   std::vector<F<T, d, e>> base_functions;
   std::vector<dvec<T, d>> base_nodes;
+  femib::types::nodes<T,d> nodes;
+  std::function<femib::types::nodes<T,d>(const femib::types::mesh<T,d>)> build_nodes;
+  int size;
+
   int dim1 = d;
   int dim2 = e;
 };
@@ -34,6 +38,21 @@ finite_element<T, d, e> create_finite_element_P1_2d1d() {
   finite_element<T, d, e> P1_2d1d;
 
   P1_2d1d.base_nodes = {{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}};
+  P1_2d1d.size = 3;
+  P1_2d1d.build_nodes = [](const femib::types::mesh<T,d> &mesh) {
+   femib::types::nodes<T,d> nodes;
+   nodes.P = mesh.P;
+   for(int n=0;n<mesh.T.size();++n) {
+      std::vector<int> row;
+      nodes.T.push_back(row);
+      for(int i=0;i<mesh.T[n].size();++i) {
+        nodes.T[n].push_back(mesh.T[n](i));
+      }
+    }
+    nodes.E = mesh.E;
+    return nodes;
+  };
+
   f.x = [](const dvec<T, d> &x) {
     if (in_std(x))
       return (dvec<T, e>){1 - x(0) - x(1)};

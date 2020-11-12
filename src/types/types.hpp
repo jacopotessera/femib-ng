@@ -12,6 +12,7 @@ template <typename T, int d> using dmat = Eigen::Matrix<T, d, d>;
 template <typename T, int d, int e> using rmat = Eigen::Matrix<T, d, e>;
 template <typename T, int d> using dtrian = std::vector<dvec<T, d>>;
 template <int d> using ditrian = Eigen::Matrix<int, d + 1, 1>;
+template <int d> using ditrian_ = Eigen::Matrix<int, d, 1>;
 
 template <typename T, int d, int e> struct xDx {
   dvec<T, e> x;
@@ -24,6 +25,12 @@ template <typename T, int d, int e> struct F {
   xDx<T, d, e> operator()(const dvec<T, d> &x) {
     return {this->x(x), this->dx(x)};
   };
+};
+
+template <typename f, int d> struct nodes {
+  std::vector<dvec<f, d>> P;
+  std::vector<std::vector<int>> T;
+  std::vector<int> E;
 };
 
 /// template <typename T, int d> using mesh = std::vector<dtrian<T, d>>;

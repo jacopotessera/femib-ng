@@ -7,47 +7,14 @@
 #include "../src/mesh/mesh.hpp"
 #include "../src/affine/affine.hpp"
 
-int get_index(int i, int n)
-{
-  if(n == 0){
-    if(i == 0){
-      return 0;
-    } else if(i==1){
-      return 1;
-    } else if(i==2){
-      return 4;
-    }
-  } else if(n == 1){
-     if(i == 0){
-       return 1;
-     } else if(i==1){
-       return 2;
-     } else if(i==2){
-        return 4;
-     }
-   } else if(n == 2){
-     if(i == 0){
-       return 2;
-     } else if(i==1){
-       return 3;
-     } else if(i==2){
-       return 4;
-     }
-   } else if(n == 3){
-      if(i == 0){
-        return 3;
-      } else if(i==1){
-        return 0;
-      } else if(i==2){
-        return 4;
-      }
-    }
-  return -1;
+int get_index(const femib::types::nodes<float,2> &nodes, int i, int n) {
+  return nodes.T[n][i];
 }
 
 TEST_CASE("testing finite_element_space") {
 
   std::vector<Eigen::Triplet<float>> M;
+  std::vector<Eigen::Triplet<float>> F;
 
   femib::gauss::node<float, 2> node1 = {1.0 / 6.0, {1.0 / 6.0, 1.0 / 6.0}};
   femib::gauss::node<float, 2> node2 = {1.0 / 6.0, {1.0 / 6.0, 2.0 / 3.0}};
@@ -68,6 +35,7 @@ TEST_CASE("testing finite_element_space") {
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
 
   femib::finite_element_space::finite_element_space<float, 2, 1> s = {f, mesh};
+  s.nodes = f.build_nodes(mesh);
 
 	for(int n=0;n<s.mesh.T.size();++n)
 	{
@@ -91,8 +59,14 @@ TEST_CASE("testing finite_element_space") {
 						return a_0*b_0 + a_1*b_1;
 						//return a.dx(x)[0]*b.dx(x)[0] + a.dx(x)[1]*b.dx(x)[1];
 						}, t);
-				std::cout << "n: " << n << ", i: " << i << ", j: " << j << " -> " << m << std::endl;
-				M.push_back(Eigen::Triplet<float>(get_index(i,n),get_index(j,n),m));
+				float f_ = femib::mesh::integrate<float,2>(rule, [&](femib::types::dvec<float,2> x){
+						float a_0 = (f.base_functions[i].x(affineBinv(t)*(x-affineb(t))))[0];
+						return a_0;
+						}, t);
+				std::cout << "n: " << n << ", i: " << i << ", j: " << j << " -> m: " << m << std::endl;
+				std::cout << "n: " << n << ", i: " << i << ", j: " << j << " -> f: " << f_ << std::endl;
+				M.push_back(Eigen::Triplet<float>(get_index(s.nodes,i,n),get_index(s.nodes,j,n),m));
+				F.push_back(Eigen::Triplet<float>(get_index(s.nodes,i,n),0,f_));
 			}
 		}
 	}
@@ -100,6 +74,9 @@ TEST_CASE("testing finite_element_space") {
 	Eigen::SparseMatrix<float> sM = Eigen::SparseMatrix<float>(5,5);
 	sM.setFromTriplets(M.begin(),M.end());
 	std::cout << sM << std::endl;
+	Eigen::SparseMatrix<float> sF = Eigen::SparseMatrix<float>(5,1);
+	sF.setFromTriplets(F.begin(),F.end());
+	std::cout << sF << std::endl;
 
     CHECK(true);
 }
