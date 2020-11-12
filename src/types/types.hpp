@@ -41,14 +41,13 @@ template <typename f, int d> struct mesh {
 
   typedef dtrian<f, d> dtrianfd;
   inline dtrianfd operator[](int pos) {
-      dtrianfd t;
-      t.reserve(d + 1);
-      for (int tt : T[pos]) {
-        t.emplace_back(P[tt]);
-      }
-      return t;
+    dtrianfd t;
+    t.reserve(d + 1);
+    for (int tt : T[pos]) {
+      t.emplace_back(P[tt]);
+    }
+    return t;
   }
-
 
   typedef ditrian<d> ditriand;
   STL_TYPEDEFS(ditriand);
