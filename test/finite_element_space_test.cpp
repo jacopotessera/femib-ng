@@ -4,6 +4,7 @@
 #include "../src/gauss/gauss.hpp"
 #include "../src/mesh/mesh.hpp"
 #include <Eigen/Sparse>
+#include <Eigen/Dense>
 #include <doctest/doctest.h>
 #include <spdlog/spdlog.h>
 
@@ -76,27 +77,60 @@ TEST_CASE("testing finite_element_space") {
             rule,
             [&](femib::types::dvec<float, 2> x) {
               float a_0 =
-                  (f.base_functions[i].x(affineBinv(t) * (x - affineb(t))))[0];
+                  -1*(f.base_functions[i].x(affineBinv(t) * (x - affineb(t))))[0];
               return a_0;
             },
             t);
-        std::cout << "n: " << n << ", i: " << i << ", j: " << j
-                  << " -> m: " << m << std::endl;
-        std::cout << "n: " << n << ", i: " << i << ", j: " << j
-                  << " -> f: " << f_ << std::endl;
+        //std::cout << "n: " << n << ", i: " << i << ", j: " << j
+        //          << " -> m: " << m << std::endl;
+        //std::cout << "n: " << n << ", i: " << i << ", j: " << j
+        //          << " -> f: " << f_ << std::endl;
         M.push_back(Eigen::Triplet<float>(get_index(s.nodes, i, n),
                                           get_index(s.nodes, j, n), m));
         F.push_back(Eigen::Triplet<float>(get_index(s.nodes, i, n), 0, f_));
       }
     }
   }
+  std::vector<Eigen::Triplet<float>> B;
+  
+  std::function<float(femib::types::dvec<float,2>)> b = [](const femib::types::dvec<float,2> &x) {
+    return x(0)+x(1);
+  };
+  for(int e : s.nodes.E) {
+    B.push_back(Eigen::Triplet<float>(e,0,b(s.nodes.P[e])));
+  }
 
-  Eigen::SparseMatrix<float> sM = Eigen::SparseMatrix<float>(5, 5);
+  std::vector<int> not_edges ;
+  for(int i = 0; i< s.nodes.P.size(); i++){
+    if(std::find(s.nodes.E.begin(),s.nodes.E.end(),i) == s.nodes.E.end()){
+      not_edges.push_back(i);
+    }
+  }
+
+  Eigen::SparseMatrix<float> sB = Eigen::SparseMatrix<float>(s.nodes.P.size(), 1);
+  sB.setFromTriplets(B.begin(), B.end());
+  Eigen::Matrix<float, Eigen::Dynamic,1> dB = Eigen::Matrix<float,Eigen::Dynamic,1>(sB);
+  Eigen::SparseMatrix<float> sM = Eigen::SparseMatrix<float>(s.nodes.P.size(), s.nodes.P.size());
   sM.setFromTriplets(M.begin(), M.end());
-  std::cout << sM << std::endl;
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic > dM = Eigen::Matrix<float,Eigen::Dynamic, Eigen::Dynamic>(sM);
+  Eigen::Matrix<float, Eigen::Dynamic,1> ss =  dM(not_edges,s.nodes.E)*dB(s.nodes.E,Eigen::all);
+  Eigen::Matrix<float,Eigen::Dynamic,1> mf;
+  mf.resize(s.nodes.P.size(),1);
+  for(int i = 0; i< s.nodes.P.size(); i++){
+    auto k = std::find(not_edges.begin(),not_edges.end(),i);
+    mf(i,0) = 0.0;
+    if(k != not_edges.end()){
+      mf(i,0) = ss(k-not_edges.begin(),0);
+    }
+  }
+
   Eigen::SparseMatrix<float> sF = Eigen::SparseMatrix<float>(5, 1);
   sF.setFromTriplets(F.begin(), F.end());
-  std::cout << sF << std::endl;
+  Eigen::Matrix<float, Eigen::Dynamic,1> dF = Eigen::Matrix<float,Eigen::Dynamic,1>(sF);
+  Eigen::Matrix<float,Eigen::Dynamic,1> bbb = (dF - mf)(not_edges,0);
+  Eigen::Matrix<float,Eigen::Dynamic,1> AAA = (dM)(not_edges,not_edges);
+  std::cout << AAA.colPivHouseholderQr().solve(bbb) << std::endl;
+  
 
   CHECK(true);
 }
