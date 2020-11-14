@@ -2,6 +2,8 @@
 #include "../affine/affine.hpp"
 #include "spdlog/spdlog.h"
 
+#include "read.cpp"
+
 template <typename T, int d>
 T femib::mesh::integrate(const femib::gauss::rule<T, d> &rule,
                          const std::function<T(femib::types::dvec<T, d>)> &f,
@@ -28,7 +30,20 @@ T femib::mesh::integrate(const femib::gauss::rule<T, d> &rule,
   return integral;
 }
 
+template <typename T, int d>
+femib::types::mesh<T, d> femib::mesh::read(const std::string &filename_p,
+                                           const std::string &filename_t,
+                                           const std::string &filename_e) {
+  femib::types::mesh<T, d> mesh = readMesh(filename_p, filename_t, filename_e);
+  return mesh;
+}
+
 template float femib::mesh::integrate<float, 2>(
     const femib::gauss::rule<float, 2> &rule,
     const std::function<float(femib::types::dvec<float, 2>)> &f,
     const femib::types::mesh<float, 2> &mesh);
+template femib::types::mesh<float, 2>
+femib::mesh::read<float, 2>(const std::string &filename_p,
+                            const std::string &filename_t,
+                            const std::string &filename_e);
+
