@@ -86,7 +86,7 @@ TEST_CASE("testing finite_element_space") {
             rule,
             [&](femib::types::dvec<float, 2> x) {
               float a_0 =
-                  4*x(0)*x(1) *
+                  -40*x(0)*x(1) *
                   (f.base_functions[i].x(affineBinv(t) * (x - affineb(t))))[0];
               return a_0;
             },
@@ -104,10 +104,13 @@ TEST_CASE("testing finite_element_space") {
   std::vector<Eigen::Triplet<float>> B;
 
   std::function<float(femib::types::dvec<float, 2>)> b =
-      [](const femib::types::dvec<float, 2> &x) { return 0.0;};//return x(0) + x(1); };
+      [](const femib::types::dvec<float, 2> &x) { return x(0) + x(1); };
+      //[](const femib::types::dvec<float, 2> &x) { return 1.0; };
   for (int e : s.nodes.E) {
-    B.push_back(Eigen::Triplet<float>(e, 0, b(s.nodes.P[e])));
+   //std::cout << e << ": " << b(s.nodes.P[e]) << std::endl;
+	  B.push_back(Eigen::Triplet<float>(e, 0, b(s.nodes.P[e])));
   }
+
 
   std::vector<int> not_edges;
   for (int i = 0; i < s.nodes.P.size(); i++) {
@@ -127,7 +130,7 @@ TEST_CASE("testing finite_element_space") {
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> dM =
       Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(sM);
   Eigen::Matrix<float, Eigen::Dynamic, 1> ss =
-      dM(not_edges, s.nodes.E) * dB(s.nodes.E, Eigen::all);
+      dM(Eigen::all, Eigen::all) * dB(Eigen::all, Eigen::all);
   Eigen::Matrix<float, Eigen::Dynamic, 1> mf;
   mf.resize(s.nodes.P.size(), 1);
   for (int i = 0; i < s.nodes.P.size(); i++) {
@@ -142,7 +145,7 @@ TEST_CASE("testing finite_element_space") {
   sF.setFromTriplets(F.begin(), F.end());
   Eigen::Matrix<float, Eigen::Dynamic, 1> dF =
       Eigen::Matrix<float, Eigen::Dynamic, 1>(sF);
-  Eigen::Matrix<float, Eigen::Dynamic, 1> bbb = (dF - mf)(not_edges, 0);
+  Eigen::Matrix<float, Eigen::Dynamic, 1> bbb = (dF - ss)(not_edges, 0);
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> AAA = (dM)(not_edges, not_edges);
   Eigen::Matrix<float, Eigen::Dynamic, 1> xxx = AAA.colPivHouseholderQr().solve(bbb);
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx;
@@ -154,18 +157,16 @@ TEST_CASE("testing finite_element_space") {
     auto k = std::find(not_edges.begin(), not_edges.end(), i);
     if (k != not_edges.end()) {
       xx(i, 0) = xxx(k - not_edges.begin(), 0);
-    } else {
-
     }
     auto kk = std::find(s.nodes.E.begin(), s.nodes.E.end(), i);
     if (kk != s.nodes.E.end()) {
-      xx(i, 0) = dB(kk - s.nodes.E.begin(), 0);
+      xx(i, 0) = dB(i, 0);
     }
   }
 
 
 
-
+if(true){
   for (int i = 0; i < s.nodes.T.size(); i++) {
 
 
@@ -179,7 +180,7 @@ int j_2 = s.nodes.T[i][2];
     std::cout << std::endl;
     std::cout << std::endl;
   }
-
+}
 
 
 
