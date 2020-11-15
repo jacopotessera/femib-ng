@@ -32,7 +32,7 @@ TEST_CASE("testing finite_element_space") {
       // E
       {0, 1, 2, 3}};
 
-  mesh = femib::mesh::read<float,2>("../mesh/p3.mat", "../mesh/t3.mat", "../mesh/e3.mat");
+  mesh = femib::mesh::read<float,2>("mesh/p3.mat", "mesh/t3.mat", "mesh/e3.mat");
 
   //for(femib::types::dtrian<float,2> v : mesh){
   //  std::cout << v[0] << std::endl;
