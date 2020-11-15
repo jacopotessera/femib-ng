@@ -1,0 +1,6 @@
+set FILE out.out
+
+make finite_element_space_test -j16
+./bin/finite_element_space_test -s > out.out
+tail -n +3 "$FILE" | head -n -11 > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
+gnuplot -p plot.plot
