@@ -42,9 +42,10 @@ TEST_CASE("testing mesh") {
     CHECK(std::fabs(integral - 2.0) <= EPSILON);
   }
 
-  femib::types::mesh<float, 2> mesh_from_file = femib::mesh::read<float, 2>("../mesh/p0.mat","../mesh/t0.mat","../mesh/e0.mat");
-  CHECK(std::fabs(mesh_from_file.P[0][0] -  (-1.0)) <= EPSILON);
-  CHECK(mesh_from_file.T[0][0] ==  0);
+  femib::types::mesh<float, 2> mesh_from_file = femib::mesh::read<float, 2>(
+      "../mesh/p0.mat", "../mesh/t0.mat", "../mesh/e0.mat");
+  CHECK(std::fabs(mesh_from_file.P[0][0] - (-1.0)) <= EPSILON);
+  CHECK(mesh_from_file.T[0][0] == 0);
   CHECK(mesh_from_file.P.size() == 5);
   CHECK(mesh_from_file.T.size() == 4);
   CHECK(mesh_from_file.E.size() == 4);

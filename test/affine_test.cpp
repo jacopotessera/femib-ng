@@ -1,8 +1,8 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "affine.hpp"
+#include <Eigen/LU>
 #include <algorithm>
 #include <doctest/doctest.h>
-#include <Eigen/LU>
 
 typedef femib::types::dvec<float, 2> dvec;
 typedef femib::types::dtrian<float, 2> dtrian;
@@ -38,11 +38,12 @@ TEST_CASE("testing affine") {
       dvec inv_transf_point = affine_inv<float, 2>(triangle, transformed_point);
       dmat affine_matrix = affineB<float, 2>(triangle);
       dmat inv_affine_matrix = affineBinv<float, 2>(triangle);
-      
+
       CHECK((transformed_point - linear_combination(triangle, c)).norm() <=
             EPSILON * transformed_point.norm());
       CHECK((inv_transf_point - point).norm() <= EPSILON * 1);
-      CHECK((affine_matrix * inv_affine_matrix).determinant() - 1 <= EPSILON * 1);
+      CHECK((affine_matrix * inv_affine_matrix).determinant() - 1 <=
+            EPSILON * 1);
     }
   }
 }

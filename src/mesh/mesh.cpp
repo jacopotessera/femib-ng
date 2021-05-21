@@ -10,7 +10,7 @@ T femib::mesh::integrate(const femib::gauss::rule<T, d> &rule,
                          const femib::types::dtrian<T, d> &t) {
 
   std::function<T(femib::types::dvec<T, d>)> g =
-      [&t,&f](const femib::types::dvec<T, d> &x) {
+      [&t, &f](const femib::types::dvec<T, d> &x) {
         spdlog::debug("[mesh] node x  {}", x[0]);
         spdlog::debug("[mesh] node y  {}", x[1]);
         spdlog::debug("[mesh] f(node) {}", f(affine(t, x)));
@@ -46,4 +46,3 @@ template femib::types::mesh<float, 2>
 femib::mesh::read<float, 2>(const std::string &filename_p,
                             const std::string &filename_t,
                             const std::string &filename_e);
-

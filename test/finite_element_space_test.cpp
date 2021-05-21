@@ -5,27 +5,33 @@
 #include "../src/mesh/mesh.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include <algorithm>
 #include <doctest/doctest.h>
 #include <spdlog/spdlog.h>
-#include <algorithm>
 #include <vector>
 
 int get_index(const femib::types::nodes<float, 2> &nodes, int i, int n) {
   return nodes.T[n][i];
 }
 
-auto printNode_generator(femib::finite_element_space::finite_element_space<float,2,1> s, Eigen::Matrix<float, Eigen::Dynamic, 1> xx)  {
+auto printNode_generator(
+    femib::finite_element_space::finite_element_space<float, 2, 1> s,
+    Eigen::Matrix<float, Eigen::Dynamic, 1> xx) {
 
-  return [&s, &xx](std::vector<int> t){
-  int j_0 = t[0];
-  int j_1 = t[1];
-  int j_2 = t[2];
-  std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t" <<  xx(j_0) << std::endl;
-  std::cout << s.nodes.P[j_1](0) << "\t" << s.nodes.P[j_1](1) << "\t" <<  xx(j_1) << std::endl;
-  std::cout << s.nodes.P[j_2](0) << "\t" << s.nodes.P[j_2](1) << "\t" <<  xx(j_2) << std::endl;
-  std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t" <<  xx(j_0) << std::endl;
-  std::cout << std::endl;
-  std::cout << std::endl;
+  return [&s, &xx](std::vector<int> t) {
+    int j_0 = t[0];
+    int j_1 = t[1];
+    int j_2 = t[2];
+    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t"
+              << xx(j_0) << std::endl;
+    std::cout << s.nodes.P[j_1](0) << "\t" << s.nodes.P[j_1](1) << "\t"
+              << xx(j_1) << std::endl;
+    std::cout << s.nodes.P[j_2](0) << "\t" << s.nodes.P[j_2](1) << "\t"
+              << xx(j_2) << std::endl;
+    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t"
+              << xx(j_0) << std::endl;
+    std::cout << std::endl;
+    std::cout << std::endl;
   };
 }
 
@@ -49,9 +55,10 @@ TEST_CASE("testing finite_element_space") {
       // E
       {0, 1, 2, 3}};
 
-  mesh = femib::mesh::read<float,2>("mesh/p3.mat", "mesh/t3.mat", "mesh/e3.mat");
+  mesh =
+      femib::mesh::read<float, 2>("mesh/p3.mat", "mesh/t3.mat", "mesh/e3.mat");
 
-  //for(femib::types::dtrian<float,2> v : mesh){
+  // for(femib::types::dtrian<float,2> v : mesh){
   //  std::cout << v[0] << std::endl;
   //  std::cout << v[1] << std::endl;
   //  std::cout << v[2] << std::endl;
@@ -82,7 +89,7 @@ TEST_CASE("testing finite_element_space") {
         // [](femib::types::dvec<float,2>){return (float)1.0;}, t);
         float m = femib::mesh::integrate<float, 2>(
             rule,
-            [&t,&f,i,j](femib::types::dvec<float, 2> x) {
+            [&t, &f, i, j](femib::types::dvec<float, 2> x) {
               float a_0 =
                   (affineBinv(t) *
                    f.base_functions[i].dx(affineBinv(t) * (x - affineb(t))))[0];
@@ -101,9 +108,9 @@ TEST_CASE("testing finite_element_space") {
             t);
         float f_ = femib::mesh::integrate<float, 2>(
             rule,
-            [&t,&f,i](femib::types::dvec<float, 2> x) {
+            [&t, &f, i](femib::types::dvec<float, 2> x) {
               float a_0 =
-                  -40*x(0)*x(1) *
+                  -40 * x(0) * x(1) *
                   (f.base_functions[i].x(affineBinv(t) * (x - affineb(t))))[0];
               return a_0;
             },
@@ -122,12 +129,11 @@ TEST_CASE("testing finite_element_space") {
 
   std::function<float(femib::types::dvec<float, 2>)> b =
       [](const femib::types::dvec<float, 2> &x) { return x(0) + x(1); };
-      //[](const femib::types::dvec<float, 2> &x) { return 1.0; };
+  //[](const femib::types::dvec<float, 2> &x) { return 1.0; };
   for (int e : s.nodes.E) {
-   //std::cout << e << ": " << b(s.nodes.P[e]) << std::endl;
-	  B.push_back(Eigen::Triplet<float>(e, 0, b(s.nodes.P[e])));
+    // std::cout << e << ": " << b(s.nodes.P[e]) << std::endl;
+    B.push_back(Eigen::Triplet<float>(e, 0, b(s.nodes.P[e])));
   }
-
 
   std::vector<int> not_edges;
   for (int i = 0; i < s.nodes.P.size(); i++) {
@@ -158,16 +164,18 @@ TEST_CASE("testing finite_element_space") {
     }
   }
 
-  Eigen::SparseMatrix<float> sF = Eigen::SparseMatrix<float>(s.nodes.P.size(), 1);
+  Eigen::SparseMatrix<float> sF =
+      Eigen::SparseMatrix<float>(s.nodes.P.size(), 1);
   sF.setFromTriplets(F.begin(), F.end());
   Eigen::Matrix<float, Eigen::Dynamic, 1> dF =
       Eigen::Matrix<float, Eigen::Dynamic, 1>(sF);
   Eigen::Matrix<float, Eigen::Dynamic, 1> bbb = (dF - ss)(not_edges, 0);
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> AAA = (dM)(not_edges, not_edges);
-  Eigen::Matrix<float, Eigen::Dynamic, 1> xxx = AAA.colPivHouseholderQr().solve(bbb);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> AAA =
+      (dM)(not_edges, not_edges);
+  Eigen::Matrix<float, Eigen::Dynamic, 1> xxx =
+      AAA.colPivHouseholderQr().solve(bbb);
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx;
-  xx.resize(s.nodes.P.size(),1);
-
+  xx.resize(s.nodes.P.size(), 1);
 
   for (int i = 0; i < s.nodes.P.size(); i++) {
     xx(i, 0) = 0.0;
@@ -181,9 +189,9 @@ TEST_CASE("testing finite_element_space") {
     }
   }
 
-  if(true){
-    std::for_each (s.nodes.T.begin(),s.nodes.T.end(),printNode_generator(s,xx));
+  if (true) {
+    std::for_each(s.nodes.T.begin(), s.nodes.T.end(),
+                  printNode_generator(s, xx));
   }
   CHECK(true);
 }
-

@@ -1,10 +1,10 @@
-#include <vector>
-#include <fstream>
-#include <string>
-#include <stdexcept>
 #include "read.hpp"
-#include <iostream>
 #include "spdlog/spdlog.h"
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 template <typename T, typename W> std::vector<T> read(std::string filename) {
   std::string tab = "\t";
@@ -23,7 +23,7 @@ template <typename T, typename W> std::vector<T> read(std::string filename) {
       for (int j = 0; (pos = line.find(tab)) != std::string::npos; ++j) {
         token = line.substr(0, pos);
         line.erase(0, pos + tab.length());
-	spdlog::debug("[read] token  {}", token);
+        spdlog::debug("[read] token  {}", token);
         set<T, W>(a[i], j, token);
       }
     }
@@ -39,7 +39,7 @@ template <class W> void castToT(std::string s, W &w) {
   // castToT interface
 }
 
-//template <> double castToT<double>(std::string s) { return std::stod(s); }
+// template <> double castToT<double>(std::string s) { return std::stod(s); }
 template <> float castToT<float>(std::string s) { return std::stof(s); }
 template <> int castToT<int>(std::string s) { return std::stoi(s); }
 
@@ -53,26 +53,31 @@ template <> void set<int, int>(int &a, int i, std::string token) {
 
 template std::vector<femib::types::dvec<float, 2>>
 read<femib::types::dvec<float, 2>, float>(std::string file);
-template std::vector<femib::types::ditrian<2>> read<femib::types::ditrian<2>, int>(std::string file);
+template std::vector<femib::types::ditrian<2>>
+read<femib::types::ditrian<2>, int>(std::string file);
 template std::vector<int> read<int, int>(std::string file);
 
-//template double castToT<double>(std::string file);
+// template double castToT<double>(std::string file);
 template float castToT<float>(std::string file);
 template int castToT<int>(std::string file);
 
-template void set<femib::types::dvec<float,2>, float>(femib::types::dvec<float,2> &a, int i, std::string token);
-template void set<femib::types::ditrian<2>, int>(femib::types::ditrian<2> &a, int i, std::string token);
+template void
+set<femib::types::dvec<float, 2>, float>(femib::types::dvec<float, 2> &a, int i,
+                                         std::string token);
+template void set<femib::types::ditrian<2>, int>(femib::types::ditrian<2> &a,
+                                                 int i, std::string token);
 template void set<int, int>(int &a, int i, std::string token);
 
-femib::types::mesh<float,2> readMesh(std::string p, std::string t) {
- femib::types::mesh<float,2> m;
-  m.P = read<femib::types::dvec<float,2>, float>(p);
+femib::types::mesh<float, 2> readMesh(std::string p, std::string t) {
+  femib::types::mesh<float, 2> m;
+  m.P = read<femib::types::dvec<float, 2>, float>(p);
   m.T = read<femib::types::ditrian<2>, int>(t);
   return m;
 }
 
-femib::types::mesh<float,2> readMesh(std::string p, std::string t, std::string e) {
-  femib::types::mesh<float,2> m = readMesh(p, t);
+femib::types::mesh<float, 2> readMesh(std::string p, std::string t,
+                                      std::string e) {
+  femib::types::mesh<float, 2> m = readMesh(p, t);
   m.E = read<int, int>(e);
   return m;
 }
