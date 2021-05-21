@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../src/finite_element/finite_element.hpp"
+#include "../src/types/types.hpp"
 #include <doctest/doctest.h>
 
 TEST_CASE("testing finite_element") {
@@ -13,5 +14,17 @@ TEST_CASE("testing finite_element") {
       e = e && (f.base_functions[j](f.base_nodes[i]).x[0] == (i == j ? 1 : 0));
     }
   }
+
+  femib::types::mesh<float, 2> mesh = {
+      // P
+      {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
+      // T
+      {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}
+
+      },
+      // E
+      {0, 1, 2, 3}};
+
+  f.build_nodes(mesh);
   CHECK(e);
 }

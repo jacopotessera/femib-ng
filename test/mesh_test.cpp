@@ -52,4 +52,6 @@ TEST_CASE("testing mesh") {
   CHECK(mesh_from_file.P.size() == 5);
   CHECK(mesh_from_file.T.size() == 4);
   CHECK(mesh_from_file.E.size() == 4);
+
+  CHECK_THROWS(femib::mesh::read<float, 2>("a", "b", "c"));
 }
