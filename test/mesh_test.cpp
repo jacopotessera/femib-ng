@@ -7,6 +7,7 @@
 const float EPSILON = std::numeric_limits<float>::epsilon();
 
 TEST_CASE("testing mesh") {
+
   femib::gauss::node<float, 2> node1 = {1.0 / 6.0, {1.0 / 6.0, 1.0 / 6.0}};
   femib::gauss::node<float, 2> node2 = {1.0 / 6.0, {1.0 / 6.0, 2.0 / 3.0}};
   femib::gauss::node<float, 2> node3 = {1.0 / 6.0, {2.0 / 3.0, 1.0 / 6.0}};
@@ -40,4 +41,11 @@ TEST_CASE("testing mesh") {
     float integral = femib::mesh::integrate<float, 2>(rule, f, mesh);
     CHECK(std::fabs(integral - 2.0) <= EPSILON);
   }
+
+  femib::types::mesh<float, 2> mesh_from_file = femib::mesh::read<float, 2>("../mesh/p0.mat","../mesh/t0.mat","../mesh/e0.mat");
+  CHECK(std::fabs(mesh_from_file.P[0][0] -  (-1.0)) <= EPSILON);
+  CHECK(mesh_from_file.T[0][0] ==  0);
+  CHECK(mesh_from_file.P.size() == 5);
+  CHECK(mesh_from_file.T.size() == 4);
+  CHECK(mesh_from_file.E.size() == 4);
 }
