@@ -4,7 +4,7 @@
 #include "../src/types/types.hpp"
 #include <doctest/doctest.h>
 
-float EPSILON = std::numeric_limits<float>::epsilon();
+const float EPSILON = std::numeric_limits<float>::epsilon();
 
 TEST_CASE("testing mesh") {
   femib::gauss::node<float, 2> node1 = {1.0 / 6.0, {1.0 / 6.0, 1.0 / 6.0}};

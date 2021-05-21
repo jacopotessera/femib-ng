@@ -66,7 +66,7 @@ template <typename f, int d> struct mesh {
       // return
       // {ref->P[(ref->T[pos])[0]],ref->P[(ref->T[pos])[1]],ref->P[(ref->T[pos])[2]]};
     }
-    inline const dtrianfd get(const mesh<f, d> *ref) {
+    inline dtrianfd get(const mesh<f, d> *ref) {
       dtrianfd t;
       t.reserve(d + 1);
       for (int tt : ref->T[pos]) {

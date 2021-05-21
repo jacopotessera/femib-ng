@@ -6,6 +6,7 @@ set(SRC_DIR src)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
 
 # Disable in-source builds to prevent source tree corruption.
 if(" ${CMAKE_SOURCE_DIR}" STREQUAL " ${CMAKE_BINARY_DIR}")

@@ -24,7 +24,7 @@ format:
 	find ./ -type f -regextype egrep  -regex ".*\.(cpp|hpp|cu|h)"  -not -path "./build/*" | xargs clang-format -i
 
 lint:
-	find ./ -type f -regextype egrep  -regex ".*\.(cpp|hpp|cu|h)"  -not -path "./build/*" | xargs oclint-0.15 -p build/compile_commands.json -disable-rule=ShortVariableName 
+	find ./ -type f -regextype egrep  -regex ".*\.(cpp|hpp|cu|h)"  -not -path "./build/*" | xargs oclint -p build/compile_commands.json -disable-rule=ShortVariableName 
 
 lib:
 	#CMAKE

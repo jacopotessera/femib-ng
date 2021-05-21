@@ -7,9 +7,26 @@
 #include <Eigen/Sparse>
 #include <doctest/doctest.h>
 #include <spdlog/spdlog.h>
+#include <algorithm>
+#include <vector>
 
 int get_index(const femib::types::nodes<float, 2> &nodes, int i, int n) {
   return nodes.T[n][i];
+}
+
+auto printNode_generator(femib::finite_element_space::finite_element_space<float,2,1> s, Eigen::Matrix<float, Eigen::Dynamic, 1> xx)  {
+
+  return [&s, &xx](std::vector<int> t){
+  int j_0 = t[0];
+  int j_1 = t[1];
+  int j_2 = t[2];
+  std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t" <<  xx(j_0) << std::endl;
+  std::cout << s.nodes.P[j_1](0) << "\t" << s.nodes.P[j_1](1) << "\t" <<  xx(j_1) << std::endl;
+  std::cout << s.nodes.P[j_2](0) << "\t" << s.nodes.P[j_2](1) << "\t" <<  xx(j_2) << std::endl;
+  std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t" <<  xx(j_0) << std::endl;
+  std::cout << std::endl;
+  std::cout << std::endl;
+  };
 }
 
 TEST_CASE("testing finite_element_space") {
@@ -65,7 +82,7 @@ TEST_CASE("testing finite_element_space") {
         // [](femib::types::dvec<float,2>){return (float)1.0;}, t);
         float m = femib::mesh::integrate<float, 2>(
             rule,
-            [&](femib::types::dvec<float, 2> x) {
+            [&t,&f,i,j](femib::types::dvec<float, 2> x) {
               float a_0 =
                   (affineBinv(t) *
                    f.base_functions[i].dx(affineBinv(t) * (x - affineb(t))))[0];
@@ -84,7 +101,7 @@ TEST_CASE("testing finite_element_space") {
             t);
         float f_ = femib::mesh::integrate<float, 2>(
             rule,
-            [&](femib::types::dvec<float, 2> x) {
+            [&t,&f,i](femib::types::dvec<float, 2> x) {
               float a_0 =
                   -40*x(0)*x(1) *
                   (f.base_functions[i].x(affineBinv(t) * (x - affineb(t))))[0];
@@ -164,30 +181,9 @@ TEST_CASE("testing finite_element_space") {
     }
   }
 
-
-
-if(true){
-  for (int i = 0; i < s.nodes.T.size(); i++) {
-
-
-int j_0 = s.nodes.T[i][0];
-int j_1 = s.nodes.T[i][1];
-int j_2 = s.nodes.T[i][2];
-    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t" <<  xx(j_0) << std::endl;
-    std::cout << s.nodes.P[j_1](0) << "\t" << s.nodes.P[j_1](1) << "\t" <<  xx(j_1) << std::endl;
-    std::cout << s.nodes.P[j_2](0) << "\t" << s.nodes.P[j_2](1) << "\t" <<  xx(j_2) << std::endl;
-    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t" <<  xx(j_0) << std::endl;
-    std::cout << std::endl;
-    std::cout << std::endl;
+  if(true){
+    std::for_each (s.nodes.T.begin(),s.nodes.T.end(),printNode_generator(s,xx));
   }
-}
-
-
-
-
-
-
-
-
   CHECK(true);
 }
+

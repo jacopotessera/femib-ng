@@ -31,7 +31,9 @@ template <typename T, typename W> std::vector<T> read(std::string filename) {
   return a;
 }
 
-template <class W> void castToT(std::string s, W &w) {}
+template <class W> void castToT(std::string s, W &w) {
+  // castToT interface
+}
 
 template <> double castToT<double>(std::string s) { return std::stod(s); }
 template <> float castToT<float>(std::string s) { return std::stof(s); }

@@ -2,11 +2,13 @@
 #include "affine.hpp"
 #include <algorithm>
 #include <doctest/doctest.h>
+#include <Eigen/LU>
 
 typedef femib::types::dvec<float, 2> dvec;
 typedef femib::types::dtrian<float, 2> dtrian;
+typedef femib::types::dmat<float, 2> dmat;
 
-std::vector<dvec> base_triangle = {{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}};
+const std::vector<dvec> base_triangle = {{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}};
 
 dvec linear_combination(const std::vector<dvec> &triangle,
                         const std::vector<float> &a) {
@@ -18,7 +20,7 @@ dvec base_linear_combination(const std::vector<float> &a) {
   return linear_combination(base_triangle, a);
 };
 
-float EPSILON = std::numeric_limits<float>::epsilon();
+const float EPSILON = std::numeric_limits<float>::epsilon();
 
 TEST_CASE("testing affine") {
 
@@ -34,9 +36,13 @@ TEST_CASE("testing affine") {
       dvec point = base_linear_combination(c);
       dvec transformed_point = affine<float, 2>(triangle, point);
       dvec inv_transf_point = affine_inv<float, 2>(triangle, transformed_point);
+      dmat affine_matrix = affineB<float, 2>(triangle);
+      dmat inv_affine_matrix = affineBinv<float, 2>(triangle);
+      
       CHECK((transformed_point - linear_combination(triangle, c)).norm() <=
             EPSILON * transformed_point.norm());
       CHECK((inv_transf_point - point).norm() <= EPSILON * 1);
+      CHECK((affine_matrix * inv_affine_matrix).determinant() - 1 <= EPSILON * 1);
     }
   }
 }

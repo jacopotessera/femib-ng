@@ -27,10 +27,7 @@ femib::types::dmat<T, d> affineB(const femib::types::dtrian<T, d> &t) {
 
 template <typename T, int d>
 femib::types::dmat<T, d> affineBinv(const femib::types::dtrian<T, d> &t) {
-  femib::types::dmat<T, d> B;
-  B << t[1](0) - t[0](0), t[2](0) - t[0](0), t[1](1) - t[0](1),
-      t[2](1) - t[0](1);
-  return B.inverse();
+  return affineB(t).inverse();
 }
 
 template <typename T, int d>
