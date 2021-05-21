@@ -4,6 +4,8 @@
 #include "../src/types/types.hpp"
 #include <doctest/doctest.h>
 
+#define SOURCE_DIR "${CMAKE_SOURCE_DIR}"
+
 const float EPSILON = std::numeric_limits<float>::epsilon();
 
 TEST_CASE("testing mesh") {
@@ -42,8 +44,9 @@ TEST_CASE("testing mesh") {
     CHECK(std::fabs(integral - 2.0) <= EPSILON);
   }
 
+  std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh_from_file = femib::mesh::read<float, 2>(
-      "../mesh/p0.mat", "../mesh/t0.mat", "../mesh/e0.mat");
+      mesh_dir + "p0.mat", mesh_dir + "t0.mat", mesh_dir + "e0.mat");
   CHECK(std::fabs(mesh_from_file.P[0][0] - (-1.0)) <= EPSILON);
   CHECK(mesh_from_file.T[0][0] == 0);
   CHECK(mesh_from_file.P.size() == 5);

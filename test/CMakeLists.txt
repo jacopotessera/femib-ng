@@ -28,6 +28,7 @@ add_test (NAME types_test COMMAND types_test)
 
 include_directories (../src/mesh)
 add_executable (mesh_test mesh_test.cpp)
+target_compile_definitions(mesh_test PUBLIC MESH_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../mesh/")
 target_compile_features (mesh_test PRIVATE cxx_std_17)
 target_link_libraries (mesh_test mesh doctest::doctest)
 add_test (NAME mesh_test COMMAND mesh_test)
