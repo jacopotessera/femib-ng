@@ -1,4 +1,4 @@
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+//#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../src/affine/affine.hpp"
 #include "../src/finite_element_space/finite_element_space.hpp"
 #include "../src/gauss/gauss.hpp"
@@ -6,9 +6,10 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <algorithm>
-#include <doctest/doctest.h>
+//#include <doctest/doctest.h>
 #include <spdlog/spdlog.h>
 #include <vector>
+#include <iostream>
 
 int get_index(const femib::types::nodes<float, 2> &nodes, int i, int n) {
   return nodes.T[n][i];
@@ -35,7 +36,8 @@ auto printNode_generator(
   };
 }
 
-TEST_CASE("testing finite_element_space") {
+//TEST_CASE("testing finite_element_space") {
+int main(){
 
   std::vector<Eigen::Triplet<float>> M;
   std::vector<Eigen::Triplet<float>> F;
@@ -54,9 +56,9 @@ TEST_CASE("testing finite_element_space") {
       },
       // E
       {0, 1, 2, 3}};
-
+  std::string mesh_dir = MESH_DIR;
   mesh =
-      femib::mesh::read<float, 2>("mesh/p3.mat", "mesh/t3.mat", "mesh/e3.mat");
+      femib::mesh::read<float, 2>(mesh_dir+"p3.mat", mesh_dir+"t3.mat", mesh_dir+"e3.mat");
 
   // for(femib::types::dtrian<float,2> v : mesh){
   //  std::cout << v[0] << std::endl;
@@ -193,5 +195,5 @@ TEST_CASE("testing finite_element_space") {
     std::for_each(s.nodes.T.begin(), s.nodes.T.end(),
                   printNode_generator(s, xx));
   }
-  CHECK(true);
+  //CHECK(true);
 }
