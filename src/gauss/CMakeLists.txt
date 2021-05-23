@@ -21,3 +21,6 @@ FATAL:
         Eigen3 Not Found.
 ")
 endif()
+
+find_package (TBB REQUIRED)
+target_link_libraries (gauss TBB::tbb)

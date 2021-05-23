@@ -7,9 +7,9 @@
 #include <Eigen/Sparse>
 #include <algorithm>
 //#include <doctest/doctest.h>
+#include <iostream>
 #include <spdlog/spdlog.h>
 #include <vector>
-#include <iostream>
 
 int get_index(const femib::types::nodes<float, 2> &nodes, int i, int n) {
   return nodes.T[n][i];
@@ -36,8 +36,8 @@ auto printNode_generator(
   };
 }
 
-//TEST_CASE("testing finite_element_space") {
-int main(){
+// TEST_CASE("testing finite_element_space") {
+int main() {
 
   std::vector<Eigen::Triplet<float>> M;
   std::vector<Eigen::Triplet<float>> F;
@@ -57,8 +57,8 @@ int main(){
       // E
       {0, 1, 2, 3}};
   std::string mesh_dir = MESH_DIR;
-  mesh =
-      femib::mesh::read<float, 2>(mesh_dir+"p3.mat", mesh_dir+"t3.mat", mesh_dir+"e3.mat");
+  mesh = femib::mesh::read<float, 2>(mesh_dir + "p5.mat", mesh_dir + "t5.mat",
+                                     mesh_dir + "e5.mat");
 
   // for(femib::types::dtrian<float,2> v : mesh){
   //  std::cout << v[0] << std::endl;
@@ -195,5 +195,5 @@ int main(){
     std::for_each(s.nodes.T.begin(), s.nodes.T.end(),
                   printNode_generator(s, xx));
   }
-  //CHECK(true);
+  // CHECK(true);
 }
