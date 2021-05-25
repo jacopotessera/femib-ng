@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <cmath>
 
+using namespace femib::affine;
+
 typedef femib::types::dvec<float, 2> dvec;
 typedef femib::types::dtrian<float, 2> dtrian;
 typedef femib::types::dmat<float, 2> dmat;
@@ -25,11 +27,11 @@ dvec base_linear_combination(const std::vector<float> &a) {
 const float EPSILON = std::numeric_limits<float>::epsilon();
 
 const std::vector<std::vector<float>> coefficients = {
-      {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.5, 0.5},
-      {0.3, 0.4, 0.3}, {1.3, 5.4, 3.3}, {0.7, 0.2, 0.1}};
+    {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.5, 0.5},
+    {0.3, 0.4, 0.3}, {1.3, 5.4, 3.3}, {0.7, 0.2, 0.1}};
 const std::vector<std::vector<dvec>> triangles = {
-      {{1.0, 2.0}, {3.0, 0.0}, {2.0, 4.0}},
-      {{12.0, 2.0}, {33.0, 10.0}, {-22.0, 34.3}}};
+    {{1.0, 2.0}, {3.0, 0.0}, {2.0, 4.0}},
+    {{12.0, 2.0}, {33.0, 10.0}, {-22.0, 34.3}}};
 
 const std::vector<dvec> triangle = triangles[0];
 const std::vector<float> c = coefficients[0];
@@ -45,7 +47,7 @@ dmat B = Eigen::Matrix<float, 2, 2>::Identity();
 static void eye(benchmark::State &state) {
   for (auto _ : state) {
     B.determinant();
-    }
+  }
 }
 
 BENCHMARK(eye);
@@ -53,7 +55,7 @@ BENCHMARK(eye);
 static void matrix_times_inv_matrix_(benchmark::State &state) {
   for (auto _ : state) {
     (affine_matrix * affine_matrix.inverse()).determinant();
-    }
+  }
 }
 
 BENCHMARK(matrix_times_inv_matrix_);
@@ -61,7 +63,7 @@ BENCHMARK(matrix_times_inv_matrix_);
 static void matrix_times_inv_matrix__(benchmark::State &state) {
   for (auto _ : state) {
     (affine_matrix.inverse() * affine_matrix).determinant();
-    }
+  }
 }
 
 BENCHMARK(matrix_times_inv_matrix__);
@@ -69,7 +71,7 @@ BENCHMARK(matrix_times_inv_matrix__);
 static void matrix_times_inv_matrix(benchmark::State &state) {
   for (auto _ : state) {
     (affine_matrix * inv_affine_matrix).determinant();
-    }
+  }
 }
 
 BENCHMARK(matrix_times_inv_matrix);

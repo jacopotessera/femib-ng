@@ -11,11 +11,7 @@ T femib::mesh::integrate(const femib::gauss::rule<T, d> &rule,
 
   std::function<T(femib::types::dvec<T, d>)> g =
       [&t, &f](const femib::types::dvec<T, d> &x) {
-        spdlog::debug("[mesh] node x  {}", x[0]);
-        spdlog::debug("[mesh] node y  {}", x[1]);
-        spdlog::debug("[mesh] f(node) {}", f(affine(t, x)));
-        spdlog::debug("[mesh] f(0) {}", f({0.0, 0.0}));
-        return affineBdet(t) * f(affine(t, x));
+        return femib::affine::affineBdet(t) * f(femib::affine::affine(t, x));
       };
   return femib::gauss::integrate<T, d>(rule, g);
 }

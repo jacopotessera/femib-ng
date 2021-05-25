@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <doctest/doctest.h>
 
+using namespace femib::affine;
+
 typedef femib::types::dvec<float, 2> dvec;
 typedef femib::types::dtrian<float, 2> dtrian;
 typedef femib::types::dmat<float, 2> dmat;

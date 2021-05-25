@@ -11,6 +11,8 @@
 #include <spdlog/spdlog.h>
 #include <vector>
 
+using namespace femib::affine;
+
 int get_index(const femib::types::nodes<float, 2> &nodes, int i, int n) {
   return nodes.T[n][i];
 }

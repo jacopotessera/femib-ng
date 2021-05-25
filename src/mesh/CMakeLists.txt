@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.9.1)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 add_library(mesh SHARED mesh.cpp)
-target_link_libraries(mesh affine)
-target_link_libraries(mesh gauss)
 find_package (spdlog)
 if(spdlog_FOUND)
    message("spdlog found.")
