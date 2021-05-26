@@ -40,7 +40,6 @@ template void set<femib::types::ditrian<2>, int>(femib::types::ditrian<2> &a,
                                                  int i, std::string token);
 template void set<int, int>(int &a, int i, std::string token);
 
-
 template <typename T, typename W> std::vector<T> read(std::string filename) {
   std::string tab = "\t";
   std::vector<T> a;
@@ -80,13 +79,13 @@ femib::types::mesh<T, d> read_mesh_file(std::string p, std::string t) {
 
 template <typename T, int d>
 femib::types::mesh<T, d> read_mesh_file(std::string p, std::string t,
-                                      std::string e) {
-  femib::types::mesh<T, d> m = read_mesh_file<T,d>(p, t);
+                                        std::string e) {
+  femib::types::mesh<T, d> m = read_mesh_file<T, d>(p, t);
   m.E = read<int, int>(e);
   return m;
 }
 
-template
-femib::types::mesh<float, 2> read_mesh_file<float, 2>(std::string p, std::string t);
-template
-femib::types::mesh<float, 2> read_mesh_file<float, 2>(std::string p, std::string t, std::string e);
+template femib::types::mesh<float, 2> read_mesh_file<float, 2>(std::string p,
+                                                               std::string t);
+template femib::types::mesh<float, 2>
+read_mesh_file<float, 2>(std::string p, std::string t, std::string e);

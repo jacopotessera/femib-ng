@@ -7,13 +7,13 @@
 
 #include "../types/types.hpp"
 
-//namespace femib::read {
+// namespace femib::read {
 
 template <typename T, int d>
 femib::types::mesh<T, d> read_mesh_file(std::string p, std::string t);
 
 template <typename T, int d>
 femib::types::mesh<T, d> read_mesh_file(std::string p, std::string t,
-                                      std::string e);
+                                        std::string e);
 //}
 #endif

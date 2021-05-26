@@ -1,10 +1,10 @@
 #ifndef MESH_HPP_INCLUDED_
 #define MESH_HPP_INCLUDED_
 
-#include "../gauss/gauss.hpp"
-#include "../types/types.hpp"
-#include "../read/read.hpp"
 #include "../affine/affine.hpp"
+#include "../gauss/gauss.hpp"
+#include "../read/read.hpp"
+#include "../types/types.hpp"
 #include <string>
 
 namespace femib::mesh {
@@ -48,7 +48,8 @@ template <typename T, int d>
 femib::types::mesh<T, d> femib::mesh::read(const std::string &filename_p,
                                            const std::string &filename_t,
                                            const std::string &filename_e) {
-  femib::types::mesh<T, d> mesh = read_mesh_file<T,d>(filename_p, filename_t, filename_e);
+  femib::types::mesh<T, d> mesh =
+      read_mesh_file<T, d>(filename_p, filename_t, filename_e);
   return mesh;
 }
 
