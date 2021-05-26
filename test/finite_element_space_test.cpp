@@ -8,7 +8,6 @@
 #include <algorithm>
 //#include <doctest/doctest.h>
 #include <iostream>
-#include <spdlog/spdlog.h>
 #include <vector>
 
 using namespace femib::affine;

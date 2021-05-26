@@ -36,4 +36,4 @@ add_subdirectory(test)
 add_subdirectory(bench)
 
 add_subdirectory(${SRC_DIR}/cuda)
-add_subdirectory(${SRC_DIR}/mesh)
+add_subdirectory(${SRC_DIR}/read)

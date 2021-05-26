@@ -29,7 +29,6 @@ femib::types::dvec<T, d> affineb(const femib::types::dtrian<T, d> &t) {
   return b;
 }
 
-
 template <typename T, int d>
 femib::types::dvec<T, d> affine_inv(const femib::types::dtrian<T, d> &t,
                                     const femib::types::dvec<T, d> &x) {

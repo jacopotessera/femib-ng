@@ -1,10 +1,9 @@
 cmake_minimum_required(VERSION 3.9.1)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
-add_library(mesh SHARED mesh.cpp)
+add_library(read SHARED read.cpp)
 find_package (spdlog)
 if(spdlog_FOUND)
-   message("spdlog found.")
-       target_link_libraries (mesh spdlog::spdlog)
+       target_link_libraries (read spdlog::spdlog)
 elseif(NOT spdlog_FOUND)
         message(FATAL_ERROR "
 FATAL:
@@ -13,8 +12,7 @@ FATAL:
 endif()
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 if(Eigen3_FOUND)
-    message("Eigen3 found.")
-    target_link_libraries (mesh Eigen3::Eigen)
+    target_link_libraries (read Eigen3::Eigen)
 elseif(NOT Eigen3_FOUND)
         message(FATAL_ERROR "
 FATAL:
