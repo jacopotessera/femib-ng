@@ -5,7 +5,11 @@
 #include "../gauss/gauss.hpp"
 #include "../read/read.hpp"
 #include "../types/types.hpp"
+#include <execution>
+#include <functional>
+#include <numeric>
 #include <string>
+#include <vector>
 
 namespace femib::mesh {
 
@@ -23,6 +27,10 @@ femib::types::mesh<T, d> read(const std::string &filename_p,
                               const std::string &filename_e);
 
 template <typename T, int d>
+std::vector<femib::types::dtrian<T, d>>
+init(const femib::types::mesh<T, d> &mesh);
+
+template <typename T, int d>
 T femib::mesh::integrate(const femib::gauss::rule<T, d> &rule,
                          const std::function<T(femib::types::dvec<T, d>)> &f,
                          const femib::types::dtrian<T, d> &t) {
@@ -33,15 +41,32 @@ T femib::mesh::integrate(const femib::gauss::rule<T, d> &rule,
       };
   return femib::gauss::integrate<T, d>(rule, g);
 }
+
+template <typename T, int d>
+std::vector<femib::types::dtrian<T, d>>
+femib::mesh::init(const femib::types::mesh<T, d> &mesh) {
+  std::vector<femib::types::dtrian<T, d>> dtrianfd;
+  for (femib::types::ditrian<d> triangle : mesh.T) {
+    femib::types::dtrian<T, d> t;
+    t.reserve(d + 1);
+    for (int point : triangle) {
+      t.emplace_back(mesh.P[point]);
+    }
+    dtrianfd.emplace_back(t);
+  }
+  return dtrianfd;
+}
+
 template <typename T, int d>
 T femib::mesh::integrate(const femib::gauss::rule<T, d> &rule,
                          const std::function<T(femib::types::dvec<T, d>)> &f,
                          const femib::types::mesh<T, d> &mesh) {
-  T integral = 0.0;
-  for (const femib::types::dtrian<T, d> &t : mesh) {
-    integral += femib::mesh::integrate(rule, f, t);
-  }
-  return integral;
+  auto unary_op = [&rule, &f](const femib::types::dtrian<T, d> &t) {
+    return femib::mesh::integrate(rule, f, t);
+  };
+  std::vector<femib::types::dtrian<T, d>> m = femib::mesh::init(mesh);
+  return std::transform_reduce(std::execution::seq, m.begin(), m.end(), 0.0,
+                               std::plus<>(), unary_op);
 }
 
 template <typename T, int d>

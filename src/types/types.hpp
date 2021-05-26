@@ -1,7 +1,6 @@
 #ifndef FEMIB_TYPES_HPP
 #define FEMIB_TYPES_HPP
 
-#include "iterator_tpl.h"
 #include <Eigen/Core>
 #include <vector>
 
@@ -48,37 +47,6 @@ template <typename f, int d> struct mesh {
     }
     return t;
   }
-
-  typedef ditrian<d> ditriand;
-  STL_TYPEDEFS(ditriand);
-  struct it_state {
-    int pos;
-    inline void next(const mesh<f, d> *ref) { ++pos; }
-    inline void begin(const mesh<f, d> *ref) { pos = 0; }
-    inline void end(const mesh<f, d> *ref) { pos = ref->T.size(); }
-    inline dtrianfd get(mesh<f, d> *ref) {
-      dtrianfd t;
-      t.reserve(d + 1);
-      for (int tt : ref->T[pos]) {
-        t.emplace_back(ref->P[tt]);
-      }
-      return t;
-      // return
-      // {ref->P[(ref->T[pos])[0]],ref->P[(ref->T[pos])[1]],ref->P[(ref->T[pos])[2]]};
-    }
-    inline dtrianfd get(const mesh<f, d> *ref) {
-      dtrianfd t;
-      t.reserve(d + 1);
-      for (int tt : ref->T[pos]) {
-        t.emplace_back(ref->P[tt]);
-      }
-      return t;
-      // return
-      // {ref->P[(ref->T[pos])[0]],ref->P[(ref->T[pos])[1]],ref->P[(ref->T[pos])[2]]};
-    }
-    inline bool cmp(const it_state &s) const { return pos != s.pos; }
-  };
-  SETUP_ITERATORS(mesh, dtrianfd, it_state);
 };
 } // namespace femib::types
 #endif
