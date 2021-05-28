@@ -2,7 +2,7 @@ find_package (doctest REQUIRED)
 find_package (TBB REQUIRED)
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
-add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test finite_element_test finite_element_space_test)
+add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test finite_element_test finite_element_space_test femib_test)
 
 include_directories (../src/affine)
 add_executable (affine_test affine_test.cpp)
@@ -47,3 +47,9 @@ target_compile_definitions(finite_element_space_test PRIVATE MESH_DIR="${CMAKE_C
 target_compile_features (finite_element_space_test PRIVATE cxx_std_17)
 target_link_libraries (finite_element_space_test read Eigen3::Eigen TBB::tbb doctest::doctest)
 add_test (NAME finite_element_space_test COMMAND finite_element_space_test)
+
+include_directories (../src/femib)
+add_executable (femib_test femib_test.cpp)
+target_compile_features (femib_test PRIVATE cxx_std_17)
+target_link_libraries (femib_test  read Eigen3::Eigen TBB::tbb  doctest::doctest)
+add_test (NAME femib_test COMMAND femib_test)
