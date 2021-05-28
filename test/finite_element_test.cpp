@@ -1,4 +1,5 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "../src/finite_element/P1_2d1d.hpp"
 #include "../src/finite_element/finite_element.hpp"
 #include "../src/types/types.hpp"
 #include <doctest/doctest.h>

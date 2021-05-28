@@ -1,5 +1,6 @@
 //#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../src/affine/affine.hpp"
+#include "../src/finite_element/P1_2d1d.hpp"
 #include "../src/finite_element_space/finite_element_space.hpp"
 #include "../src/gauss/gauss.hpp"
 #include "../src/mesh/mesh.hpp"
