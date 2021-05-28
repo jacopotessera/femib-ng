@@ -1,6 +1,5 @@
 set FILE build/out.out
 
-make -C build finite_element_space_test -j16
-./build/bin/finite_element_space_test -s > $FILE
+time ./build/bin/finite_element_space_test -s > $FILE
 tail -n +3 "$FILE" | head -n -11 > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
 gnuplot -p plot.plot

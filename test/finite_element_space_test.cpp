@@ -3,6 +3,7 @@
 #include "../src/finite_element/P1_2d1d.hpp"
 #include "../src/finite_element_space/finite_element_space.hpp"
 #include "../src/gauss/gauss.hpp"
+#include "../src/gauss/gauss_lagrange_2_2d.hpp"
 #include "../src/mesh/mesh.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
@@ -44,22 +45,10 @@ int main() {
   std::vector<Eigen::Triplet<float>> M;
   std::vector<Eigen::Triplet<float>> F;
 
-  femib::gauss::node<float, 2> node1 = {1.0 / 6.0, {1.0 / 6.0, 1.0 / 6.0}};
-  femib::gauss::node<float, 2> node2 = {1.0 / 6.0, {1.0 / 6.0, 2.0 / 3.0}};
-  femib::gauss::node<float, 2> node3 = {1.0 / 6.0, {2.0 / 3.0, 1.0 / 6.0}};
-  femib::gauss::rule<float, 2> rule = {{node1, node2, node3}};
+  femib::gauss::rule<float, 2> rule = femib::gauss::create_gauss_2_2d<float, 2>(); 
 
-  femib::types::mesh<float, 2> mesh = {
-      // P
-      {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
-      // T
-      {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}
-
-      },
-      // E
-      {0, 1, 2, 3}};
   std::string mesh_dir = MESH_DIR;
-  mesh = femib::mesh::read<float, 2>(mesh_dir + "p5.mat", mesh_dir + "t5.mat",
+  femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(mesh_dir + "p5.mat", mesh_dir + "t5.mat",
                                      mesh_dir + "e5.mat");
 
   // for(femib::types::dtrian<float,2> v : mesh){
