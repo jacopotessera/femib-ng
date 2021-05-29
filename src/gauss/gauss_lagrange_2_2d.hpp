@@ -5,8 +5,7 @@
 
 namespace femib::gauss {
 
-template <typename T, int d>
-femib::gauss::rule<T, d> create_gauss_2_2d() {
+template <typename T, int d> femib::gauss::rule<T, d> create_gauss_2_2d() {
   femib::gauss::node<T, d> node1 = {1.0 / 6.0, {1.0 / 6.0, 1.0 / 6.0}};
   femib::gauss::node<T, d> node2 = {1.0 / 6.0, {1.0 / 6.0, 2.0 / 3.0}};
   femib::gauss::node<T, d> node3 = {1.0 / 6.0, {2.0 / 3.0, 1.0 / 6.0}};

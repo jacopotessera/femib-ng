@@ -45,11 +45,12 @@ int main() {
   std::vector<Eigen::Triplet<float>> M;
   std::vector<Eigen::Triplet<float>> F;
 
-  femib::gauss::rule<float, 2> rule = femib::gauss::create_gauss_2_2d<float, 2>(); 
+  femib::gauss::rule<float, 2> rule =
+      femib::gauss::create_gauss_2_2d<float, 2>();
 
   std::string mesh_dir = MESH_DIR;
-  femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(mesh_dir + "p5.mat", mesh_dir + "t5.mat",
-                                     mesh_dir + "e5.mat");
+  femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
+      mesh_dir + "p5.mat", mesh_dir + "t5.mat", mesh_dir + "e5.mat");
 
   // for(femib::types::dtrian<float,2> v : mesh){
   //  std::cout << v[0] << std::endl;
