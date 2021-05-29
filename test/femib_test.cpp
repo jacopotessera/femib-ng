@@ -45,7 +45,7 @@ int main() {
       femib::gauss::create_gauss_2_2d<float, 2>();
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
-      mesh_dir + "p5.mat", mesh_dir + "t5.mat", mesh_dir + "e5.mat");
+      mesh_dir + "p4.mat", mesh_dir + "t4.mat", mesh_dir + "e4.mat");
 
   femib::finite_element::finite_element<float, 2, 1> f =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
@@ -77,8 +77,8 @@ int main() {
               };
               float m = femib::mesh::integrate<float, 2>(
                   rule,
-                  [&t, &f, i, j](femib::types::dvec<float, 2> x) {
-                    float a_0 = (affineBinv(t) *
+                  [&t, &f, i, j, &a, &b](femib::types::dvec<float, 2> x) {
+                    /*float a_0 = (affineBinv(t) *
                                  f.base_functions[i].dx(affineBinv(t) *
                                                         (x - affineb(t))))[0];
                     float a_1 = (affineBinv(t) *
@@ -90,8 +90,8 @@ int main() {
                     float b_1 = (affineBinv(t) *
                                  f.base_functions[j].dx(affineBinv(t) *
                                                         (x - affineb(t))))[1];
-                    return a_0 * b_0 + a_1 * b_1;
-                    // return a.dx(x)[0]*b.dx(x)[0] + a.dx(x)[1]*b.dx(x)[1];
+                    return a_0 * b_0 + a_1 * b_1; */
+                    return a.dx(x)[0]*b.dx(x)[0] + a.dx(x)[1]*b.dx(x)[1];
                   },
                   t);
               MM.push_back(Eigen::Triplet<float>(get_index(s.nodes, i, n),
