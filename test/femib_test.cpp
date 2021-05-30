@@ -41,7 +41,7 @@ int main() {
       femib::gauss::create_gauss_2_2d<float, 2>();
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
-      mesh_dir + "p4.mat", mesh_dir + "t4.mat", mesh_dir + "e4.mat");
+      mesh_dir + "p5.mat", mesh_dir + "t5.mat", mesh_dir + "e5.mat");
 
   femib::finite_element::finite_element<float, 2, 1> f =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
@@ -121,10 +121,11 @@ int main() {
         return F;
       };
 
-  std::vector<Eigen::Triplet<float>> M =
-      femib::poisson::build_diagonal<float, 2, 1>(
-          s, rule, femib::poisson::ddot<float, 2, 1>); // poisson.M(s, s);
-  std::vector<Eigen::Triplet<float>> F = poisson.f(s);
+  femib::poisson::MeF<float> mef = femib::poisson::build_diagonal<float, 2, 1>(
+      s, rule, femib::poisson::ddot<float, 2, 1>); // poisson.M(s, s);
+
+  std::vector<Eigen::Triplet<float>> M = mef.M;
+  std::vector<Eigen::Triplet<float>> F = mef.F; // poisson.f(s);
 
   std::vector<Eigen::Triplet<float>> B;
 
