@@ -7,8 +7,11 @@
 #include "../mesh/mesh.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include <tbb/concurrent_vector.h>
 #include <functional>
 #include <vector>
+#include <tbb/tbb.h>
+#include "tbb/task_scheduler_init.h"
 
 int get_index(const femib::types::nodes<float, 2> &nodes, int i, int n) {
   return nodes.T[n][i];
@@ -51,6 +54,11 @@ build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
                    fff) {
 
   std::vector<Eigen::Triplet<float>> MM;
+  tbb::concurrent_vector<Eigen::Triplet<float>> cMM;
+  
+  int N_THREADS = tbb::task_scheduler_init::default_num_threads();
+  tbb::task_scheduler_init init(N_THREADS);
+  
   for (int n = 0; n < s.mesh.T.size(); ++n) {
     for (int i = 0; i < s.finite_element.base_functions.size(); ++i) {
       for (int j = 0; j < s.finite_element.base_functions.size(); ++j) {
@@ -75,12 +83,12 @@ build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
             //  return a.dx(x)[0] * b.dx(x)[0] + a.dx(x)[1] * b.dx(x)[1];
             //},
             fff(a, b), t);
-        MM.push_back(Eigen::Triplet<float>(get_index(s.nodes, i, n),
+        cMM.push_back(Eigen::Triplet<float>(get_index(s.nodes, i, n),
                                            get_index(s.nodes, j, n), m));
       }
     }
   }
-  return MM;
+  return {cMM.begin(), cMM.end()};
 }
 
 } // namespace femib::poisson
