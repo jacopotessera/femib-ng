@@ -14,10 +14,6 @@
 
 using namespace femib::affine;
 
-int get_index(const femib::types::nodes<float, 2> &nodes, int i, int n) {
-  return nodes.T[n][i];
-}
-
 auto printNode_generator(
     femib::finite_element_space::finite_element_space<float, 2, 1> s,
     Eigen::Matrix<float, Eigen::Dynamic, 1> xx) {
@@ -45,7 +41,7 @@ int main() {
       femib::gauss::create_gauss_2_2d<float, 2>();
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
-      mesh_dir + "p5.mat", mesh_dir + "t5.mat", mesh_dir + "e5.mat");
+      mesh_dir + "p4.mat", mesh_dir + "t4.mat", mesh_dir + "e4.mat");
 
   femib::finite_element::finite_element<float, 2, 1> f =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
@@ -56,7 +52,7 @@ int main() {
   femib::poisson::poisson<float, 2, 1> poisson;
   poisson.V = s;
 
-  poisson.M =
+  /*poisson.M =
       [&f, &rule](
           femib::finite_element_space::finite_element_space<float, 2, 1> s,
           femib::finite_element_space::finite_element_space<float, 2, 1> ss) {
@@ -77,7 +73,7 @@ int main() {
               };
               float m = femib::mesh::integrate<float, 2>(
                   rule,
-                  [&t, &f, i, j, &a, &b](femib::types::dvec<float, 2> x) {
+                  [&a, &b](femib::types::dvec<float, 2> x) {
                     return a.dx(x)[0] * b.dx(x)[0] + a.dx(x)[1] * b.dx(x)[1];
                   },
                   t);
@@ -87,7 +83,7 @@ int main() {
           }
         }
         return MM;
-      };
+      };*/
 
   poisson.f =
       [&f, &rule](
@@ -125,7 +121,9 @@ int main() {
         return F;
       };
 
-  std::vector<Eigen::Triplet<float>> M = poisson.M(s, s);
+  std::vector<Eigen::Triplet<float>> M =
+      femib::poisson::build_diagonal<float, 2, 1>(
+          s, rule, femib::poisson::ddot<float, 2, 1>); // poisson.M(s, s);
   std::vector<Eigen::Triplet<float>> F = poisson.f(s);
 
   std::vector<Eigen::Triplet<float>> B;
