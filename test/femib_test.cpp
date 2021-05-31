@@ -12,8 +12,6 @@
 #include <iostream>
 #include <vector>
 
-using namespace femib::affine;
-
 auto printNode_generator(
     femib::finite_element_space::finite_element_space<float, 2, 1> s,
     Eigen::Matrix<float, Eigen::Dynamic, 1> xx) {
@@ -52,75 +50,6 @@ int main() {
   femib::poisson::poisson<float, 2, 1> poisson;
   poisson.V = s;
 
-  /*poisson.M =
-      [&f, &rule](
-          femib::finite_element_space::finite_element_space<float, 2, 1> s,
-          femib::finite_element_space::finite_element_space<float, 2, 1> ss) {
-        std::vector<Eigen::Triplet<float>> MM;
-        for (int n = 0; n < s.mesh.T.size(); ++n) {
-          for (int i = 0; i < s.finite_element.base_functions.size(); ++i) {
-            for (int j = 0; j < s.finite_element.base_functions.size(); ++j) {
-              femib::types::F<float, 2, 1> a;
-              femib::types::F<float, 2, 1> b;
-              femib::types::dtrian<float, 2> t = s.mesh[n];
-              a.dx = [&](const femib::types::dvec<float, 2> &x) {
-                return (affineBinv(t) * f.base_functions[i].dx(
-                                            affineBinv(t) * (x - affineb(t))));
-              };
-              b.dx = [&](const femib::types::dvec<float, 2> &x) {
-                return (affineBinv(t) * f.base_functions[j].dx(
-                                            affineBinv(t) * (x - affineb(t))));
-              };
-              float m = femib::mesh::integrate<float, 2>(
-                  rule,
-                  [&a, &b](femib::types::dvec<float, 2> x) {
-                    return a.dx(x)[0] * b.dx(x)[0] + a.dx(x)[1] * b.dx(x)[1];
-                  },
-                  t);
-              MM.push_back(Eigen::Triplet<float>(get_index(s.nodes, i, n),
-                                                 get_index(s.nodes, j, n), m));
-            }
-          }
-        }
-        return MM;
-      };
-
-  poisson.f =
-      [&f, &rule](
-          femib::finite_element_space::finite_element_space<float, 2, 1> s) {
-        std::vector<Eigen::Triplet<float>> F;
-        for (int n = 0; n < s.mesh.T.size(); ++n) {
-          for (int i = 0; i < s.finite_element.base_functions.size(); ++i) {
-            for (int j = 0; j < s.finite_element.base_functions.size(); ++j) {
-              femib::types::F<float, 2, 1> a;
-              femib::types::F<float, 2, 1> b;
-              femib::types::dtrian<float, 2> t = s.mesh[n];
-              a.dx = [&](const femib::types::dvec<float, 2> &x) {
-                return (affineBinv(t) * f.base_functions[i].dx(
-                                            affineBinv(t) * (x - affineb(t))));
-              };
-              b.dx = [&](const femib::types::dvec<float, 2> &x) {
-                return (affineBinv(t) * f.base_functions[j].dx(
-                                            affineBinv(t) * (x - affineb(t))));
-              };
-
-              float f_ = femib::mesh::integrate<float, 2>(
-                  rule,
-                  [&t, &f, i](femib::types::dvec<float, 2> x) {
-                    float a_0 = -40 * x(0) * x(1) *
-                                (f.base_functions[i].x(affineBinv(t) *
-                                                       (x - affineb(t))))[0];
-                    return a_0;
-                  },
-                  t);
-              F.push_back(
-                  Eigen::Triplet<float>(get_index(s.nodes, i, n), 0, f_));
-            }
-          }
-        }
-        return F;
-      };*/
-
   femib::poisson::MandF<float> mandF =
       femib::poisson::build_diagonal<float, 2, 1>(
           s, rule, femib::poisson::ddot<float, 2, 1>,
@@ -129,15 +58,11 @@ int main() {
   std::vector<Eigen::Triplet<float>> M = mandF.M; // poisson.M(s, s);
   std::vector<Eigen::Triplet<float>> F = mandF.F; // poisson.f(s);
 
-  std::vector<Eigen::Triplet<float>> B;
-
   std::function<float(femib::types::dvec<float, 2>)> b =
       [](const femib::types::dvec<float, 2> &x) { return x(0) + x(1); };
-  //[](const femib::types::dvec<float, 2> &x) { return 1.0; };
-  for (int e : s.nodes.E) {
-    // std::cout << e << ": " << b(s.nodes.P[e]) << std::endl;
-    B.push_back(Eigen::Triplet<float>(e, 0, b(s.nodes.P[e])));
-  }
+
+  std::vector<Eigen::Triplet<float>> B =
+      femib::poisson::build_edges<float, 2, 1>(s, b);
 
   std::vector<int> not_edges;
   for (int i = 0; i < s.nodes.P.size(); i++) {

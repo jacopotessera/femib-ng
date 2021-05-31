@@ -44,6 +44,17 @@ forz(femib::types::F<float, 2, 1> a) {
   };
 }
 
+template <typename T, int d, int e>
+std::vector<Eigen::Triplet<T>>
+build_edges(femib::finite_element_space::finite_element_space<T, d, e> s,
+            std::function<T(femib::types::dvec<T, d>)> b) {
+  std::vector<Eigen::Triplet<float>> B;
+  for (int i : s.nodes.E) {
+    B.push_back(Eigen::Triplet<T>(i, 0, b(s.nodes.P[i])));
+  }
+  return B;
+}
+
 template <typename T> struct MandF {
   std::vector<Eigen::Triplet<T>> M;
   std::vector<Eigen::Triplet<T>> F;
