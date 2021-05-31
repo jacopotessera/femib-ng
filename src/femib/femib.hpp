@@ -36,8 +36,14 @@ ddot(femib::types::F<float, 2, 1> a, femib::types::F<float, 2, 1> b) {
   };
 }
 
+template <typename T> struct MandF {
+  std::vector<Eigen::Triplet<T>> M;
+  std::vector<Eigen::Triplet<T>> F;
+};
+
 template <typename T, int d, int e>
-std::vector<Eigen::Triplet<T>>
+// std::vector<Eigen::Triplet<T>>
+MandF<T>
 build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
                femib::gauss::rule<T, d> rule,
 
@@ -51,18 +57,19 @@ build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
                    fff) {
 
   std::vector<Eigen::Triplet<float>> MM;
+  std::vector<Eigen::Triplet<float>> FF;
   for (int n = 0; n < s.mesh.T.size(); ++n) {
+    femib::types::dtrian<float, 2> t = s.mesh[n];
     for (int i = 0; i < s.finite_element.base_functions.size(); ++i) {
+      femib::types::F<float, 2, 1> a;
+      a.dx = [&](const femib::types::dvec<float, 2> &x) {
+        return (femib::affine::affineBinv(t) *
+                s.finite_element.base_functions[i].dx(
+                    femib::affine::affineBinv(t) *
+                    (x - femib::affine::affineb(t))));
+      };
       for (int j = 0; j < s.finite_element.base_functions.size(); ++j) {
-        femib::types::F<float, 2, 1> a;
         femib::types::F<float, 2, 1> b;
-        femib::types::dtrian<float, 2> t = s.mesh[n];
-        a.dx = [&](const femib::types::dvec<float, 2> &x) {
-          return (femib::affine::affineBinv(t) *
-                  s.finite_element.base_functions[i].dx(
-                      femib::affine::affineBinv(t) *
-                      (x - femib::affine::affineb(t))));
-        };
         b.dx = [&](const femib::types::dvec<float, 2> &x) {
           return (femib::affine::affineBinv(t) *
                   s.finite_element.base_functions[j].dx(
@@ -78,9 +85,19 @@ build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
         MM.push_back(Eigen::Triplet<float>(get_index(s.nodes, i, n),
                                            get_index(s.nodes, j, n), m));
       }
+      float f_ = femib::mesh::integrate<float, 2>(
+          rule,
+          [&t, &s, i](femib::types::dvec<float, 2> x) {
+            float a_0 =
+                -400 * x(0) * x(1) *
+                (s.finite_element.base_functions[i].x(femib::affine::affineBinv(t) * (x - femib::affine::affineb(t))))[0];
+            return a_0;
+          },
+          t);
+      FF.push_back(Eigen::Triplet<float>(get_index(s.nodes, i, n), 0, f_));
     }
   }
-  return MM;
+  return {MM, FF};
 }
 
 } // namespace femib::poisson
