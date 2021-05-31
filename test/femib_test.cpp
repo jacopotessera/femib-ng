@@ -68,7 +68,7 @@ int main() {
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> dB =
       femib::poisson::triplets2dense<float>(B, s.nodes.P.size(), 1);
-  Eigen::Matrix<float, Eigen::Dynamic, 1> dM =
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> dM =
       femib::poisson::triplets2dense<float>(M, s.nodes.P.size(),
                                             s.nodes.P.size());
   Eigen::Matrix<float, Eigen::Dynamic, 1> dF =

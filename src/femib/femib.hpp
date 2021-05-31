@@ -7,6 +7,7 @@
 #include "../mesh/mesh.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include <algorithm>
 #include <functional>
 #include <iostream>
 #include <vector>
