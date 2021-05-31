@@ -28,6 +28,17 @@ template <typename T, int d, int e> struct poisson {
       f;
 };
 
+template <typename T>
+Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>
+triplets2dense(std::vector<Eigen::Triplet<T>> M, int rows, int cols) {
+
+  Eigen::SparseMatrix<T> sM = Eigen::SparseMatrix<T>(rows, cols);
+  sM.setFromTriplets(M.begin(), M.end());
+  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM =
+      Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>(sM);
+  return dM;
+}
+
 template <typename T, int d, int e>
 std::function<T(femib::types::dvec<T, d>)>
 ddot(femib::types::F<float, 2, 1> a, femib::types::F<float, 2, 1> b) {
@@ -53,6 +64,18 @@ build_edges(femib::finite_element_space::finite_element_space<T, d, e> s,
     B.push_back(Eigen::Triplet<T>(i, 0, b(s.nodes.P[i])));
   }
   return B;
+}
+
+template <typename T, int d, int e>
+std::vector<int>
+build_not_edges(femib::finite_element_space::finite_element_space<T, d, e> s) {
+  std::vector<int> not_edges;
+  for (int i = 0; i < s.nodes.P.size(); i++) {
+    if (std::find(s.nodes.E.begin(), s.nodes.E.end(), i) == s.nodes.E.end()) {
+      not_edges.push_back(i);
+    }
+  }
+  return not_edges;
 }
 
 template <typename T> struct MandF {

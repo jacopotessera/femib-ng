@@ -59,28 +59,22 @@ int main() {
   std::vector<Eigen::Triplet<float>> F = mandF.F; // poisson.f(s);
 
   std::function<float(femib::types::dvec<float, 2>)> b =
-      [](const femib::types::dvec<float, 2> &x) { return x(0) + x(1); };
+      [](const femib::types::dvec<float, 2> &x) { return 10 * x(0); };
 
   std::vector<Eigen::Triplet<float>> B =
       femib::poisson::build_edges<float, 2, 1>(s, b);
 
-  std::vector<int> not_edges;
-  for (int i = 0; i < s.nodes.P.size(); i++) {
-    if (std::find(s.nodes.E.begin(), s.nodes.E.end(), i) == s.nodes.E.end()) {
-      not_edges.push_back(i);
-    }
-  }
+  std::vector<int> not_edges = femib::poisson::build_not_edges<float, 2, 1>(s);
 
-  Eigen::SparseMatrix<float> sB =
-      Eigen::SparseMatrix<float>(s.nodes.P.size(), 1);
-  sB.setFromTriplets(B.begin(), B.end());
   Eigen::Matrix<float, Eigen::Dynamic, 1> dB =
-      Eigen::Matrix<float, Eigen::Dynamic, 1>(sB);
-  Eigen::SparseMatrix<float> sM =
-      Eigen::SparseMatrix<float>(s.nodes.P.size(), s.nodes.P.size());
-  sM.setFromTriplets(M.begin(), M.end());
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> dM =
-      Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(sM);
+      femib::poisson::triplets2dense<float>(B, s.nodes.P.size(), 1);
+  Eigen::Matrix<float, Eigen::Dynamic, 1> dM =
+      femib::poisson::triplets2dense<float>(M, s.nodes.P.size(),
+                                            s.nodes.P.size());
+  Eigen::Matrix<float, Eigen::Dynamic, 1> dF =
+      femib::poisson::triplets2dense<float>(F, s.nodes.P.size(), 1);
+
+  // cosa fa questo ???
   Eigen::Matrix<float, Eigen::Dynamic, 1> ss =
       dM(Eigen::all, Eigen::all) * dB(Eigen::all, Eigen::all);
   Eigen::Matrix<float, Eigen::Dynamic, 1> mf;
@@ -93,11 +87,7 @@ int main() {
     }
   }
 
-  Eigen::SparseMatrix<float> sF =
-      Eigen::SparseMatrix<float>(s.nodes.P.size(), 1);
-  sF.setFromTriplets(F.begin(), F.end());
-  Eigen::Matrix<float, Eigen::Dynamic, 1> dF =
-      Eigen::Matrix<float, Eigen::Dynamic, 1>(sF);
+  // cosa fa questo ???
   Eigen::Matrix<float, Eigen::Dynamic, 1> bbb = (dF - ss)(not_edges, 0);
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> AAA =
       (dM)(not_edges, not_edges);
@@ -106,6 +96,7 @@ int main() {
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx;
   xx.resize(s.nodes.P.size(), 1);
 
+  // cosa fa questo ???
   for (int i = 0; i < s.nodes.P.size(); i++) {
     xx(i, 0) = 0.0;
     auto k = std::find(not_edges.begin(), not_edges.end(), i);
