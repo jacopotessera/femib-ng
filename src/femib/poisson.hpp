@@ -26,6 +26,8 @@ template <typename T, int d, int e> struct poisson {
       f;
 };
 
+template <typename T, int d, int e> void init() {}
+
 template <typename T>
 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>
 triplets2dense(std::vector<Eigen::Triplet<T>> M, int rows, int cols) {
