@@ -212,7 +212,7 @@ auto print_node_generator(
 }
 
 template <typename T, int d, int e>
-void init(poisson<T, d, e> &s, femib::gauss::rule<T, d> &rule) {
+void init(poisson<T, d, e> &s, const femib::gauss::rule<T, d> &rule) {
 
   MandF<T> mandF =
       build_diagonal<T, d, e>(s.V, rule, ddot<T, d, e>, forz<T, d, e>);
@@ -230,6 +230,21 @@ void init(poisson<T, d, e> &s, femib::gauss::rule<T, d> &rule) {
   s.dB = triplets2dense<T>(B, s.V.nodes.P.size(), 1);
   s.dM = triplets2dense<T>(M, s.V.nodes.P.size(), s.V.nodes.P.size());
   s.dF = triplets2dense<T>(F, s.V.nodes.P.size(), 1);
+}
+
+template <typename T, int d, int e>
+Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const poisson<T, d, e> &poisson) {
+
+  std::vector<int> not_edges = build_not_edges<T, d, e>(poisson.V);
+
+  AAAbbb<T> aaabbb = remove_edges<T>(poisson.dM, poisson.dF, poisson.dB,
+                                     poisson.V.nodes.P.size(), not_edges);
+
+  Eigen::Matrix<T, Eigen::Dynamic, 1> xxx =
+      aaabbb.AAA.colPivHouseholderQr().solve(aaabbb.bbb);
+
+  return add_edges<T>(xxx, poisson.dB, poisson.V.nodes.P.size(), not_edges,
+                      poisson.V.nodes.E);
 }
 
 } // namespace femib::poisson
