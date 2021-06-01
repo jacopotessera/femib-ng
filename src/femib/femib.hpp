@@ -134,6 +134,62 @@ build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
   return {MM, FF};
 }
 
+template <typename T> struct AAAbbb {
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> AAA;
+  Eigen::Matrix<float, Eigen::Dynamic, 1> bbb;
+};
+
+template <typename T>
+AAAbbb<T> remove_edges(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM,
+                       Eigen::Matrix<T, Eigen::Dynamic, 1> dF,
+                       Eigen::Matrix<T, Eigen::Dynamic, 1> dB, int rows,
+                       std::vector<int> not_edges) {
+
+  Eigen::Matrix<float, Eigen::Dynamic, 1> ss =
+      dM(Eigen::all, Eigen::all) * dB(Eigen::all, Eigen::all);
+  Eigen::Matrix<float, Eigen::Dynamic, 1> mf;
+  mf.resize(rows, 1);
+  for (int i = 0; i < rows; i++) {
+    auto k = std::find(not_edges.begin(), not_edges.end(), i);
+    mf(i, 0) = 0.0;
+    if (k != not_edges.end()) {
+      mf(i, 0) = ss(k - not_edges.begin(), 0);
+    }
+  }
+
+  Eigen::Matrix<float, Eigen::Dynamic, 1> bbb = (dF - ss)(not_edges, 0);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> AAA =
+      (dM)(not_edges, not_edges);
+
+  return {AAA, bbb};
+}
+
+template <typename T>
+Eigen::Matrix<T, Eigen::Dynamic, 1> add_edges(
+
+    Eigen::Matrix<float, Eigen::Dynamic, 1> xxx,
+    Eigen::Matrix<T, Eigen::Dynamic, 1> dB, int rows,
+    std::vector<int> not_edges, std::vector<int> nodesE) {
+
+  Eigen::Matrix<float, Eigen::Dynamic, 1> xx;
+  xx.resize(rows, 1);
+
+  // cosa fa questo ???
+  for (int i = 0; i < rows; i++) {
+    xx(i, 0) = 0.0;
+    auto k = std::find(not_edges.begin(), not_edges.end(), i);
+    if (k != not_edges.end()) {
+      xx(i, 0) = xxx(k - not_edges.begin(), 0);
+    }
+    auto kk = std::find(nodesE.begin(), nodesE.end(), i);
+    if (kk != nodesE.end()) {
+      xx(i, 0) = dB(i, 0);
+    }
+  }
+
+  return xx;
+}
+
 template <typename T, int d, int e>
 auto print_node_generator(
     femib::finite_element_space::finite_element_space<T, d, e> s,
