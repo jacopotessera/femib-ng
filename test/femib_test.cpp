@@ -28,40 +28,44 @@ int main() {
 
   femib::poisson::poisson<float, 2, 1> poisson = {s};
 
-  femib::poisson::MandF<float> mandF =
-      femib::poisson::build_diagonal<float, 2, 1>(
-          s, rule, femib::poisson::ddot<float, 2, 1>,
-          femib::poisson::forz<float, 2, 1>);
+  /*
+    femib::poisson::MandF<float> mandF =
+        femib::poisson::build_diagonal<float, 2, 1>(
+            s, rule, femib::poisson::ddot<float, 2, 1>,
+            femib::poisson::forz<float, 2, 1>);
 
-  std::vector<Eigen::Triplet<float>> M = mandF.M; // poisson.M(s, s);
-  std::vector<Eigen::Triplet<float>> F = mandF.F; // poisson.f(s);
+    std::vector<Eigen::Triplet<float>> M = mandF.M; // poisson.M(s, s);
+    std::vector<Eigen::Triplet<float>> F = mandF.F; // poisson.f(s);
 
-  std::function<float(femib::types::dvec<float, 2>)> b =
-      [](const femib::types::dvec<float, 2> &x) {
-        return 10 * x(0) * x(1) * x(1);
-      };
+    std::function<float(femib::types::dvec<float, 2>)> b =
+        [](const femib::types::dvec<float, 2> &x) {
+          return 10 * x(0) * x(1) * x(1);
+        };
 
-  std::vector<Eigen::Triplet<float>> B =
-      femib::poisson::build_edges<float, 2, 1>(s, b);
+    std::vector<Eigen::Triplet<float>> B =
+        femib::poisson::build_edges<float, 2, 1>(s, b);*/
 
   std::vector<int> not_edges = femib::poisson::build_not_edges<float, 2, 1>(s);
+  /*
+      Eigen::Matrix<float, Eigen::Dynamic, 1> dB =
+          femib::poisson::triplets2dense<float>(B, s.nodes.P.size(), 1);
+      Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> dM =
+          femib::poisson::triplets2dense<float>(M, s.nodes.P.size(),
+                                                s.nodes.P.size());
+      Eigen::Matrix<float, Eigen::Dynamic, 1> dF =
+          femib::poisson::triplets2dense<float>(F, s.nodes.P.size(), 1);
+    */
 
-  Eigen::Matrix<float, Eigen::Dynamic, 1> dB =
-      femib::poisson::triplets2dense<float>(B, s.nodes.P.size(), 1);
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> dM =
-      femib::poisson::triplets2dense<float>(M, s.nodes.P.size(),
-                                            s.nodes.P.size());
-  Eigen::Matrix<float, Eigen::Dynamic, 1> dF =
-      femib::poisson::triplets2dense<float>(F, s.nodes.P.size(), 1);
+  femib::poisson::init<float, 2, 1>(poisson, rule);
 
   femib::poisson::AAAbbb<float> aaabbb = femib::poisson::remove_edges<float>(
-      dM, dF, dB, s.nodes.P.size(), not_edges);
+      poisson.dM, poisson.dF, poisson.dB, s.nodes.P.size(), not_edges);
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xxx =
       aaabbb.AAA.colPivHouseholderQr().solve(aaabbb.bbb);
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx = femib::poisson::add_edges<float>(
-      xxx, dB, s.nodes.P.size(), not_edges, s.nodes.E);
+      xxx, poisson.dB, s.nodes.P.size(), not_edges, s.nodes.E);
 
   std::for_each(s.nodes.T.begin(), s.nodes.T.end(),
                 femib::poisson::print_node_generator<float, 2, 1>(s, xx));

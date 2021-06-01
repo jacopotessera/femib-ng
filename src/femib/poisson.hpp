@@ -24,9 +24,11 @@ template <typename T, int d, int e> struct poisson {
   std::function<std::vector<Eigen::Triplet<T>>(
       femib::finite_element_space::finite_element_space<T, d, e> a)>
       f;
-};
 
-template <typename T, int d, int e> void init() {}
+  Eigen::Matrix<T, Eigen::Dynamic, 1> dB;
+  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM;
+  Eigen::Matrix<T, Eigen::Dynamic, 1> dF;
+};
 
 template <typename T>
 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>
@@ -207,6 +209,27 @@ auto print_node_generator(
     std::cout << std::endl;
     std::cout << std::endl;
   };
+}
+
+template <typename T, int d, int e>
+void init(poisson<T, d, e> &s, femib::gauss::rule<T, d> &rule) {
+
+  MandF<T> mandF =
+      build_diagonal<T, d, e>(s.V, rule, ddot<T, d, e>, forz<T, d, e>);
+
+  std::vector<Eigen::Triplet<T>> M = mandF.M; // poisson.M(s, s);
+  std::vector<Eigen::Triplet<T>> F = mandF.F; // poisson.f(s);
+
+  std::function<T(femib::types::dvec<T, d>)> b =
+      [](const femib::types::dvec<T, d> &x) { return 10 * x(0) * x(1) * x(1); };
+
+  std::vector<Eigen::Triplet<T>> B = build_edges<T, d, e>(s.V, b);
+
+  std::vector<int> not_edges = build_not_edges<T, d, e>(s.V);
+
+  s.dB = triplets2dense<T>(B, s.V.nodes.P.size(), 1);
+  s.dM = triplets2dense<T>(M, s.V.nodes.P.size(), s.V.nodes.P.size());
+  s.dF = triplets2dense<T>(F, s.V.nodes.P.size(), 1);
 }
 
 } // namespace femib::poisson
