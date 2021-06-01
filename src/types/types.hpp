@@ -32,7 +32,11 @@ template <typename f, int d> struct nodes {
   std::vector<int> E;
 };
 
-/// template <typename T, int d> using mesh = std::vector<dtrian<T, d>>;
+template <typename f, int d>
+int get_index(const nodes<f, d> &nodes, int i, int n) {
+  return nodes.T[n][i];
+}
+
 template <typename f, int d> struct mesh {
   std::vector<dvec<f, d>> P;
   std::vector<ditrian<d>> T;
