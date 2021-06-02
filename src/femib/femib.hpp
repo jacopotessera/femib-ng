@@ -70,6 +70,13 @@ build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
   tbb::parallel_for(
       tbb::blocked_range<int>(0, s.mesh.T.size()),
       [&](const tbb::blocked_range<int> &range) {
+        std::vector<Eigen::Triplet<float>> scMM;
+        scMM.reserve(s.mesh.T.size() * s.finite_element.base_functions.size() *
+                     s.finite_element.base_functions.size());
+        std::vector<Eigen::Triplet<float>> scF;
+        scF.reserve(s.mesh.T.size() * s.finite_element.base_functions.size() *
+                    s.finite_element.base_functions.size());
+
         for (int n = range.begin(); n < range.end(); ++n) {
           femib::types::dtrian<float, 2> t = s.mesh[n];
           for (int i = 0; i < s.finite_element.base_functions.size(); ++i) {
@@ -93,8 +100,8 @@ build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
                             (x - femib::affine::affineb(t))));
               };
               float m = femib::mesh::integrate<float, 2>(rule, fff(a, b), t);
-              cMM.push_back(Eigen::Triplet<float>(get_index(s.nodes, i, n),
-                                                  get_index(s.nodes, j, n), m));
+              scMM.push_back(Eigen::Triplet<float>(
+                  get_index(s.nodes, i, n), get_index(s.nodes, j, n), m));
             }
 
             float f_ = femib::mesh::integrate<float, 2>(
@@ -107,9 +114,12 @@ build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
                   return a_0;
                 },
                 t);
-            F.push_back(Eigen::Triplet<float>(get_index(s.nodes, i, n), 0, f_));
+            scF.push_back(
+                Eigen::Triplet<float>(get_index(s.nodes, i, n), 0, f_));
           }
         }
+        cMM.grow_by(scMM.begin(), scMM.end());
+        F.grow_by(scF.begin(), scF.end());
       });
 
   return {{cMM.begin(), cMM.end()}, {F.begin(), F.end()}};
