@@ -1,0 +1,211 @@
+#include "types.hpp"
+
+femib::types::dmat<T,d> vec2mat(const femib::types::dvec<T,d> &b)
+{
+	femib::types::dmat<T,d> B; B.rows = b.size; B.cols = 1;
+	for(int i=0;i<b.size;++i)
+	{
+		B(i,0) = b(i);
+	}
+	return B;
+}
+
+
+
+
+// doppio prodotto interno
+T dpi(const femib::types::dmat<T,d> &A, const femib::types::dmat<T,d> &B)
+{
+	if(A.rows == 1 && A.cols == 1 && B.rows == 1 && B.cols == 1)
+	{
+		return A(0,0)*B(0,0);
+	}
+	else if(A.rows == 2 && A.cols == 2 && B.rows == 2 && B.cols == 2)
+	{
+		return A(0,0)*B(0,0)+A(0,1)*B(1,0)+A(1,0)*B(0,1)+A(1,1)*B(1,1);
+	}
+	else if(A.rows == 3 && A.cols == 3 && B.rows == 3 && B.cols == 3)
+	{
+		return A(0,0)*B(0,0)+A(0,1)*B(1,0)+A(0,2)*B(2,0)+
+				A(1,0)*B(0,1)+A(1,1)*B(1,1)+A(1,2)*B(2,1)+
+				A(2,0)*B(0,2)+A(2,1)*B(1,2)+A(2,2)*B(2,2);
+	}
+	#ifndef __CUDA_ARCH__
+	else throw EXCEPTION("dpi: Non-squared matrix!");
+	#endif
+}
+
+T pf(const femib::types::dmat<T,d> &A, const femib::types::dvec<T,d> &B)
+{
+	if(A.rows == B.size && A.cols == 1)
+	{
+		return (trans(A)*vec2mat(B))(0,0);
+		/*T r = 0.0;
+		for(int i=0;i<A.rows;++i)
+		{
+			for(int j=0;j<A.cols;++j)
+			{
+				r += A(i,j)*B(i,j);
+			}
+		}*/
+	}
+	#ifndef __CUDA_ARCH__
+	else throw EXCEPTION("pf: Incompatible size!");
+	#endif*/
+}
+
+// prodotto scalare
+T pf(const femib::types::dmat<T,d> &A, const femib::types::dmat<T,d> &B)
+{
+	if(A.rows == B.rows && A.cols == B.cols)
+	{
+		return dtrace(A*trans(B));
+		/*T r = 0.0;
+		for(int i=0;i<A.rows;++i)
+		{
+			for(int j=0;j<A.cols;++j)
+			{
+				r += A(i,j)*B(i,j);
+			}
+		}*/
+	}
+	#ifndef __CUDA_ARCH__
+	else throw EXCEPTION("pf: Incompatible size!");
+	#endif*/
+		
+	/*if(A.rows == 1 && A.cols == 1 && B.rows == 1 && B.cols == 1)
+	{
+		return A(0,0)*B(0,0);
+	}
+  	else if(A.rows == 2 && A.cols == 2 && B.rows == 2 && B.cols == 2)
+	{
+		return A(0,0)*B(0,0)+A(0,1)*B(0,1)+A(1,0)*B(1,0)+A(1,1)*B(1,1);
+	}
+	else if(A.rows == 3 && A.cols == 3 && B.rows == 3 && B.cols == 3)
+	{
+		return A(0,0)*B(0,0)+A(0,1)*B(0,1)+A(0,2)*B(0,2)+
+				A(1,0)*B(1,0)+A(1,1)*B(1,1)+A(1,2)*B(1,2)+
+				A(2,0)*B(2,0)+A(2,1)*B(2,1)+A(2,2)*B(2,2);
+	}
+	#ifndef __CUDA_ARCH__
+	else throw EXCEPTION("pf: Non-squared matrix!");
+	#endif*/
+}
+
+// gradiente simmetrico
+femib::types::dmat<T,d> symm(const femib::types::dmat<T,d> &A){
+  return A+trans(A);
+}
+
+// dot-divergenza
+femib::types::dvec<T,d> dotdiv(const femib::types::dvec<T,d> &b, const femib::types::dmat<T,d> &B)
+{
+	femib::types::dvec<T,d> v;
+	if(b.size == 1 && B.rows == 1 && B.cols == 1)
+	{
+		v = {b(0)*B(0,0)};
+	}
+	else if(b.size == 2 && B.rows == 2 && B.cols == 2)
+	{
+		v = {b(0)*B(0,0)+b(1)*B(0,1),b(0)*B(1,0)+b(1)*B(1,1)};
+	}
+	else if(b.size == 3 && B.rows == 3 && B.cols == 3)
+	{
+		v = {b(0)*B(0,0)+b(1)*B(0,1)+b(2)*B(0,2),
+		b(0)*B(1,0)+b(1)*B(1,1)+b(2)*B(1,2),
+		b(0)*B(2,0)+b(1)*B(2,1)+b(2)*B(2,2)};
+	}
+	#ifndef __CUDA_ARCH__
+	else throw EXCEPTION("dotdiv: Incompatible dimensions!");
+	#endif
+	return v;
+}
+
+
+std::function<T(femib::types::dvec<T,d>)> dpi(const std::function<femib::types::dmat<T,d>(femib::types::dvec<T,d>)> &A, const std::function<femib::types::dmat<T,d>(femib::types::dvec<T,d>)> &B)
+{
+	return ([&](const femib::types::dvec<T,d> &x){return dpi(A(x),B(x));});
+}
+
+std::function<T(femib::types::dvec<T,d>)> pf(const std::function<femib::types::dmat<T,d>(femib::types::dvec<T,d>)> &A, const std::function<femib::types::dvec<T,d>(femib::types::dvec<T,d>)> &B)
+{
+	return ([&](const femib::types::dvec<T,d> &x){return pf(A(x),B(x));});
+}
+
+std::function<T(femib::types::dvec<T,d>)> pf(const std::function<femib::types::dmat<T,d>(femib::types::dvec<T,d>)> &A, const std::function<femib::types::dmat<T,d>(femib::types::dvec<T,d>)> &B)
+{
+	return ([&](const femib::types::dvec<T,d> &x){return pf(A(x),B(x));});
+}
+
+std::function<femib::types::dmat<T,d>(femib::types::dvec<T,d>)> symm(const std::function<femib::types::dmat<T,d>(femib::types::dvec<T,d>)> &A)
+{
+	return ([&](const femib::types::dvec<T,d> &x){return symm(A(x));});
+}
+
+std::function<femib::types::dvec<T,d>(femib::types::dvec<T,d>)> dotdiv(const std::function<femib::types::dvec<T,d>(femib::types::dvec<T,d>)> &b, const std::function<femib::types::dmat<T,d>(femib::types::dvec<T,d>)> &A)
+{
+	return ([&](const femib::types::dvec<T,d> &x){return dotdiv(b(x),A(x));});
+}
+
+std::function<T(femib::types::dvec<T,d>)> ddot(const std::function<femib::types::dvec<T,d>(femib::types::dvec<T,d>)> &a, const std::function<femib::types::dvec<T,d>(femib::types::dvec<T,d>)> &b)
+{
+	return ([&](const femib::types::dvec<T,d> &x){return ddot(a(x),b(x));});
+}
+
+std::function<T(femib::types::dvec<T,d>)> operator*(T a, const std::function<T(femib::types::dvec<T,d>)> &b)
+{
+	return ([&](const femib::types::dvec<T,d> &x){return a*b(x);});
+}
+
+std::function<T(femib::types::dvec<T,d>)> operator-(const std::function<T(femib::types::dvec<T,d>)> &a, const std::function<T(femib::types::dvec<T,d>)> &b)
+{
+	//return ([&](const femib::types::dvec<T,d> &x){return a(x)-b(x);});
+	return a+(-1.0)*b;
+}
+
+std::function<T(femib::types::dvec<T,d>)> operator*(const std::function<T(femib::types::dvec<T,d>)> &a, const std::function<T(femib::types::dvec<T,d>)> &b)
+{
+	return ([&](const femib::types::dvec<T,d> &x){return a(x)*b(x);});
+}
+
+std::function<femib::types::dmat<T,d>(femib::types::dvec<T,d>)> operator*(const std::function<femib::types::dmat<T,d>(femib::types::dvec<T,d>)> &a, const femib::types::dmat<T,d> &b)
+{
+	//return ([&](const femib::types::dvec<T,d> &x){return a(x)*b;});
+	return a*constant<femib::types::dmat<T,d>>(b);
+}
+
+std::function<femib::types::dmat<T,d>(femib::types::dvec<T,d>)> operator*(const std::function<femib::types::dmat<T,d>(femib::types::dvec<T,d>)> &a, const std::function<femib::types::dmat<T,d>(femib::types::dvec<T,d>)> &b)
+{
+	return ([&](const femib::types::dvec<T,d> &x){return a(x)*b(x);});
+}
+
+std::function<T(femib::types::dvec<T,d>)> project(const std::function<femib::types::dvec<T,d>(femib::types::dvec<T,d>)> &a, int i)
+{
+	return ([&,i](const femib::types::dvec<T,d> &x){return a(x)(i);});
+}
+
+std::function<T(femib::types::dvec<T,d>)> operator+(const std::function<T(femib::types::dvec<T,d>)> &a, const std::function<T(femib::types::dvec<T,d>)> &b)
+{
+	return ([a,b](const femib::types::dvec<T,d> &x){return a(x)+b(x);});
+}
+
+template<typename T>
+std::function<T(femib::types::dvec<T,d>)> constant(const T &c)
+{
+	return ([&](const femib::types::dvec<T,d> &x){return c;});
+}
+
+template<typename T, typename U, typename V>
+std::function<T(V)> compose(const std::function<T(U)> &a, const std::function<U(V)> &b)
+{
+	return ([&](const V &x){return a(b(x));});
+}
+
+F compose(const F &a, const F &b)
+{
+	F c;
+	c.x = compose<femib::types::dvec<T,d>,femib::types::dvec<T,d>,femib::types::dvec<T,d>>(a.x,b.x);
+	c.dx = ([&](const femib::types::dvec<T,d> &x){return a.dx(b.x(x))*b.dx(x);});
+	return c;
+}
+
