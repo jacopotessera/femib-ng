@@ -2,6 +2,7 @@
 #define FEMIB_POISSON_HPP_INCLUDED_
 
 #include "../affine/affine.hpp"
+#include "../femib/femib.hpp"
 #include "../finite_element_space/finite_element_space.hpp"
 #include "../gauss/gauss.hpp"
 #include "../mesh/mesh.hpp"
@@ -29,17 +30,6 @@ template <typename T, int d, int e> struct poisson {
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM;
   Eigen::Matrix<T, Eigen::Dynamic, 1> dF;
 };
-
-template <typename T>
-Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>
-triplets2dense(std::vector<Eigen::Triplet<T>> M, int rows, int cols) {
-
-  Eigen::SparseMatrix<T> sM = Eigen::SparseMatrix<T>(rows, cols);
-  sM.setFromTriplets(M.begin(), M.end());
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM =
-      Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>(sM);
-  return dM;
-}
 
 template <typename T, int d, int e>
 std::function<T(femib::types::dvec<T, d>)> ddot(femib::types::F<T, d, e> a,
@@ -227,9 +217,10 @@ void init(poisson<T, d, e> &s, const femib::gauss::rule<T, d> &rule) {
 
   std::vector<int> not_edges = build_not_edges<T, d, e>(s.V);
 
-  s.dB = triplets2dense<T>(B, s.V.nodes.P.size(), 1);
-  s.dM = triplets2dense<T>(M, s.V.nodes.P.size(), s.V.nodes.P.size());
-  s.dF = triplets2dense<T>(F, s.V.nodes.P.size(), 1);
+  s.dB = femib::util::triplets2dense<T>(B, s.V.nodes.P.size(), 1);
+  s.dM =
+      femib::util::triplets2dense<T>(M, s.V.nodes.P.size(), s.V.nodes.P.size());
+  s.dF = femib::util::triplets2dense<T>(F, s.V.nodes.P.size(), 1);
 }
 
 template <typename T, int d, int e>
