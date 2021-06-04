@@ -51,7 +51,7 @@ int main() {
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
       mesh_dir + "p5.mat", mesh_dir + "t5.mat", mesh_dir + "e5.mat");
-
+  mesh.init();
   // for(femib::types::dtrian<float,2> v : mesh){
   //  std::cout << v[0] << std::endl;
   //  std::cout << v[1] << std::endl;

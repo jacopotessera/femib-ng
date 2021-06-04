@@ -1,7 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "cuda.h"
 #include <doctest/doctest.h>
-#include <iostream>
 
 TEST_CASE("testing cuda size") {
   femib::cuda::setStackSize(FEMIB_CUDA_STACK_SIZE);

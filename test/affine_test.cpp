@@ -1,8 +1,8 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "affine.hpp"
-#include <Eigen/LU>
-#include <algorithm>
 #include <doctest/doctest.h>
+
+const float EPSILON = std::numeric_limits<float>::epsilon();
 
 using namespace femib::affine;
 
@@ -21,8 +21,6 @@ dvec linear_combination(const std::vector<dvec> &triangle,
 dvec base_linear_combination(const std::vector<float> &a) {
   return linear_combination(base_triangle, a);
 };
-
-const float EPSILON = std::numeric_limits<float>::epsilon();
 
 TEST_CASE("testing affine") {
 

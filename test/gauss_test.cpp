@@ -1,6 +1,5 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "../src/gauss/gauss.hpp"
-#include <cmath>
+#include "gauss.hpp"
 #include <doctest/doctest.h>
 
 const float EPSILON = std::numeric_limits<float>::epsilon();
