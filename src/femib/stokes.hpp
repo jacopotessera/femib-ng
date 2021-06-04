@@ -56,9 +56,8 @@ std::vector<Eigen::Triplet<T>> build_diagonal(
               femib::affine::affineBinv(t) * (x - femib::affine::affineb(t))));
         };
         T m = femib::mesh::integrate<T, d>(rule, stokes_b(a, b), t);
-        BB.push_back(
-            Eigen::Triplet<T>(femib::types::get_index<T, d>(v.nodes, i, n),
-                              femib::types::get_index<T, d>(q.nodes, j, n), m));
+        BB.push_back(Eigen::Triplet<T>(v.nodes.get_index(i, n),
+                                       q.nodes.get_index(j, n), m));
       }
       // T f_ = femib::mesh::integrate<T, d>(rule, ggg(a), t);
       // FF.push_back(Eigen::Triplet<T>(

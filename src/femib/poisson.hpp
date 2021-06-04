@@ -112,13 +112,11 @@ build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
                       (x - femib::affine::affineb(t))));
         };
         T m = femib::mesh::integrate<T, d>(rule, fff(a, b), t);
-        MM.push_back(
-            Eigen::Triplet<T>(femib::types::get_index<T, d>(s.nodes, i, n),
-                              femib::types::get_index<T, d>(s.nodes, j, n), m));
+        MM.push_back(Eigen::Triplet<T>(s.nodes.get_index(i, n),
+                                       s.nodes.get_index(j, n), m));
       }
       T f_ = femib::mesh::integrate<T, d>(rule, ggg(a), t);
-      FF.push_back(Eigen::Triplet<T>(
-          femib::types::get_index<T, d>(s.nodes, i, n), 0, f_));
+      FF.push_back(Eigen::Triplet<T>(s.nodes.get_index(i, n), 0, f_));
     }
   }
   return {MM, FF};

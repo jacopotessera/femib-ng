@@ -31,13 +31,8 @@ template <typename f, int d> struct nodes {
   std::vector<std::vector<int>> T;
   std::vector<int> E;
 
-  int get_index(int i, int n) { return T[n][i]; }
+  int get_index(int i, int n) const { return T[n][i]; }
 };
-
-template <typename f, int d>
-int get_index(const nodes<f, d> &nodes, int i, int n) {
-  return nodes.T[n][i];
-}
 
 template <typename f, int d> struct mesh {
   std::vector<dvec<f, d>> P;
