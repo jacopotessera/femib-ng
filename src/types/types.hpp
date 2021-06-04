@@ -30,6 +30,8 @@ template <typename f, int d> struct nodes {
   std::vector<dvec<f, d>> P;
   std::vector<std::vector<int>> T;
   std::vector<int> E;
+
+  int get_index(int i, int n) { return T[n][i]; }
 };
 
 template <typename f, int d>
@@ -59,15 +61,6 @@ template <typename f, int d> struct mesh {
   }
 
   inline dtrian<f, d> operator[](int i) const { return N[i]; }
-
-  /*inline dtrian<f, d> operator[](int pos) const {
-    dtrian<f, d> t;
-    t.reserve(d + 1);
-    for (int tt : T[pos]) {
-      t.emplace_back(P[tt]);
-    }
-    return t;
-  }*/
 };
 } // namespace femib::types
 #endif
