@@ -43,7 +43,7 @@ template <typename f, int d> struct mesh {
   std::vector<int> E;
 
   typedef dtrian<f, d> dtrianfd;
-  inline dtrianfd operator[](int pos) {
+  inline dtrianfd operator[](int pos) const {
     dtrianfd t;
     t.reserve(d + 1);
     for (int tt : T[pos]) {
