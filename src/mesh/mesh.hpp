@@ -43,30 +43,14 @@ T femib::mesh::integrate(const femib::gauss::rule<T, d> &rule,
 }
 
 template <typename T, int d>
-std::vector<femib::types::dtrian<T, d>>
-femib::mesh::init(const femib::types::mesh<T, d> &mesh) {
-  std::vector<femib::types::dtrian<T, d>> dtrianfd;
-  for (femib::types::ditrian<d> triangle : mesh.T) {
-    femib::types::dtrian<T, d> t;
-    t.reserve(d + 1);
-    for (int point : triangle) {
-      t.emplace_back(mesh.P[point]);
-    }
-    dtrianfd.emplace_back(t);
-  }
-  return dtrianfd;
-}
-
-template <typename T, int d>
 T femib::mesh::integrate(const femib::gauss::rule<T, d> &rule,
                          const std::function<T(femib::types::dvec<T, d>)> &f,
                          const femib::types::mesh<T, d> &mesh) {
   auto unary_op = [&rule, &f](const femib::types::dtrian<T, d> &t) {
     return femib::mesh::integrate(rule, f, t);
   };
-  std::vector<femib::types::dtrian<T, d>> m = femib::mesh::init(mesh);
-  return std::transform_reduce(std::execution::seq, m.begin(), m.end(), 0.0,
-                               std::plus<>(), unary_op);
+  return std::transform_reduce(std::execution::seq, mesh.N.begin(),
+                               mesh.N.end(), 0.0, std::plus<>(), unary_op);
 }
 
 template <typename T, int d>

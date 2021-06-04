@@ -57,5 +57,6 @@ template <typename f, int d> struct mesh {
 
   inline dtrian<f, d> operator[](int i) const { return N[i]; }
 };
+
 } // namespace femib::types
 #endif
