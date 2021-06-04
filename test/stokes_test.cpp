@@ -19,7 +19,7 @@ int main() {
       femib::gauss::create_gauss_2_2d<float, 2>();
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
-      mesh_dir + "p1.mat", mesh_dir + "t1.mat", mesh_dir + "e1.mat");
+      mesh_dir + "p0.mat", mesh_dir + "t0.mat", mesh_dir + "e0.mat");
   mesh.init();
 
   // V
@@ -41,7 +41,9 @@ int main() {
   stokes.V = v;
   stokes.Q = q;
   femib::stokes::init<float, 2>(stokes, rule);
-  std::cout << stokes.B(0, 0) << std::endl;
+
+  std::cout << stokes.A << std::endl;
+  std::cout << stokes.B << std::endl;
 
   // Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
   //    femib::poisson::solve<float, 2, 1>(poisson);
