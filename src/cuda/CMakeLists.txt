@@ -14,7 +14,6 @@ add_library(cuda SHARED cuda.cu)
 
 find_package (spdlog)
 if(spdlog_FOUND)
-    message("spdlog found.")
     target_link_libraries (cuda spdlog::spdlog)
 elseif(NOT spdlog_FOUND)
 	message(FATAL_ERROR "
