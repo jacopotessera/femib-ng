@@ -42,15 +42,32 @@ template <typename f, int d> struct mesh {
   std::vector<ditrian<d>> T;
   std::vector<int> E;
 
-  typedef dtrian<f, d> dtrianfd;
-  inline dtrianfd operator[](int pos) const {
-    dtrianfd t;
+  bool initialized = false;
+  std::vector<dtrian<f, d>> N;
+
+  void init() {
+    if (!initialized) {
+      for (ditrian<d> t : T) {
+        dtrian<f, d> n;
+        n.reserve(d + 1);
+        for (int i : t) {
+          n.emplace_back(P[i]);
+        }
+        N.emplace_back(n);
+      }
+    }
+  }
+
+  inline dtrian<f, d> operator[](int i) const { return N[i]; }
+
+  /*inline dtrian<f, d> operator[](int pos) const {
+    dtrian<f, d> t;
     t.reserve(d + 1);
     for (int tt : T[pos]) {
       t.emplace_back(P[tt]);
     }
     return t;
-  }
+  }*/
 };
 } // namespace femib::types
 #endif

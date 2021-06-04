@@ -20,6 +20,7 @@ int main() {
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
       mesh_dir + "p1.mat", mesh_dir + "t1.mat", mesh_dir + "e1.mat");
+  mesh.init();
 
   // V
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =

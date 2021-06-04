@@ -32,7 +32,7 @@ template <typename T, int d> struct stokes {
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
 stokes_b(const femib::types::F<T, d, d> &u, const femib::types::F<T, d, 1> &q) {
-  // return  div(u)* project<T, d>(q.x, 0);
+  // return project<T, d>(q.x, 0) * div(u);
   return [&u, &q](const femib::types::dvec<T, d> &x) {
     return div(u)(x) * q.x(x)(0);
   };
