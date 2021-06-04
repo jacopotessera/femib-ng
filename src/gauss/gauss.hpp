@@ -17,8 +17,8 @@ template <typename T, int d> struct node {
 template <typename T, int d> struct rule { std::vector<node<T, d>> nodes; };
 
 template <typename T, int d>
-T integrate(const femib::gauss::rule<T, d> rule,
-            std::function<T(femib::types::dvec<T, d>)> &f) {
+T integrate(const femib::gauss::rule<T, d> &rule,
+            const std::function<T(femib::types::dvec<T, d>)> &f) {
   auto unary_op = [&f](const femib::gauss::node<T, d> &node) {
     return node.weight * f(node.node);
   };

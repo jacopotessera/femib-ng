@@ -7,6 +7,7 @@
 #include "../types/types.hpp"
 #include <execution>
 #include <functional>
+#include <numeric>
 #include <string>
 
 namespace femib::mesh {

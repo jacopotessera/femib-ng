@@ -11,7 +11,7 @@ template <class T> T castToT(std::string s);
 template <class W> void castToT(std::string s, W &w);
 template <typename T, typename W> std::vector<T> read(std::string filename);
 
-// template <> double castToT<double>(std::string s) { return std::stod(s); }
+template <> double castToT<double>(std::string s) { return std::stod(s); }
 template <> float castToT<float>(std::string s) { return std::stof(s); }
 template <> int castToT<int>(std::string s) { return std::stoi(s); }
 
@@ -29,7 +29,7 @@ template std::vector<femib::types::ditrian<2>>
 read<femib::types::ditrian<2>, int>(std::string file);
 template std::vector<int> read<int, int>(std::string file);
 
-// template double castToT<double>(std::string file);
+template double castToT<double>(std::string file);
 template float castToT<float>(std::string file);
 template int castToT<int>(std::string file);
 
@@ -49,7 +49,6 @@ template <typename T, typename W> std::vector<T> read(std::string filename) {
   spdlog::debug("[read] filename: {}", filename);
   if (file.is_open()) {
     for (int i = 0; std::getline(file, line); ++i) {
-      // spdlog::debug("[read] line  {}", i);
       T t;
       a.push_back(t);
       size_t pos = 0;
@@ -57,7 +56,6 @@ template <typename T, typename W> std::vector<T> read(std::string filename) {
       for (int j = 0; (pos = line.find(tab)) != std::string::npos; ++j) {
         token = line.substr(0, pos);
         line.erase(0, pos + tab.length());
-        // spdlog::debug("[read] token  {}", token);
         set<T, W>(a[i], j, token);
       }
     }
