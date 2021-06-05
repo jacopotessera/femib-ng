@@ -17,11 +17,19 @@ finite_element<T, d, e> create_finite_element_P1_2d2d() {
   P1_2d2d.build_nodes = [](const femib::types::mesh<T, d> &mesh) {
     femib::types::nodes<T, d> nodes;
     nodes.P = mesh.P;
+    for (femib::types::dvec<T, d> p : mesh.P) {
+      nodes.P.push_back(p);
+    }
+
+    int size_P = mesh.P.size();
     for (int n = 0; n < mesh.T.size(); ++n) {
       std::vector<int> row;
       nodes.T.push_back(row);
-      for (int i = 0; i < mesh.T[n].size() * d; ++i) {
-        nodes.T[n].push_back(mesh.T[n](i % d));
+      for (int i = 0; i < mesh.T[n].size(); ++i) {
+        nodes.T[n].push_back(mesh.T[n](i));
+      }
+      for (int i = 0; i < mesh.T[n].size(); ++i) {
+        nodes.T[n].push_back(mesh.T[n](i) + size_P);
       }
     }
     nodes.E = mesh.E;
