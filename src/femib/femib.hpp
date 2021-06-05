@@ -8,6 +8,8 @@
 
 #include "../affine/affine.hpp"
 #include "../finite_element_space/finite_element_space.hpp"
+#include "../gauss/gauss.hpp"
+#include "../mesh/mesh.hpp"
 #include "../types/types.hpp"
 
 namespace femib::util {
@@ -51,6 +53,37 @@ template <typename T> struct solvable_equations {
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> A;
   Eigen::Matrix<T, Eigen::Dynamic, 1> b;
 };
+
+template <typename T, int d, int e>
+build_diagonal_result<T> build_diagonal(
+    const femib::finite_element_space::finite_element_space<T, d, e> &v,
+    const femib::gauss::rule<T, d> &rule,
+    std::function<std::function<T(femib::types::dvec<T, d>)>(
+        femib::types::F<T, d, e>, femib::types::F<T, d, e>)>
+        fff,
+    std::function<
+        std::function<T(femib::types::dvec<T, d>)>(femib::types::F<T, d, e>)>
+        ggg) {
+  std::vector<Eigen::Triplet<T>> BB;
+  std::vector<Eigen::Triplet<T>> FF;
+  for (int n = 0; n < v.mesh.T.size(); ++n) {
+    femib::types::dtrian<T, d> t = v.mesh[n];
+    for (int i = 0; i < v.finite_element.base_functions.size(); ++i) {
+      femib::types::F<T, d, e> a =
+          femib::util::base_function2real_function<T, d, e>(v, n, i);
+      for (int j = 0; j < v.finite_element.base_functions.size(); ++j) {
+        femib::types::F<T, d, e> b =
+            femib::util::base_function2real_function<T, d, e>(v, n, j);
+        T m = femib::mesh::integrate<T, d>(rule, fff(a, b), t);
+        BB.push_back(Eigen::Triplet<T>(v.nodes.get_index(i, n),
+                                       v.nodes.get_index(j, n), m));
+      }
+      T f_ = femib::mesh::integrate<T, d>(rule, ggg(a), t);
+      FF.push_back(Eigen::Triplet<T>(v.nodes.get_index(i, n), 0, f_));
+    }
+  }
+  return {BB, FF};
+}
 
 } // namespace femib::util
 #endif

@@ -70,37 +70,6 @@ build_not_edges(femib::finite_element_space::finite_element_space<T, d, e> s) {
   return not_edges;
 }
 
-template <typename T, int d, int e>
-femib::util::build_diagonal_result<T>
-build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
-               femib::gauss::rule<T, d> rule,
-               std::function<std::function<T(femib::types::dvec<T, d>)>(
-                   femib::types::F<T, d, e>, femib::types::F<T, d, e>)>
-                   fff,
-               std::function<std::function<T(femib::types::dvec<T, d>)>(
-                   femib::types::F<T, d, e>)>
-                   ggg) {
-  std::vector<Eigen::Triplet<T>> MM;
-  std::vector<Eigen::Triplet<T>> FF;
-  for (int n = 0; n < s.mesh.T.size(); ++n) {
-    femib::types::dtrian<T, d> t = s.mesh[n];
-    for (int i = 0; i < s.finite_element.base_functions.size(); ++i) {
-      femib::types::F<T, d, e> a =
-          femib::util::base_function2real_function<T, d, e>(s, n, i);
-      for (int j = 0; j < s.finite_element.base_functions.size(); ++j) {
-        femib::types::F<T, d, e> b =
-            femib::util::base_function2real_function<T, d, e>(s, n, j);
-        T m = femib::mesh::integrate<T, d>(rule, fff(a, b), t);
-        MM.push_back(Eigen::Triplet<T>(s.nodes.get_index(i, n),
-                                       s.nodes.get_index(j, n), m));
-      }
-      T f_ = femib::mesh::integrate<T, d>(rule, ggg(a), t);
-      FF.push_back(Eigen::Triplet<T>(s.nodes.get_index(i, n), 0, f_));
-    }
-  }
-  return {MM, FF};
-}
-
 template <typename T>
 femib::util::solvable_equations<T>
 remove_edges(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM,
@@ -177,8 +146,9 @@ auto print_node_generator(
 template <typename T, int d, int e>
 void init(poisson<T, d, e> &s, const femib::gauss::rule<T, d> &rule) {
 
-  femib::util::build_diagonal_result<T> result = build_diagonal<T, d, e>(
-      s.V, rule, ddot<T, d, e>, external_force<T, d, e>);
+  femib::util::build_diagonal_result<T> result =
+      femib::util::build_diagonal<T, d, e>(s.V, rule, ddot<T, d, e>,
+                                           external_force<T, d, e>);
 
   std::vector<Eigen::Triplet<T>> M = result.M;
   std::vector<Eigen::Triplet<T>> F = result.F;
