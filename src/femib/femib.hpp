@@ -42,5 +42,10 @@ femib::types::F<T, d, e> base_function2real_function(
   return a;
 }
 
+template <typename T> struct build_diagonal_result {
+  std::vector<Eigen::Triplet<T>> M;
+  std::vector<Eigen::Triplet<T>> F;
+};
+
 } // namespace femib::util
 #endif

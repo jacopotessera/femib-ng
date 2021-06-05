@@ -40,7 +40,8 @@ std::function<T(femib::types::dvec<T, d>)> ddot(femib::types::F<T, d, e> a,
 }
 
 template <typename T, int d, int e>
-std::function<T(femib::types::dvec<T, d>)> forz(femib::types::F<T, d, e> a) {
+std::function<T(femib::types::dvec<T, d>)>
+external_force(femib::types::F<T, d, e> a) {
   return [a](femib::types::dvec<T, d> x) {
     return -400 * x(0) * x(1) * a.x(x)[0];
   };
@@ -69,13 +70,8 @@ build_not_edges(femib::finite_element_space::finite_element_space<T, d, e> s) {
   return not_edges;
 }
 
-template <typename T> struct MandF {
-  std::vector<Eigen::Triplet<T>> M;
-  std::vector<Eigen::Triplet<T>> F;
-};
-
 template <typename T, int d, int e>
-MandF<T>
+femib::util::build_diagonal_result<T>
 build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
                femib::gauss::rule<T, d> rule,
                std::function<std::function<T(femib::types::dvec<T, d>)>(
@@ -202,11 +198,11 @@ auto print_node_generator(
 template <typename T, int d, int e>
 void init(poisson<T, d, e> &s, const femib::gauss::rule<T, d> &rule) {
 
-  MandF<T> mandF =
-      build_diagonal<T, d, e>(s.V, rule, ddot<T, d, e>, forz<T, d, e>);
+  femib::util::build_diagonal_result<T> result = build_diagonal<T, d, e>(
+      s.V, rule, ddot<T, d, e>, external_force<T, d, e>);
 
-  std::vector<Eigen::Triplet<T>> M = mandF.M; // poisson.M(s, s);
-  std::vector<Eigen::Triplet<T>> F = mandF.F; // poisson.f(s);
+  std::vector<Eigen::Triplet<T>> M = result.M;
+  std::vector<Eigen::Triplet<T>> F = result.F;
 
   std::function<T(femib::types::dvec<T, d>)> b =
       [](const femib::types::dvec<T, d> &x) { return 10 * x(0) * x(1) * x(1); };
