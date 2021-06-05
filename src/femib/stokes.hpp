@@ -8,6 +8,7 @@
 #include "../types/differential_operation.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include <iostream>
 
 namespace femib::stokes {
 
@@ -20,7 +21,7 @@ template <typename T, int d> struct stokes {
   Eigen::Matrix<T, Eigen::Dynamic, 1> f;
   Eigen::Matrix<T, Eigen::Dynamic, 1> bV;
 
-  Eigen::Matrix<T, 1, Eigen::Dynamic> bQ; // = 0
+  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> bQ;
 
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> AA;
   Eigen::Matrix<T, Eigen::Dynamic, 1> ff;
@@ -64,9 +65,11 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
   s.bV = femib::util::triplets2dense(femib::util::build_edges<T, d, d>(s.V, b),
                                      s.V.nodes.P.size(), 1);
 
-  s.bQ = femib::util::triplets2dense(
-      femib::util::build_zero_mean_edges<T, d>(s.Q, rule), 1,
-      s.Q.nodes.P.size());
+  s.bQ = femib::util::build_zero_mean_edges<T, d>(s.Q, rule);
+
+  std::cout << s.B << std::endl;
+  std::cout << s.bQ << std::endl;
+  std::cout << s.B * s.bQ << std::endl;
 
   s.AA = Eigen::ArrayXXf::Zero(s.V.nodes.P.size() + s.Q.nodes.P.size(),
                                s.V.nodes.P.size() + s.Q.nodes.P.size());

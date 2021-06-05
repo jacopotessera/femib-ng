@@ -121,7 +121,7 @@ build_edges(const femib::finite_element_space::finite_element_space<T, d, e> &s,
 }
 
 template <typename T, int d>
-std::vector<Eigen::Triplet<T>> build_zero_mean_edges(
+Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> build_zero_mean_edges(
     const femib::finite_element_space::finite_element_space<T, d, 1> &v,
     const femib::gauss::rule<T, d> &rule) {
   std::vector<Eigen::Triplet<T>> B;
@@ -138,10 +138,18 @@ std::vector<Eigen::Triplet<T>> build_zero_mean_edges(
     }
   }
 
-  // for (int i : s.nodes.E) {
-  //  B.push_back(Eigen::Triplet<T>(i, 0, b(s.nodes.P[i])));
-  //}
-  return B;
+  Eigen::Matrix<T, 1, Eigen::Dynamic> BB =
+      femib::util::triplets2dense<T>(B, 1, v.nodes.P.size());
+
+  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> BBB =
+      Eigen::ArrayXXf::Zero(v.nodes.P.size(), v.nodes.P.size());
+
+  T b1 = BB(0);
+  BBB(0, 0) = -1;
+  for (int i = 1; i < BB.cols(); ++i) {
+    BBB(0, i) = BB(i) / b1;
+  }
+  return BBB;
 }
 
 template <typename T, int d, int e>

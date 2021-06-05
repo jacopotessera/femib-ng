@@ -45,8 +45,8 @@ int main() {
   std::cout << stokes.AA << std::endl;
   std::cout << stokes.ff << std::endl;
   // std::cout << stokes.B.transpose() << std::endl;
-  // std::cout << stokes.bV << std::endl;
-  // std::cout << stokes.bQ << std::endl;
+  std::cout << stokes.bV << std::endl;
+  std::cout << stokes.bQ << std::endl;
 
   // Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
   //    femib::poisson::solve<float, 2, 1>(poisson);
