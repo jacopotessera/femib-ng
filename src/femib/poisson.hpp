@@ -42,9 +42,7 @@ std::function<T(femib::types::dvec<T, d>)> ddot(femib::types::F<T, d, e> a,
 template <typename T, int d, int e>
 std::function<T(femib::types::dvec<T, d>)>
 external_force(femib::types::F<T, d, e> a) {
-  return [a](femib::types::dvec<T, d> x) {
-    return -400 * x(0) * x(1) * a.x(x)[0] + 10 * a.x(x)[1];
-  };
+  return [a](femib::types::dvec<T, d> x) { return a.x(x)[0] + a.x(x)[1]; };
 }
 
 template <typename T>
@@ -56,15 +54,6 @@ remove_edges(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM,
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> ss =
       dM(Eigen::all, Eigen::all) * dB(Eigen::all, Eigen::all);
-  Eigen::Matrix<T, Eigen::Dynamic, 1> mf;
-  mf.resize(rows, 1);
-  for (int i = 0; i < rows; i++) {
-    auto k = std::find(not_edges.begin(), not_edges.end(), i);
-    mf(i, 0) = 0.0;
-    if (k != not_edges.end()) {
-      mf(i, 0) = ss(k - not_edges.begin(), 0);
-    }
-  }
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> bbb = (dF - ss)(not_edges, 0);
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> AAA =
@@ -131,7 +120,7 @@ void init(poisson<T, d, e> &s, const femib::gauss::rule<T, d> &rule) {
   std::vector<Eigen::Triplet<T>> F = result.F;
 
   std::function<T(femib::types::dvec<T, d>)> b =
-      [](const femib::types::dvec<T, d> &x) { return 10 * x(0) * x(1) * x(1); };
+      [](const femib::types::dvec<T, d> &x) { return 0; };
 
   std::vector<Eigen::Triplet<T>> B = femib::util::build_edges<T, d, e>(s.V, b);
 
