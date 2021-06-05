@@ -33,6 +33,9 @@ finite_element<T, d, e> create_finite_element_P1_2d2d() {
       }
     }
     nodes.E = mesh.E;
+    for (int i = 0; i < mesh.E.size(); ++i) {
+      nodes.E.push_back(mesh.E[i] + size_P);
+    }
     return nodes;
   };
 
