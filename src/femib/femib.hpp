@@ -108,5 +108,28 @@ std::vector<Eigen::Triplet<T>> build_non_diagonal(
   return BB;
 }
 
+template <typename T, int d, int e>
+std::vector<Eigen::Triplet<T>>
+build_edges(femib::finite_element_space::finite_element_space<T, d, e> s,
+            std::function<T(femib::types::dvec<T, d>)> b) {
+  std::vector<Eigen::Triplet<T>> B;
+  for (int i : s.nodes.E) {
+    B.push_back(Eigen::Triplet<T>(i, 0, b(s.nodes.P[i])));
+  }
+  return B;
+}
+
+template <typename T, int d, int e>
+std::vector<int>
+build_not_edges(femib::finite_element_space::finite_element_space<T, d, e> s) {
+  std::vector<int> not_edges;
+  for (int i = 0; i < s.nodes.P.size(); i++) {
+    if (std::find(s.nodes.E.begin(), s.nodes.E.end(), i) == s.nodes.E.end()) {
+      not_edges.push_back(i);
+    }
+  }
+  return not_edges;
+}
+
 } // namespace femib::util
 #endif

@@ -47,29 +47,6 @@ external_force(femib::types::F<T, d, e> a) {
   };
 }
 
-template <typename T, int d, int e>
-std::vector<Eigen::Triplet<T>>
-build_edges(femib::finite_element_space::finite_element_space<T, d, e> s,
-            std::function<T(femib::types::dvec<T, d>)> b) {
-  std::vector<Eigen::Triplet<T>> B;
-  for (int i : s.nodes.E) {
-    B.push_back(Eigen::Triplet<T>(i, 0, b(s.nodes.P[i])));
-  }
-  return B;
-}
-
-template <typename T, int d, int e>
-std::vector<int>
-build_not_edges(femib::finite_element_space::finite_element_space<T, d, e> s) {
-  std::vector<int> not_edges;
-  for (int i = 0; i < s.nodes.P.size(); i++) {
-    if (std::find(s.nodes.E.begin(), s.nodes.E.end(), i) == s.nodes.E.end()) {
-      not_edges.push_back(i);
-    }
-  }
-  return not_edges;
-}
-
 template <typename T>
 femib::util::solvable_equations<T>
 remove_edges(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM,
@@ -156,9 +133,9 @@ void init(poisson<T, d, e> &s, const femib::gauss::rule<T, d> &rule) {
   std::function<T(femib::types::dvec<T, d>)> b =
       [](const femib::types::dvec<T, d> &x) { return 10 * x(0) * x(1) * x(1); };
 
-  std::vector<Eigen::Triplet<T>> B = build_edges<T, d, e>(s.V, b);
+  std::vector<Eigen::Triplet<T>> B = femib::util::build_edges<T, d, e>(s.V, b);
 
-  std::vector<int> not_edges = build_not_edges<T, d, e>(s.V);
+  std::vector<int> not_edges = femib::util::build_not_edges<T, d, e>(s.V);
 
   s.dB = femib::util::triplets2dense<T>(B, s.V.nodes.P.size(), 1);
   s.dM =
@@ -169,7 +146,7 @@ void init(poisson<T, d, e> &s, const femib::gauss::rule<T, d> &rule) {
 template <typename T, int d, int e>
 Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const poisson<T, d, e> &poisson) {
 
-  std::vector<int> not_edges = build_not_edges<T, d, e>(poisson.V);
+  std::vector<int> not_edges = femib::util::build_not_edges<T, d, e>(poisson.V);
 
   femib::util::solvable_equations<T> solvable_equations = remove_edges<T>(
       poisson.dM, poisson.dF, poisson.dB, poisson.V.nodes.P.size(), not_edges);
