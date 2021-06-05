@@ -43,7 +43,7 @@ template <typename T, int d, int e>
 std::function<T(femib::types::dvec<T, d>)>
 external_force(femib::types::F<T, d, e> a) {
   return [a](femib::types::dvec<T, d> x) {
-    return -400 * x(0) * x(1) * a.x(x)[0];
+    return -400 * x(0) * x(1) * a.x(x)[0] + 10 * a.x(x)[1];
   };
 }
 
@@ -85,28 +85,11 @@ build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
   for (int n = 0; n < s.mesh.T.size(); ++n) {
     femib::types::dtrian<T, d> t = s.mesh[n];
     for (int i = 0; i < s.finite_element.base_functions.size(); ++i) {
-      femib::types::F<T, d, e> a;
-
-      a.x =
-          [&](const femib::types::dvec<T, d> &x) {
-            return (s.finite_element.base_functions[i].x(
-                femib::affine::affineBinv(t) *
-                (x - femib::affine::affineb(t))));
-          },
-      a.dx = [&](const femib::types::dvec<T, d> &x) {
-        return (femib::affine::affineBinv(t) *
-                s.finite_element.base_functions[i].dx(
-                    femib::affine::affineBinv(t) *
-                    (x - femib::affine::affineb(t))));
-      };
+      femib::types::F<T, d, e> a =
+          femib::util::base_function2real_function<T, d, e>(s, n, i);
       for (int j = 0; j < s.finite_element.base_functions.size(); ++j) {
-        femib::types::F<T, d, e> b;
-        b.dx = [&](const femib::types::dvec<T, d> &x) {
-          return (femib::affine::affineBinv(t) *
-                  s.finite_element.base_functions[j].dx(
-                      femib::affine::affineBinv(t) *
-                      (x - femib::affine::affineb(t))));
-        };
+        femib::types::F<T, d, e> b =
+            femib::util::base_function2real_function<T, d, e>(s, n, j);
         T m = femib::mesh::integrate<T, d>(rule, fff(a, b), t);
         MM.push_back(Eigen::Triplet<T>(s.nodes.get_index(i, n),
                                        s.nodes.get_index(j, n), m));
@@ -118,16 +101,12 @@ build_diagonal(femib::finite_element_space::finite_element_space<T, d, e> s,
   return {MM, FF};
 }
 
-template <typename T> struct AAAbbb {
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> AAA;
-  Eigen::Matrix<T, Eigen::Dynamic, 1> bbb;
-};
-
 template <typename T>
-AAAbbb<T> remove_edges(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM,
-                       Eigen::Matrix<T, Eigen::Dynamic, 1> dF,
-                       Eigen::Matrix<T, Eigen::Dynamic, 1> dB, int rows,
-                       std::vector<int> not_edges) {
+femib::util::solvable_equations<T>
+remove_edges(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM,
+             Eigen::Matrix<T, Eigen::Dynamic, 1> dF,
+             Eigen::Matrix<T, Eigen::Dynamic, 1> dB, int rows,
+             std::vector<int> not_edges) {
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> ss =
       dM(Eigen::all, Eigen::all) * dB(Eigen::all, Eigen::all);
@@ -222,13 +201,13 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const poisson<T, d, e> &poisson) {
 
   std::vector<int> not_edges = build_not_edges<T, d, e>(poisson.V);
 
-  AAAbbb<T> aaabbb = remove_edges<T>(poisson.dM, poisson.dF, poisson.dB,
-                                     poisson.V.nodes.P.size(), not_edges);
+  femib::util::solvable_equations<T> solvable_equations = remove_edges<T>(
+      poisson.dM, poisson.dF, poisson.dB, poisson.V.nodes.P.size(), not_edges);
 
-  Eigen::Matrix<T, Eigen::Dynamic, 1> xxx =
-      aaabbb.AAA.colPivHouseholderQr().solve(aaabbb.bbb);
+  Eigen::Matrix<T, Eigen::Dynamic, 1> x =
+      solvable_equations.A.colPivHouseholderQr().solve(solvable_equations.b);
 
-  return add_edges<T>(xxx, poisson.dB, poisson.V.nodes.P.size(), not_edges,
+  return add_edges<T>(x, poisson.dB, poisson.V.nodes.P.size(), not_edges,
                       poisson.V.nodes.E);
 }
 

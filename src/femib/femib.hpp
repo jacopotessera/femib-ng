@@ -47,5 +47,10 @@ template <typename T> struct build_diagonal_result {
   std::vector<Eigen::Triplet<T>> F;
 };
 
+template <typename T> struct solvable_equations {
+  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> A;
+  Eigen::Matrix<T, Eigen::Dynamic, 1> b;
+};
+
 } // namespace femib::util
 #endif
