@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include <iostream>
 #include <vector>
 
 #include "../affine/affine.hpp"
