@@ -9,8 +9,7 @@ namespace femib::finite_element {
 
 template <typename T, int d>
 dvec<T, d> find_center_of(const femib::types::mesh<T, d> &mesh, int n) {
-  dvec<T, d> c;
-  // c.size = mesh.P[0].size;
+  dvec<T, d> c = {0.0, 0.0};
   double k = 1.0 / mesh.T[n].size();
   for (int j = 0; j < mesh.T[n].size(); ++j) {
     c = c + k * mesh.P[mesh.T[n](j)];

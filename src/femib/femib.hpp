@@ -3,13 +3,13 @@
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-#include <iostream>
 #include <vector>
 
 #include "../affine/affine.hpp"
 #include "../finite_element_space/finite_element_space.hpp"
 #include "../gauss/gauss.hpp"
 #include "../mesh/mesh.hpp"
+#include "../types/differential_operation.hpp"
 #include "../types/types.hpp"
 
 namespace femib::util {
@@ -110,12 +110,36 @@ std::vector<Eigen::Triplet<T>> build_non_diagonal(
 
 template <typename T, int d, int e>
 std::vector<Eigen::Triplet<T>>
-build_edges(femib::finite_element_space::finite_element_space<T, d, e> s,
-            std::function<T(femib::types::dvec<T, d>)> b) {
+build_edges(const femib::finite_element_space::finite_element_space<T, d, e> &s,
+            const std::function<T(femib::types::dvec<T, d>)> &b) {
   std::vector<Eigen::Triplet<T>> B;
   for (int i : s.nodes.E) {
     B.push_back(Eigen::Triplet<T>(i, 0, b(s.nodes.P[i])));
   }
+  return B;
+}
+
+template <typename T, int d>
+std::vector<Eigen::Triplet<T>> build_zero_mean_edges(
+    const femib::finite_element_space::finite_element_space<T, d, 1> &v,
+    const femib::gauss::rule<T, d> &rule) {
+  std::vector<Eigen::Triplet<T>> B;
+  for (int n = 0; n < v.mesh.T.size(); ++n) {
+    femib::types::dtrian<T, d> t = v.mesh[n];
+    for (int i = 0; i < v.finite_element.base_functions.size(); ++i) {
+      femib::types::F<T, d, 1> a =
+          femib::util::base_function2real_function<T, d, 1>(v, n, i);
+
+      auto g = [&](const femib::types::dvec<T, d> &x) { return a.x(x)(0); };
+
+      T m = femib::mesh::integrate<T, d>(rule, g, t);
+      B.push_back(Eigen::Triplet<T>(0, v.nodes.get_index(i, n), m));
+    }
+  }
+
+  // for (int i : s.nodes.E) {
+  //  B.push_back(Eigen::Triplet<T>(i, 0, b(s.nodes.P[i])));
+  //}
   return B;
 }
 

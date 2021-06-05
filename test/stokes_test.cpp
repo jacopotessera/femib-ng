@@ -44,6 +44,7 @@ int main() {
 
   std::cout << stokes.A << std::endl;
   std::cout << stokes.B << std::endl;
+  std::cout << stokes.bQ << std::endl;
 
   // Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
   //    femib::poisson::solve<float, 2, 1>(poisson);

@@ -19,6 +19,8 @@ template <typename T, int d> struct stokes {
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> B;
   Eigen::Matrix<T, Eigen::Dynamic, 1> f;
   Eigen::Matrix<T, Eigen::Dynamic, 1> b;
+
+  Eigen::Matrix<T, 1, Eigen::Dynamic> bQ;
 };
 
 template <typename T, int d>
@@ -54,6 +56,10 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
   s.B = femib::util::triplets2dense(
       femib::util::build_non_diagonal<T, d>(s.V, s.Q, rule, stokes_b<T, d>),
       s.V.nodes.P.size(), s.Q.nodes.P.size());
+
+  s.bQ = femib::util::triplets2dense(
+      femib::util::build_zero_mean_edges<T, d>(s.Q, rule), 1,
+      s.Q.nodes.P.size());
 }
 
 } // namespace femib::stokes

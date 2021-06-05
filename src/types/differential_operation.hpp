@@ -1,3 +1,6 @@
+#ifndef DIFFERENTIAL_OPERATION_HPP_INCLUDED_
+#define DIFFERENTIAL_OPERATION_HPP_INCLUDED_
+
 #include "types.hpp"
 
 template <typename T, int d>
@@ -14,9 +17,9 @@ div(const femib::types::F<T, d, d> &a) {
   return [&](const femib::types::dvec<T, d> &x) { return a.dx(x).trace(); };
 }
 
-template <typename T, int d>
+template <typename T, int d, int e>
 std::function<T(femib::types::dvec<T, d>)> project(
-    const std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)> &a,
+    const std::function<femib::types::dvec<T, e>(femib::types::dvec<T, d>)> &a,
     int i) {
   return ([&](const femib::types::dvec<T, d> &x) { return a(x)(i); });
 }
@@ -43,3 +46,5 @@ dpi(const femib::types::F<T, d, d> &a, const femib::types::F<T, d, d> &b) {
     return dpi(symm(a)(x), symm(b)(x));
   });
 }
+
+#endif
