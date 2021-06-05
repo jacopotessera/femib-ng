@@ -44,29 +44,6 @@ external_force(femib::types::F<T, d, d> a) {
 }
 
 template <typename T, int d>
-std::vector<Eigen::Triplet<T>> build_non_diagonal(
-    const femib::finite_element_space::finite_element_space<T, d, d> &v,
-    const femib::finite_element_space::finite_element_space<T, d, 1> &q,
-    const femib::gauss::rule<T, d> &rule) {
-  std::vector<Eigen::Triplet<T>> BB;
-  for (int n = 0; n < v.mesh.T.size(); ++n) {
-    femib::types::dtrian<T, d> t = v.mesh[n];
-    for (int i = 0; i < v.finite_element.base_functions.size(); ++i) {
-      femib::types::F<T, d, d> a =
-          femib::util::base_function2real_function<T, d, d>(v, n, i);
-      for (int j = 0; j < q.finite_element.base_functions.size(); ++j) {
-        femib::types::F<T, d, 1> b =
-            femib::util::base_function2real_function<T, d, 1>(q, n, j);
-        T m = femib::mesh::integrate<T, d>(rule, stokes_b(a, b), t);
-        BB.push_back(Eigen::Triplet<T>(v.nodes.get_index(i, n),
-                                       q.nodes.get_index(j, n), m));
-      }
-    }
-  }
-  return BB;
-}
-
-template <typename T, int d>
 void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 
   femib::util::build_diagonal_result<T> result =
@@ -74,8 +51,9 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
                                            external_force<T, d>);
   s.A = femib::util::triplets2dense(result.M, s.V.nodes.P.size(),
                                     s.V.nodes.P.size());
-  s.B = femib::util::triplets2dense(build_non_diagonal(s.V, s.Q, rule),
-                                    s.V.nodes.P.size(), s.Q.nodes.P.size());
+  s.B = femib::util::triplets2dense(
+      femib::util::build_non_diagonal<T, d>(s.V, s.Q, rule, stokes_b<T, d>),
+      s.V.nodes.P.size(), s.Q.nodes.P.size());
 }
 
 } // namespace femib::stokes

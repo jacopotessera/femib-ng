@@ -58,12 +58,10 @@ template <typename T, int d, int e>
 build_diagonal_result<T> build_diagonal(
     const femib::finite_element_space::finite_element_space<T, d, e> &v,
     const femib::gauss::rule<T, d> &rule,
-    std::function<std::function<T(femib::types::dvec<T, d>)>(
-        femib::types::F<T, d, e>, femib::types::F<T, d, e>)>
-        fff,
-    std::function<
-        std::function<T(femib::types::dvec<T, d>)>(femib::types::F<T, d, e>)>
-        ggg) {
+    const std::function<std::function<T(femib::types::dvec<T, d>)>(
+        femib::types::F<T, d, e>, femib::types::F<T, d, e>)> &fff,
+    const std::function<std::function<T(femib::types::dvec<T, d>)>(
+        femib::types::F<T, d, e>)> &ggg) {
   std::vector<Eigen::Triplet<T>> BB;
   std::vector<Eigen::Triplet<T>> FF;
   for (int n = 0; n < v.mesh.T.size(); ++n) {
@@ -83,6 +81,31 @@ build_diagonal_result<T> build_diagonal(
     }
   }
   return {BB, FF};
+}
+
+template <typename T, int d>
+std::vector<Eigen::Triplet<T>> build_non_diagonal(
+    const femib::finite_element_space::finite_element_space<T, d, d> &v,
+    const femib::finite_element_space::finite_element_space<T, d, 1> &q,
+    const femib::gauss::rule<T, d> &rule,
+    const std::function<std::function<T(femib::types::dvec<T, d>)>(
+        femib::types::F<T, d, d>, femib::types::F<T, d, 1>)> &fff) {
+  std::vector<Eigen::Triplet<T>> BB;
+  for (int n = 0; n < v.mesh.T.size(); ++n) {
+    femib::types::dtrian<T, d> t = v.mesh[n];
+    for (int i = 0; i < v.finite_element.base_functions.size(); ++i) {
+      femib::types::F<T, d, d> a =
+          femib::util::base_function2real_function<T, d, d>(v, n, i);
+      for (int j = 0; j < q.finite_element.base_functions.size(); ++j) {
+        femib::types::F<T, d, 1> b =
+            femib::util::base_function2real_function<T, d, 1>(q, n, j);
+        T m = femib::mesh::integrate<T, d>(rule, fff(a, b), t);
+        BB.push_back(Eigen::Triplet<T>(v.nodes.get_index(i, n),
+                                       q.nodes.get_index(j, n), m));
+      }
+    }
+  }
+  return BB;
 }
 
 } // namespace femib::util
