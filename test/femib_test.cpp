@@ -1,4 +1,5 @@
 #include "../src/affine/affine.hpp"
+#include "../src/femib/femib.hpp"
 #include "../src/femib/poisson.hpp"
 #include "../src/finite_element/P1_2d1d.hpp"
 #include "../src/finite_element_space/finite_element_space.hpp"
@@ -35,5 +36,5 @@ int main() {
       femib::poisson::solve<float, 2, 1>(poisson);
 
   std::for_each(s.nodes.T.begin(), s.nodes.T.end(),
-                femib::poisson::print_node_generator<float, 2, 1>(s, xx));
+                femib::util::print_node_generator<float, 2, 1>(s, xx));
 }
