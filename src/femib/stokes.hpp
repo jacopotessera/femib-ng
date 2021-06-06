@@ -73,7 +73,8 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> add_edges(
 
     Eigen::Matrix<T, Eigen::Dynamic, 1> xxx,
     Eigen::Matrix<T, Eigen::Dynamic, 1> bV, int rowsV, int rowsQ,
-    std::vector<int> not_edges, std::vector<int> nodesE) {
+    std::vector<int> not_edges, std::vector<int> nodesE,
+    Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> bQ) {
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx;
   xx.resize(rowsV + rowsQ, 1);
@@ -90,10 +91,14 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> add_edges(
     }
   }
 
+  Eigen::Matrix<T, Eigen::Dynamic, 1> ppp = xxx.bottomRows(rowsQ - 1);
+
+  Eigen::Matrix<T, 1, Eigen::Dynamic> PPP = bQ.block(0, 1, 1, rowsQ - 1);
+
   for (int i = rowsV; i < rowsV + rowsQ; i++) {
     xx(i, 0) = 0.0;
     if (i == rowsV) {
-      xx(i, 0) = 0.0;
+      xx(i, 0) = PPP * ppp;
     } else {
       auto k = std::find(not_edges.begin(), not_edges.end(), i);
       xx(i, 0) = xxx(k - not_edges.begin(), 0);
@@ -165,9 +170,9 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &stokes) {
     not_edges.push_back(stokes.V.nodes.P.size() + i);
   }
 
-  Eigen::Matrix<T, Eigen::Dynamic, 1> xx =
-      add_edges<T>(x, stokes.bV, stokes.V.nodes.P.size(),
-                   stokes.Q.nodes.P.size(), not_edges, stokes.V.nodes.E);
+  Eigen::Matrix<T, Eigen::Dynamic, 1> xx = add_edges<T>(
+      x, stokes.bV, stokes.V.nodes.P.size(), stokes.Q.nodes.P.size(), not_edges,
+      stokes.V.nodes.E, stokes.bQ);
 
   return xx;
 }
