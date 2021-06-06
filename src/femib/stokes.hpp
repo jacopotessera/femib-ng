@@ -146,9 +146,9 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
             s.Q.nodes.P.size()) = s.bQ;
 
   std::vector<int> not_edges = femib::util::build_not_edges<T, d, d>(s.V);
-  not_edges.push_back(s.V.nodes.P.size() + 1); // first pressure
-  not_edges.push_back(s.V.nodes.P.size() + 2); // first pressure
-  not_edges.push_back(s.V.nodes.P.size() + 3); // first pressure
+  for (int i = 1; i < s.Q.nodes.P.size(); ++i) {
+    not_edges.push_back(s.V.nodes.P.size() + i);
+  }
 
   s.solvable_equations = remove_edges<T>(s.AA, s.ff, s.bV, bbQ, not_edges);
 }
@@ -161,9 +161,9 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &stokes) {
           stokes.solvable_equations.b);
 
   std::vector<int> not_edges = femib::util::build_not_edges<T, d, d>(stokes.V);
-  not_edges.push_back(stokes.V.nodes.P.size() + 1); // first pressure
-  not_edges.push_back(stokes.V.nodes.P.size() + 2); // first pressure
-  not_edges.push_back(stokes.V.nodes.P.size() + 3); // first pressure
+  for (int i = 1; i < stokes.Q.nodes.P.size(); ++i) {
+    not_edges.push_back(stokes.V.nodes.P.size() + i);
+  }
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx =
       add_edges<T>(x, stokes.bV, stokes.V.nodes.P.size(),
