@@ -118,6 +118,9 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const poisson<T, d, e> &poisson) {
   femib::util::solvable_equations<T> solvable_equations = remove_edges<T>(
       poisson.dM, poisson.dF, poisson.dB, poisson.V.nodes.P.size(), not_edges);
 
+  std::cerr << solvable_equations.A.rows() << " x "
+            << solvable_equations.A.cols() << std::endl;
+
   Eigen::Matrix<T, Eigen::Dynamic, 1> x =
       solvable_equations.A.colPivHouseholderQr().solve(solvable_equations.b);
 

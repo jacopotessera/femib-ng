@@ -161,6 +161,9 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 template <typename T, int d, int e>
 Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &stokes) {
 
+  std::cerr << stokes.solvable_equations.A.rows() << " x "
+            << stokes.solvable_equations.A.cols() << std::endl;
+
   Eigen::Matrix<T, Eigen::Dynamic, 1> x =
       stokes.solvable_equations.A.colPivHouseholderQr().solve(
           stokes.solvable_equations.b);

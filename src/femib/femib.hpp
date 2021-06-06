@@ -186,5 +186,50 @@ auto print_node_generator(
   };
 }
 
+template <typename T, int d, int e>
+auto print_node_generator_stokes(
+    femib::finite_element_space::finite_element_space<T, d, e> s,
+    Eigen::Matrix<T, Eigen::Dynamic, 1> xx) {
+
+  return [&s, &xx](std::vector<int> t) {
+    int j_0 = t[0];
+    int j_1 = t[1];
+    int j_2 = t[2];
+    int j_6 = t[6];
+    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t"
+              << xx(j_0) << std::endl;
+    std::cout << s.nodes.P[j_1](0) << "\t" << s.nodes.P[j_1](1) << "\t"
+              << xx(j_1) << std::endl;
+    std::cout << s.nodes.P[j_6](0) << "\t" << s.nodes.P[j_6](1) << "\t"
+              << xx(j_6) << std::endl;
+    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t"
+              << xx(j_0) << std::endl;
+    std::cout << std::endl;
+    std::cout << std::endl;
+
+    std::cout << s.nodes.P[j_1](0) << "\t" << s.nodes.P[j_1](1) << "\t"
+              << xx(j_1) << std::endl;
+    std::cout << s.nodes.P[j_2](0) << "\t" << s.nodes.P[j_2](1) << "\t"
+              << xx(j_2) << std::endl;
+    std::cout << s.nodes.P[j_6](0) << "\t" << s.nodes.P[j_6](1) << "\t"
+              << xx(j_6) << std::endl;
+    std::cout << s.nodes.P[j_1](0) << "\t" << s.nodes.P[j_1](1) << "\t"
+              << xx(j_1) << std::endl;
+    std::cout << std::endl;
+    std::cout << std::endl;
+
+    std::cout << s.nodes.P[j_2](0) << "\t" << s.nodes.P[j_2](1) << "\t"
+              << xx(j_2) << std::endl;
+    std::cout << s.nodes.P[j_6](0) << "\t" << s.nodes.P[j_6](1) << "\t"
+              << xx(j_6) << std::endl;
+    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t"
+              << xx(j_0) << std::endl;
+    std::cout << s.nodes.P[j_2](0) << "\t" << s.nodes.P[j_2](1) << "\t"
+              << xx(j_2) << std::endl;
+    std::cout << std::endl;
+    std::cout << std::endl;
+  };
+}
+
 } // namespace femib::util
 #endif

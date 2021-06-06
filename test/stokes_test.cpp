@@ -19,7 +19,7 @@ int main() {
       femib::gauss::create_gauss_2_2d<float, 2>();
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
-      mesh_dir + "p0.mat", mesh_dir + "t0.mat", mesh_dir + "e0.mat");
+      mesh_dir + "p3.mat", mesh_dir + "t3.mat", mesh_dir + "e3.mat");
   mesh.init();
 
   // V
@@ -42,17 +42,11 @@ int main() {
   stokes.Q = q;
   femib::stokes::init<float, 2>(stokes, rule);
 
+  std::cerr << "SOLVE..." << std::endl;
+
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::stokes::solve<float, 2, 1>(stokes);
-  //std::cout << xx << std::endl;
-  std::for_each(
-      v.nodes.T.begin(), v.nodes.T.end(),
-      femib::util::print_node_generator<float, 2, 2>(
-          v, xx.block(0, 0, (v.nodes.P.size() - 2 * v.nodes.T.size()) / 2, 1)));
-
-  std::for_each(
-      v.nodes.T.begin(), v.nodes.T.end(),
-      femib::util::print_node_generator<float, 2, 2>(
-          v, xx.block((v.nodes.P.size() - 2 * v.nodes.T.size()) / 2, 0,
-                      (v.nodes.P.size() - 2 * v.nodes.T.size()) / 2, 1)));
+  // std::cout << xx << std::endl;
+  std::for_each(v.nodes.T.begin(), v.nodes.T.end(),
+                femib::util::print_node_generator<float, 2, 2>(v, xx));
 }
