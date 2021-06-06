@@ -68,6 +68,41 @@ remove_edges(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM,
   return {AAA, bbb};
 }
 
+template <typename T>
+Eigen::Matrix<T, Eigen::Dynamic, 1> add_edges(
+
+    Eigen::Matrix<T, Eigen::Dynamic, 1> xxx,
+    Eigen::Matrix<T, Eigen::Dynamic, 1> bV, int rowsV, int rowsQ,
+    std::vector<int> not_edges, std::vector<int> nodesE) {
+
+  Eigen::Matrix<T, Eigen::Dynamic, 1> xx;
+  xx.resize(rowsV + rowsQ, 1);
+
+  for (int i = 0; i < rowsV; i++) {
+    xx(i, 0) = 0.0;
+    auto k = std::find(not_edges.begin(), not_edges.end(), i);
+    if (k != not_edges.end()) {
+      xx(i, 0) = xxx(k - not_edges.begin(), 0);
+    }
+    auto kk = std::find(nodesE.begin(), nodesE.end(), i);
+    if (kk != nodesE.end()) {
+      xx(i, 0) = bV(i, 0);
+    }
+  }
+
+  for (int i = rowsV; i < rowsV + rowsQ; i++) {
+    xx(i, 0) = 0.0;
+    if (i == rowsV) {
+      xx(i, 0) = 0.0;
+    } else {
+      auto k = std::find(not_edges.begin(), not_edges.end(), i);
+      xx(i, 0) = xxx(k - not_edges.begin(), 0);
+    }
+  }
+
+  return xx;
+}
+
 template <typename T, int d>
 void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 
@@ -125,7 +160,16 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &stokes) {
       stokes.solvable_equations.A.colPivHouseholderQr().solve(
           stokes.solvable_equations.b);
 
-  return x;
+  std::vector<int> not_edges = femib::util::build_not_edges<T, d, d>(stokes.V);
+  not_edges.push_back(stokes.V.nodes.P.size() + 1); // first pressure
+  not_edges.push_back(stokes.V.nodes.P.size() + 2); // first pressure
+  not_edges.push_back(stokes.V.nodes.P.size() + 3); // first pressure
+
+  Eigen::Matrix<T, Eigen::Dynamic, 1> xx =
+      add_edges<T>(x, stokes.bV, stokes.V.nodes.P.size(),
+                   stokes.Q.nodes.P.size(), not_edges, stokes.V.nodes.E);
+
+  return xx;
 }
 
 } // namespace femib::stokes
