@@ -42,16 +42,6 @@ int main() {
   stokes.Q = q;
   femib::stokes::init<float, 2>(stokes, rule);
 
-  // std::cout << stokes.AA << std::endl;
-  // std::cout << stokes.ff << std::endl;
-  // std::cout << stokes.B.transpose() << std::endl;
-  // std::cout << stokes.bV << std::endl;
-  // std::cout << stokes.bQ << std::endl;
-
-  // std::cout << stokes.solvable_equations.A << std::endl;
-
-  // std::cout << stokes.solvable_equations.b << std::endl;
-
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::stokes::solve<float, 2, 1>(stokes);
   std::cout << xx << std::endl;

@@ -98,7 +98,7 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> add_edges(
   for (int i = rowsV; i < rowsV + rowsQ; i++) {
     xx(i, 0) = 0.0;
     if (i == rowsV) {
-      xx(i, 0) = PPP * ppp;
+      xx(i, 0) = -PPP * ppp;
     } else {
       auto k = std::find(not_edges.begin(), not_edges.end(), i);
       xx(i, 0) = xxx(k - not_edges.begin(), 0);
