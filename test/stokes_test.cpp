@@ -1,7 +1,7 @@
 #include "../src/affine/affine.hpp"
 #include "../src/femib/stokes.hpp"
 #include "../src/finite_element/P0_2d1d.hpp"
-#include "../src/finite_element/P1_2d2d.hpp"
+#include "../src/finite_element/P1+B_2d2d.hpp"
 #include "../src/finite_element_space/finite_element_space.hpp"
 #include "../src/gauss/gauss.hpp"
 #include "../src/gauss/gauss_lagrange_2_2d.hpp"
@@ -24,7 +24,7 @@ int main() {
 
   // V
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
-      femib::finite_element::create_finite_element_P1_2d2d<float, 2, 2>();
+      femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
   femib::finite_element_space::finite_element_space<float, 2, 2> v = {f_p1_2d2d,
                                                                       mesh};
   v.nodes = f_p1_2d2d.build_nodes(mesh);
