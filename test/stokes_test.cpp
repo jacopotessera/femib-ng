@@ -44,7 +44,15 @@ int main() {
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::stokes::solve<float, 2, 1>(stokes);
-  std::cout << xx << std::endl;
-  // std::for_each(s.nodes.T.begin(), s.nodes.T.end(),
-  //              femib::poisson::print_node_generator<float, 2, 1>(s, xx));
+  //std::cout << xx << std::endl;
+  std::for_each(
+      v.nodes.T.begin(), v.nodes.T.end(),
+      femib::util::print_node_generator<float, 2, 2>(
+          v, xx.block(0, 0, (v.nodes.P.size() - 2 * v.nodes.T.size()) / 2, 1)));
+
+  std::for_each(
+      v.nodes.T.begin(), v.nodes.T.end(),
+      femib::util::print_node_generator<float, 2, 2>(
+          v, xx.block((v.nodes.P.size() - 2 * v.nodes.T.size()) / 2, 0,
+                      (v.nodes.P.size() - 2 * v.nodes.T.size()) / 2, 1)));
 }
