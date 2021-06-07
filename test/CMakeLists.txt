@@ -13,7 +13,7 @@ add_test (NAME affine_test COMMAND affine_test)
 include_directories (../src/cuda)
 add_executable (cuda_test cuda_test.cpp)
 target_compile_features (cuda_test PRIVATE cxx_std_17)
-target_link_libraries (cuda_test cuda doctest::doctest)
+target_link_libraries (cuda_test cuda Eigen3::Eigen doctest::doctest)
 add_test (NAME cuda_test COMMAND cuda_test)
 
 include_directories (../src/gauss)

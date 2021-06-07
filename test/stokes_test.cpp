@@ -46,6 +46,9 @@ int main() {
   std::cerr << box[0] << std::endl;
   std::cerr << box[1] << std::endl;
 
+  femib::types::box<float, 2> boxx =
+      femib::mesh::lin_spaced<float, 2>(box, 0.1);
+
   std::cerr << "SOLVE..." << std::endl;
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =

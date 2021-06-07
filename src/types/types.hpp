@@ -39,8 +39,8 @@ template <typename f, int d> struct mesh {
   std::vector<ditrian<d>> T;
   std::vector<int> E;
 
-  bool initialized = false;
   std::vector<dtrian<f, d>> N;
+  bool initialized = false;
 
   void init() {
     if (!initialized) {

@@ -67,5 +67,21 @@ femib::types::box<T, d> find_box(const femib::types::mesh<T, d> &m) {
   return box;
 }
 
+template <typename T, int d>
+femib::types::box<T, d> lin_spaced(const femib::types::box<T, d> &b, T delta) {
+  T x_min = b[0](0);
+  T x_max = b[1](0);
+  T y_min = b[0](1);
+  T y_max = b[1](1);
+  femib::types::box<T, d> box;
+  for (T x = x_min; x < x_max; x += delta) {
+    for (T y = y_min; y < y_max; y += delta) {
+      femib::types::dvec<T, d> w = {x, y};
+      box.emplace_back(w);
+    }
+  }
+  return box;
+}
+
 } // namespace femib::mesh
 #endif
