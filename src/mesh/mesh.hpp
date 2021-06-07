@@ -44,5 +44,28 @@ femib::types::mesh<T, d> read(const std::string &filename_p,
   return mesh;
 }
 
+template <typename T, int d>
+femib::types::box<T, d> find_box(const femib::types::mesh<T, d> &m) {
+  femib::types::box<T, d> box;
+  femib::types::dvec<T, d> b1 = m.P[0];
+  femib::types::dvec<T, d> b2 = m.P[0];
+  for (int n = 1; n < m.P.size(); ++n) {
+    femib::types::dvec<T, d> v = m.P[n];
+
+    if (b1(0) > v(0))
+      b1(0) = v(0);
+    if (b1(1) > v(1))
+      b1(1) = v(1);
+
+    if (b2(0) < v(0))
+      b2(0) = v(0);
+    if (b2(1) < v(1))
+      b2(1) = v(1);
+  }
+  box.emplace_back(b1);
+  box.emplace_back(b2);
+  return box;
+}
+
 } // namespace femib::mesh
 #endif

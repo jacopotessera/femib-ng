@@ -42,6 +42,10 @@ int main() {
   stokes.Q = q;
   femib::stokes::init<float, 2>(stokes, rule);
 
+  femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
+  std::cerr << box[0] << std::endl;
+  std::cerr << box[1] << std::endl;
+
   std::cerr << "SOLVE..." << std::endl;
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =

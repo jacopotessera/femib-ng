@@ -58,5 +58,7 @@ template <typename f, int d> struct mesh {
   inline dtrian<f, d> operator[](int i) const { return N[i]; }
 };
 
+template <typename f, int d> using box = std::vector<dvec<f, d>>;
+
 } // namespace femib::types
 #endif
