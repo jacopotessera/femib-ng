@@ -40,3 +40,19 @@ TEST_CASE("testing cuda in_triangle") {
   CHECK_FALSE(femib::cuda::in_triangle<float, 2>(P4, T));
   CHECK_FALSE(femib::cuda::in_triangle<float, 2>(P5, T));
 }
+
+TEST_CASE("testing cuda accurate") {
+  CHECK(femib::cuda::accurate<float, 2>(P1, T));
+  CHECK_FALSE(femib::cuda::accurate<float, 2>(P2, T));
+  CHECK(femib::cuda::accurate<float, 2>(P3, T));
+  CHECK_FALSE(femib::cuda::accurate<float, 2>(P4, T));
+  CHECK_FALSE(femib::cuda::accurate<float, 2>(P5, T));
+}
+
+TEST_CASE("testing cuda parallel_accurate") {
+  CHECK(femib::cuda::parallel_accurate<float, 2>(P1, T));
+  CHECK_FALSE(femib::cuda::parallel_accurate<float, 2>(P2, T));
+  CHECK(femib::cuda::parallel_accurate<float, 2>(P3, T));
+  CHECK_FALSE(femib::cuda::parallel_accurate<float, 2>(P4, T));
+  CHECK_FALSE(femib::cuda::parallel_accurate<float, 2>(P5, T));
+}

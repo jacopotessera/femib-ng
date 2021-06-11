@@ -1,8 +1,8 @@
 #include <iostream>
 
+#include "../affine/affine.hpp"
 #include "../mesh/mesh.hpp"
 #include "../types/types.hpp"
-#include "../affine/affine.hpp"
 #include "cuda.h"
 #include "mini-book.h"
 #include "spdlog/spdlog.h"
@@ -44,6 +44,14 @@ template <typename T> T *femib::cuda::copyToDevice(T x) {
   return X;
 }
 
+template <typename T> T *femib::cuda::copyVectorToDevice(std::vector<T> x) {
+  T *X;
+  HANDLE_ERROR(cudaMalloc((void **)&X, sizeof(T) * x.size()));
+  HANDLE_ERROR(
+      cudaMemcpy(X, x.data(), sizeof(T) * x.size(), cudaMemcpyHostToDevice));
+  return X;
+}
+
 template <typename T> T femib::cuda::copyToHost(T *X) {
   T x;
   HANDLE_ERROR(cudaMemcpy(&x, X, sizeof(T), cudaMemcpyDeviceToHost));
@@ -58,8 +66,7 @@ femib::cuda::in_box(const femib::types::dvec<f, d> &P,
   femib::types::box<f, d> box = femib::mesh::find_box<f, d>(mesh);
   bool e = true;
   for (int i = 0; e && i < P.size(); ++i) {
-    e = e && P(i) > (box[0](i) - sqrtf(EPSILON)) &&
-        P(i) < (box[1](i) + sqrtf(EPSILON));
+    e = e && P(i) > (box[0](i) - EPSILON) && P(i) < (box[1](i) + EPSILON);
   }
   return e;
 }
@@ -68,76 +75,104 @@ template <typename f, int d>
 __host__ __device__ bool
 femib::cuda::in_triangle(const femib::types::dvec<f, d> &P,
                          const femib::types::dtrian<f, d> &T) {
-
-  femib::types::dvec<f, d> b[2];
-  b[0] = T[1] - T[0];
-  b[1] = T[2] - T[0];
-  femib::types::dvec<f, d> p = P - T[0];
-  femib::types::dmat<f, d> M;
-  for (int i = 0; i < M.rows(); ++i) {
-    for (int j = 0; j < M.cols(); ++j) {
-      M(i, j) = b[j](i);
-    }
-  }
-
-  femib::types::dvec<f, d> x = M.inverse() * p;
-  return (x(0) >= 0) && (x(1) >= 0) && ((x(0) + x(1)) <= 1);
+  femib::types::dvec<f, d> x = femib::affine::affine_inv<f, d>(T, P);
+  return (x(0) >= 0) && (x(1) >= 0) && (x(0) + x(1) <= 1);
 }
 
-/*
-__host__ __device__ template <typename f, int d>
-bool accurate(const femib::types::dvec<f, d> &P,
-              const femib::types::dtrian<f, d> &T) {
-  bool N;
-  if (not in_box(P, T)) {
-    N = 0;
+template <typename f, int d>
+__host__ __device__ f distance_point_segment(
+    const femib::types::dvec<f, d> &P, const femib::types::dtrian<f, d> &T) {
+  femib::types::dvec<f, d> D = T[1] - T[0];
+  femib::types::dvec<f, d> E = P - T[0];
+  femib::types::dvec<f, d> F = P - T[0];
+  f P1P2 = (D.transpose() * D);
+  f PP = (E.transpose() * D);
+  f dd = PP / P1P2;
+  if (dd < 0) {
+    return (E.transpose() * E);
+  } else if (dd >= 0 && dd <= 1) {
+    return ((-E).transpose() * (-E)) - dd * dd * P1P2;
   } else {
-    if (in_triangle(P, T)) {
-      N = 1;
-    } else {
-      if (P.size == 1 && T.size == 2) {
-        if (false) {
-          N = 0;
-        } else if (distancePointPoint(P, T(0)) <= EPSILON) {
-          N = 1;
-        } else if (distancePointPoint(P, T(1)) <= EPSILON) {
-          N = 1;
-        } else {
-          N = 0;
-        }
-      } else if (P.size == 2 && T.size == 3) {
-        if (false) {
-          N = 0;
-        } else if (distancePointSegment(P, {T(0), T(1)}) <= EPSILON) {
-          N = 1;
-        } else if (distancePointSegment(P, {T(1), T(2)}) <= EPSILON) {
-          N = 1;
-        } else if (distancePointSegment(P, {T(2), T(0)}) <= EPSILON) {
-          N = 1;
-        } else {
-          N = 0;
-        }
-      } else if (P.size == 3 && T.size == 4) {
-        if (false) {
-          N = 0;
-        } else if (distancePointTriangle(P, {T(0), T(1), T(2)}) <= EPSILON) {
-          N = 1;
-        } else if (distancePointTriangle(P, {T(0), T(1), T(3)}) <= EPSILON) {
-          N = 1;
-        } else if (distancePointTriangle(P, {T(1), T(2), T(3)}) <= EPSILON) {
-          N = 1;
-        } else if (distancePointTriangle(P, {T(2), T(0), T(3)}) <= EPSILON) {
-          N = 1;
-        } else {
-          N = 0;
-        }
-      } else {
-        N = 0;
-      }
-    }
+    return F.transpose() * F;
   }
-  return N;
-}*/
+}
+
+template <typename f, int d>
+__host__ __device__ bool
+femib::cuda::accurate(const femib::types::dvec<f, d> &P,
+                      const femib::types::dtrian<f, d> &T) {
+  if (not femib::cuda::in_box(P, T)) {
+    return false;
+  }
+  if (femib::cuda::in_triangle(P, T)) {
+    return true;
+  }
+  if (false) {
+    return false;
+  } else if (distance_point_segment(P, {T[0], T[1]}) <= EPSILON) {
+    return true;
+  } else if (distance_point_segment(P, {T[1], T[2]}) <= EPSILON) {
+    return true;
+  } else if (distance_point_segment(P, {T[2], T[0]}) <= EPSILON) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template <typename f, int d_>
+__host__ __device__ bool
+femib::cuda::accurate(const femib::types::dvec<f, d_> &x,
+                      femib::types::dvec<f, d_> *t) {
+  f a = t[1](0) - t[0](0);
+  f b = t[2](0) - t[0](0);
+  f c = t[1](1) - t[0](1);
+  f d = t[2](1) - t[0](1);
+
+  f X = x(0) - t[0](0);
+  f Y = x(1) - t[0](1);
+
+  f det = 1 / (a * d - b * c);
+
+  f x_ = det * (d * X - b * Y);
+  f y_ = det * (-c * X + a * Y);
+
+  return (x_ >= 0) && (y_ >= 0) && (x_ + y_ <= 1);
+}
+
+template <typename f, int d>
+__global__ void parallel_accurate_kernel(femib::types::dvec<f, d> *T,
+                                         femib::types::dvec<f, d> *X, bool *N) {
+  int blockId = blockIdx.x;
+  int threadId = blockId * blockDim.x + threadIdx.x;
+
+  femib::types::dvec<f, d> t[3] = {T[threadId], T[threadId + 1],
+                                   T[threadId + 2]};
+  N[threadId] = femib::cuda::accurate(X[blockId], t);
+}
+
+template <typename f, int d>
+__host__ bool
+femib::cuda::parallel_accurate(const femib::types::dvec<f, d> &X,
+                               const femib::types::dtrian<f, d> &T) {
+  femib::types::dvec<f, d> *devT =
+      copyVectorToDevice<femib::types::dvec<f, d>>(T);
+  femib::types::dvec<f, d> *devX = copyToDevice<femib::types::dvec<f, d>>(X);
+  bool N = false;
+  bool *devN = copyToDevice(N);
+  parallel_accurate_kernel<f, d><<<1, 1>>>(devT, devX, devN);
+  bool NN = copyToHost(devN);
+  return NN;
+}
+
+template <typename f, int d>
+__host__ bool serial_accurate(femib::types::dtrian<f, d> T,
+                              femib::types::dvec<f, d> X) {
+
+  femib::types::dtrian<f, d> t = T;
+  femib::types::dvec<f, d> p = X;
+  return femib::cuda::accurate(p, t);
+}
 
 template double *femib::cuda::copyToDevice<double>(double x);
 template double femib::cuda::copyToHost<double>(double *x);
@@ -148,3 +183,9 @@ femib::cuda::in_box<float, 2>(const femib::types::dvec<float, 2> &P,
 template __host__ __device__ bool
 femib::cuda::in_triangle<float, 2>(const femib::types::dvec<float, 2> &P,
                                    const femib::types::dtrian<float, 2> &T);
+template __host__ __device__ bool
+femib::cuda::accurate<float, 2>(const femib::types::dvec<float, 2> &P,
+                                const femib::types::dtrian<float, 2> &T);
+template __host__ bool femib::cuda::parallel_accurate<float, 2>(
+    const femib::types::dvec<float, 2> &X,
+    const femib::types::dtrian<float, 2> &T);

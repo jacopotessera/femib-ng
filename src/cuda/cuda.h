@@ -12,6 +12,7 @@ int getHeapSize();
 void setStackSize(int stackSize);
 void setHeapSize(int heapSize);
 template <typename T> T *copyToDevice(T x);
+template <typename T> T *copyVectorToDevice(T x);
 template <typename T> T copyToHost(T *X);
 
 template <typename f, int d>
@@ -20,6 +21,16 @@ bool in_box(const femib::types::dvec<f, d> &P,
 template <typename f, int d>
 bool in_triangle(const femib::types::dvec<f, d> &P,
                  const femib::types::dtrian<f, d> &T);
+template <typename f, int d>
+bool accurate(const femib::types::dvec<f, d> &P,
+              const femib::types::dtrian<f, d> &T);
+template <typename f, int d>
+bool serial_accurate(femib::types::dvec<f, d> *P, femib::types::dtrian<f, d> T,
+                     femib::types::dvec<f, d> X);
+
+template <typename f, int d>
+bool parallel_accurate(const femib::types::dvec<f, d> &P,
+                       const femib::types::dtrian<f, d> &T);
 
 } // namespace femib::cuda
 
