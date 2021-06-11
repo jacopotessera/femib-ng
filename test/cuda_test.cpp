@@ -10,6 +10,9 @@ femib::types::dvec<float, 2> P3 = {0.0, 0.0};
 femib::types::dvec<float, 2> P4 = {-0.5, -0.5};
 femib::types::dvec<float, 2> P5 = {0.7, 0.7};
 
+femib::types::dtrian<float, 2> Ts[] = {T};
+femib::types::dvec<float, 2> Ps[] = {P1, P2, P3, P4, P5};
+
 TEST_CASE("testing cuda size") {
   femib::cuda::setStackSize(FEMIB_CUDA_STACK_SIZE);
   femib::cuda::setHeapSize(FEMIB_CUDA_HEAP_SIZE);
@@ -47,6 +50,16 @@ TEST_CASE("testing cuda accurate") {
   CHECK(femib::cuda::accurate<float, 2>(P3, T));
   CHECK_FALSE(femib::cuda::accurate<float, 2>(P4, T));
   CHECK_FALSE(femib::cuda::accurate<float, 2>(P5, T));
+}
+
+TEST_CASE("testing cuda serial_accurate") {
+  bool N[5];
+  femib::cuda::serial_accurate<float, 2>(Ps, 5, Ts, 1, N);
+  CHECK(N[0]);
+  CHECK_FALSE(N[1]);
+  CHECK(N[2]);
+  CHECK_FALSE(N[3]);
+  CHECK_FALSE(N[4]);
 }
 
 TEST_CASE("testing cuda parallel_accurate") {

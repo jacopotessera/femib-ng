@@ -174,6 +174,20 @@ __host__ bool serial_accurate(femib::types::dtrian<f, d> T,
   return femib::cuda::accurate(p, t);
 }
 
+template <typename f, int d>
+__host__ void femib::cuda::serial_accurate(femib::types::dvec<f, d> *X,
+                                           int size_X,
+                                           femib::types::dtrian<f, d> *T,
+                                           int size_T, bool *N) {
+  for (int i = 0; i < size_T; ++i) {
+    for (int j = 0; j < size_X; ++j) {
+      femib::types::dtrian<f, d> t = T[i];
+      femib::types::dvec<f, d> p = X[j];
+      N[i * size_T + j] = femib::cuda::accurate(p, t);
+    }
+  }
+}
+
 template double *femib::cuda::copyToDevice<double>(double x);
 template double femib::cuda::copyToHost<double>(double *x);
 
@@ -189,3 +203,7 @@ femib::cuda::accurate<float, 2>(const femib::types::dvec<float, 2> &P,
 template __host__ bool femib::cuda::parallel_accurate<float, 2>(
     const femib::types::dvec<float, 2> &X,
     const femib::types::dtrian<float, 2> &T);
+
+template __host__ void femib::cuda::serial_accurate<float, 2>(
+    femib::types::dvec<float, 2> *X, int size_X,
+    femib::types::dtrian<float, 2> *T, int size_T, bool *N);

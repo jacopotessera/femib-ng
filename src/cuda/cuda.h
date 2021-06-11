@@ -32,6 +32,10 @@ template <typename f, int d>
 bool parallel_accurate(const femib::types::dvec<f, d> &P,
                        const femib::types::dtrian<f, d> &T);
 
+template <typename f, int d>
+void serial_accurate(femib::types::dvec<f, d> *X, int size_X,
+                     femib::types::dtrian<f, d> *T, int size_T, bool *N);
+
 } // namespace femib::cuda
 
 #endif
