@@ -8,7 +8,6 @@
 #include "spdlog/spdlog.h"
 
 #include <cmath>
-
 #pragma diag_suppress 2527
 #pragma diag_suppress 2529
 #pragma diag_suppress 2651
@@ -165,14 +164,12 @@ __global__ void parallel_accurate_kernel(femib::types::dvec<f, d> *T,
 }
 
 template <typename f, int d>
-__global__ void parallel_accurate_kernel(femib::types::dtrian<f, d> *T,
+__global__ void parallel_accurate_kernel(femib::types::dtrian_<f, d> *T,
                                          femib::types::dvec<f, d> *X, bool *N) {
   int blockId = blockIdx.x;
   int threadId = blockId * blockDim.x + threadIdx.x;
-
-  // femib::types::dvec<f, d> t[3] = {T[threadId], T[threadId + 1],
-  //                                 T[threadId + 2]};
-  N[threadId] = true; // femib::cuda::accurate(X[blockId], t);
+  bool n = femib::cuda::accurate<f, d>(X[blockId], T[threadIdx.x]);
+  N[threadId] = n;
 }
 
 template <typename f, int d>
@@ -215,7 +212,7 @@ __host__ void femib::cuda::serial_accurate(femib::types::dvec<f, d> *X,
 template <typename f, int d>
 __host__ void femib::cuda::parallel_accurate(femib::types::dvec<f, d> *X,
                                              int size_X,
-                                             femib::types::dtrian<f, d> *T,
+                                             femib::types::dtrian_<f, d> *T,
                                              int size_T, bool *N) {
 
   parallel_accurate_kernel<f, d><<<size_X, size_T>>>(T, X, N);
@@ -242,7 +239,7 @@ template __host__ void femib::cuda::serial_accurate<float, 2>(
     femib::types::dtrian<float, 2> *T, int size_T, bool *N);
 template __host__ void femib::cuda::parallel_accurate<float, 2>(
     femib::types::dvec<float, 2> *X, int size_X,
-    femib::types::dtrian<float, 2> *T, int size_T, bool *N);
+    femib::types::dtrian_<float, 2> *T, int size_T, bool *N);
 
 template <typename T> T *femib::cuda::copyToDevice(T *x, int size) {
   T *X;
@@ -261,15 +258,16 @@ size) { T *X; HANDLE_ERROR(cudaMalloc((void **)&X, sizeof(T) * x.size()));
 
 template <typename T> T *femib::cuda::copyToHost(T *X, int size) {
   T *x;
-  HANDLE_ERROR(cudaMemcpy(&x, X, sizeof(T) * size, cudaMemcpyDeviceToHost));
+  x = (T *)malloc(sizeof(T) * size);
+  HANDLE_ERROR(cudaMemcpy(x, X, sizeof(T) * size, cudaMemcpyDeviceToHost));
   return x;
 }
 
 template femib::types::dvec<float, 2> *
 femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(
     femib::types::dvec<float, 2> *x, int size);
-template femib::types::dtrian<float, 2> *
-femib::cuda::copyToDevice<femib::types::dtrian<float, 2>>(
-    femib::types::dtrian<float, 2> *x, int size); // TODO
+template femib::types::dtrian_<float, 2> *
+femib::cuda::copyToDevice<femib::types::dtrian_<float, 2>>(
+    femib::types::dtrian_<float, 2> *x, int size);
 template bool *femib::cuda::copyToDevice<bool>(bool *x, int size);
 template bool *femib::cuda::copyToHost<bool>(bool *x, int size);
