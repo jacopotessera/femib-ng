@@ -63,9 +63,17 @@ TEST_CASE("testing cuda serial_accurate") {
 }
 
 TEST_CASE("testing cuda parallel_accurate") {
-  CHECK(femib::cuda::parallel_accurate<float, 2>(P1, T));
-  CHECK_FALSE(femib::cuda::parallel_accurate<float, 2>(P2, T));
-  CHECK(femib::cuda::parallel_accurate<float, 2>(P3, T));
-  CHECK_FALSE(femib::cuda::parallel_accurate<float, 2>(P4, T));
-  CHECK_FALSE(femib::cuda::parallel_accurate<float, 2>(P5, T));
+  bool N[5];
+  femib::types::dtrian<float, 2> *devT =
+      femib::cuda::copyToDevice<femib::types::dtrian<float, 2>>(Ts, 1);
+  femib::types::dvec<float, 2> *devX =
+      femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(Ps, 5);
+  bool *devN = femib::cuda::copyToDevice<bool>(N, 5);
+  femib::cuda::parallel_accurate<float, 2>(devX, 5, devT, 1, devN);
+  bool *NN = femib::cuda::copyToHost<bool>(devN, 5);
+  CHECK(N[0]);
+  CHECK_FALSE(N[1]);
+  CHECK(N[2]);
+  CHECK_FALSE(N[3]);
+  CHECK_FALSE(N[4]);
 }

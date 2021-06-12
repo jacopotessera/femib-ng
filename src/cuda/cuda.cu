@@ -9,6 +9,18 @@
 
 #include <cmath>
 
+#pragma diag_suppress 2527
+#pragma diag_suppress 2529
+#pragma diag_suppress 2651
+#pragma diag_suppress 2653
+#pragma diag_suppress 2668
+#pragma diag_suppress 2669
+#pragma diag_suppress 2670
+#pragma diag_suppress 2671
+#pragma diag_suppress 2735
+#pragma diag_suppress 2737
+#pragma diag_suppress 20014
+
 const float EPSILON = std::numeric_limits<float>::epsilon();
 
 void femib::cuda::printSize() {
@@ -58,6 +70,7 @@ template <typename T> T femib::cuda::copyToHost(T *X) {
   return x;
 }
 
+#pragma diag_suppress 522
 template <typename f, int d>
 __host__ __device__ bool
 femib::cuda::in_box(const femib::types::dvec<f, d> &P,
@@ -152,6 +165,17 @@ __global__ void parallel_accurate_kernel(femib::types::dvec<f, d> *T,
 }
 
 template <typename f, int d>
+__global__ void parallel_accurate_kernel(femib::types::dtrian<f, d> *T,
+                                         femib::types::dvec<f, d> *X, bool *N) {
+  int blockId = blockIdx.x;
+  int threadId = blockId * blockDim.x + threadIdx.x;
+
+  // femib::types::dvec<f, d> t[3] = {T[threadId], T[threadId + 1],
+  //                                 T[threadId + 2]};
+  N[threadId] = true; // femib::cuda::accurate(X[blockId], t);
+}
+
+template <typename f, int d>
 __host__ bool
 femib::cuda::parallel_accurate(const femib::types::dvec<f, d> &X,
                                const femib::types::dtrian<f, d> &T) {
@@ -188,6 +212,15 @@ __host__ void femib::cuda::serial_accurate(femib::types::dvec<f, d> *X,
   }
 }
 
+template <typename f, int d>
+__host__ void femib::cuda::parallel_accurate(femib::types::dvec<f, d> *X,
+                                             int size_X,
+                                             femib::types::dtrian<f, d> *T,
+                                             int size_T, bool *N) {
+
+  parallel_accurate_kernel<f, d><<<size_X, size_T>>>(T, X, N);
+}
+
 template double *femib::cuda::copyToDevice<double>(double x);
 template double femib::cuda::copyToHost<double>(double *x);
 
@@ -207,3 +240,36 @@ template __host__ bool femib::cuda::parallel_accurate<float, 2>(
 template __host__ void femib::cuda::serial_accurate<float, 2>(
     femib::types::dvec<float, 2> *X, int size_X,
     femib::types::dtrian<float, 2> *T, int size_T, bool *N);
+template __host__ void femib::cuda::parallel_accurate<float, 2>(
+    femib::types::dvec<float, 2> *X, int size_X,
+    femib::types::dtrian<float, 2> *T, int size_T, bool *N);
+
+template <typename T> T *femib::cuda::copyToDevice(T *x, int size) {
+  T *X;
+  HANDLE_ERROR(cudaMalloc((void **)&X, sizeof(T) * size));
+  HANDLE_ERROR(cudaMemcpy(X, x, sizeof(T) * size, cudaMemcpyHostToDevice));
+  return X;
+}
+
+/*
+template <typename T> T *femib::cuda::copyVectorToDevice(std::vector<T> x, int
+size) { T *X; HANDLE_ERROR(cudaMalloc((void **)&X, sizeof(T) * x.size()));
+  HANDLE_ERROR(
+      cudaMemcpy(X, x.data(), sizeof(T) * x.size(), cudaMemcpyHostToDevice));
+  return X;
+}*/
+
+template <typename T> T *femib::cuda::copyToHost(T *X, int size) {
+  T *x;
+  HANDLE_ERROR(cudaMemcpy(&x, X, sizeof(T) * size, cudaMemcpyDeviceToHost));
+  return x;
+}
+
+template femib::types::dvec<float, 2> *
+femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(
+    femib::types::dvec<float, 2> *x, int size);
+template femib::types::dtrian<float, 2> *
+femib::cuda::copyToDevice<femib::types::dtrian<float, 2>>(
+    femib::types::dtrian<float, 2> *x, int size); // TODO
+template bool *femib::cuda::copyToDevice<bool>(bool *x, int size);
+template bool *femib::cuda::copyToHost<bool>(bool *x, int size);
