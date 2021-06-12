@@ -45,8 +45,7 @@ template <typename T> T *femib::cuda::copyToDevice(T *x, int size) {
 }
 
 template <typename T> T *femib::cuda::copyToHost(T *X, int size) {
-  T *x;
-  x = (T *)malloc(sizeof(T) * size);
+  T *x = new T[size];
   HANDLE_ERROR(cudaMemcpy(x, X, sizeof(T) * size, cudaMemcpyDeviceToHost));
   return x;
 }

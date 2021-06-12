@@ -13,6 +13,7 @@ int getStackSize();
 int getHeapSize();
 void setStackSize(int stackSize);
 void setHeapSize(int heapSize);
+
 template <typename T> T *copyToDevice(T *x, int size);
 template <typename T> T *copyToHost(T *X, int size);
 
