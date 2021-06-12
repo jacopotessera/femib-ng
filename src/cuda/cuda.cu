@@ -50,6 +50,8 @@ template <typename T> T *femib::cuda::copyToHost(T *X, int size) {
   return x;
 }
 
+/******************************************************************************/
+
 template <typename f, int d>
 __host__ __device__ bool
 femib::cuda::in_box(const femib::types::dvec<f, d> &P,
@@ -131,6 +133,8 @@ femib::cuda::accurate(const femib::types::dvec<f, d_> &x,
 
   return (x_ >= 0) && (y_ >= 0) && (x_ + y_ <= 1);
 }
+
+/******************************************************************************/
 
 template <typename f, int d>
 __host__ void femib::cuda::serial_accurate(femib::types::dvec<f, d> *X,

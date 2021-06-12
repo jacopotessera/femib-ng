@@ -1,7 +1,10 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "../src/mesh/mesh.hpp"
 #include "../src/types/types.hpp"
 #include "cuda.h"
+#include "spdlog/spdlog.h"
 #include <doctest/doctest.h>
+#include <iostream>
 #include <vector>
 
 femib::types::dtrian<float, 2> T = {{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}};
@@ -74,20 +77,35 @@ TEST_CASE("testing cuda serial_accurate") {
 }
 
 TEST_CASE("testing cuda parallel_accurate") {
-  bool N[25];
+  std::string mesh_dir = MESH_DIR;
+  femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
+      mesh_dir + "p3.mat", mesh_dir + "t3.mat", mesh_dir + "e3.mat");
+  mesh.init();
+  femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
+  femib::types::box<float, 2> boxx =
+      femib::mesh::lin_spaced<float, 2>(box, 0.1);
 
-  std::vector<femib::types::dtrian<float, 2>> Tss_ = {T, T2, T3, T4, T5};
-  femib::types::dtrian_<float, 2> *Tss__ =
-      femib::types::vector_dtrian2pointer_dtrian_<float, 2>(Tss_);
+  spdlog::set_pattern("[%Y-%m-%dT%T] [%l] [%@@%!] %v");
+  SPDLOG_INFO("[boxx.size()] found to be {}", boxx.size());
+  SPDLOG_INFO("[mesh.N.size()] found to be {}", mesh.N.size());
+
+  bool N[boxx.size() * mesh.N.size()];
+
+  femib::types::dtrian_<float, 2> *T =
+      femib::types::vector_dtrian2pointer_dtrian_<float, 2>(mesh.N);
 
   femib::types::dtrian_<float, 2> *devT =
-      femib::cuda::copyToDevice<femib::types::dtrian_<float, 2>>(Tss__, 5);
+      femib::cuda::copyToDevice<femib::types::dtrian_<float, 2>>(T,
+                                                                 mesh.N.size());
   femib::types::dvec<float, 2> *devX =
-      femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(Ps, 5);
-  bool *devN = femib::cuda::copyToDevice<bool>(N, 25);
-  femib::cuda::parallel_accurate<float, 2>(devX, 5, devT, 5, devN);
+      femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(boxx.data(),
+                                                              boxx.size());
+  bool *devN = femib::cuda::copyToDevice<bool>(N, boxx.size() * mesh.N.size());
+  femib::cuda::parallel_accurate<float, 2>(devX, boxx.size(), devT,
+                                           mesh.N.size(), devN);
   bool *NN;
-  NN = femib::cuda::copyToHost<bool>(devN, 25);
+  NN = femib::cuda::copyToHost<bool>(devN, boxx.size() * mesh.N.size());
+
   CHECK(NN[0]);
   CHECK_FALSE(NN[1]);
   CHECK(NN[2]);
@@ -98,6 +116,6 @@ TEST_CASE("testing cuda parallel_accurate") {
   CHECK_FALSE(NN[24]);
   delete[] NN;
   NN = NULL;
-  delete[] Tss__;
-  Tss__ = NULL;
+  delete[] T;
+  T = NULL;
 }
