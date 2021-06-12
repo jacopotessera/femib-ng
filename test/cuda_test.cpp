@@ -6,7 +6,7 @@
 femib::types::dtrian<float, 2> T = {{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}};
 femib::types::dtrian<float, 2> T2 = {{1.0, 0.0}, {1.0, 0.0}, {0.0, -1.0}};
 femib::types::dtrian<float, 2> T3 = {{2.0, 0.0}, {-1.0, 0.0}, {0.0, 1.0}};
-femib::types::dtrian<float, 2> T4 = {{3.0, 0.0}, {1.0, 0.0}, {0.0, -1.0}};
+femib::types::dtrian<float, 2> T4 = {{3.0, 0.0}, {-2.0, 2.0}, {0.0, -1.0}};
 femib::types::dtrian<float, 2> T5 = {
     {-4.0, 0.0}, {-1.0, -20.0}, {-10.0, -11.0}};
 femib::types::dvec<float, 2> P1 = {0.5, 0.5};
@@ -83,21 +83,20 @@ TEST_CASE("testing cuda parallel_accurate") {
                                              {Tss[4][0], Tss[4][1], Tss[4][2]}};
 
   femib::types::dtrian_<float, 2> *devT =
-      femib::cuda::copyToDevice<femib::types::dtrian_<float, 2>>(
-          &Tss_, //&(Tss__[0]),
-          1);
+      femib::cuda::copyToDevice<femib::types::dtrian_<float, 2>>(&(Tss__[0]),
+                                                                 5);
   femib::types::dvec<float, 2> *devX =
       femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(Ps, 5);
-  bool *devN = femib::cuda::copyToDevice<bool>(N, 5);
-  femib::cuda::parallel_accurate<float, 2>(devX, 5, devT, 1, devN);
-  bool *NN = (bool *)malloc(sizeof(bool) * 5);
-  NN = femib::cuda::copyToHost<bool>(devN, 5);
+  bool *devN = femib::cuda::copyToDevice<bool>(N, 25);
+  femib::cuda::parallel_accurate<float, 2>(devX, 5, devT, 5, devN);
+  bool *NN = (bool *)malloc(sizeof(bool) * 25);
+  NN = femib::cuda::copyToHost<bool>(devN, 25);
   CHECK(NN[0]);
   CHECK_FALSE(NN[1]);
   CHECK(NN[2]);
   CHECK_FALSE(NN[3]);
   CHECK_FALSE(NN[4]);
   // ...
-  // CHECK(NN[23]);
-  // CHECK_FALSE(NN[24]);
+  CHECK(NN[23]);
+  CHECK_FALSE(NN[24]);
 }
