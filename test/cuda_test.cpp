@@ -79,11 +79,11 @@ TEST_CASE("testing cuda serial_accurate") {
 TEST_CASE("testing cuda parallel_accurate") {
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
-      mesh_dir + "p3.mat", mesh_dir + "t3.mat", mesh_dir + "e3.mat");
+      mesh_dir + "p0.mat", mesh_dir + "t0.mat", mesh_dir + "e0.mat");
   mesh.init();
   femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
   femib::types::box<float, 2> boxx =
-      femib::mesh::lin_spaced<float, 2>(box, 0.1);
+      femib::mesh::lin_spaced<float, 2>(box, 0.49);
 
   spdlog::set_pattern("[%Y-%m-%dT%T] [%l] [%@@%!] %v");
   SPDLOG_INFO("[boxx.size()] found to be {}", boxx.size());
@@ -106,16 +106,31 @@ TEST_CASE("testing cuda parallel_accurate") {
   bool *NN;
   NN = femib::cuda::copyToHost<bool>(devN, boxx.size() * mesh.N.size());
 
+  std::vector<int> NNN;
+
+  for (int i = 0; i < boxx.size(); ++i) {
+    for (int n = 0; n < mesh.N.size(); ++n) {
+      if (NN[i * mesh.N.size() + n]) {
+        NNN.push_back(n);
+        break;
+      }
+    }
+  }
   CHECK(NN[0]);
-  CHECK_FALSE(NN[1]);
-  CHECK(NN[2]);
-  CHECK_FALSE(NN[3]);
-  CHECK_FALSE(NN[4]);
-  // ...
-  CHECK(NN[23]);
-  CHECK_FALSE(NN[24]);
   delete[] NN;
   NN = NULL;
   delete[] T;
   T = NULL;
+  for (int i = 0; i < boxx.size(); ++i) {
+    SPDLOG_INFO("[({},{})] found to be in triangle {}", boxx[i](0), boxx[i](1),
+                NNN[i]);
+  }
+
+  // CHECK_FALSE(NN[1]);
+  // CHECK(NN[2]);
+  // CHECK_FALSE(NN[3]);
+  // CHECK_FALSE(NN[4]);
+  // ...
+  // CHECK(NN[23]);
+  // CHECK_FALSE(NN[24]);
 }

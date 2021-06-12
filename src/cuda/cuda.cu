@@ -141,11 +141,11 @@ __host__ void femib::cuda::serial_accurate(femib::types::dvec<f, d> *X,
                                            int size_X,
                                            femib::types::dtrian<f, d> *T,
                                            int size_T, bool *N) {
-  for (int i = 0; i < size_T; ++i) {
-    for (int j = 0; j < size_X; ++j) {
+  for (int j = 0; j < size_X; ++j) {
+    for (int i = 0; i < size_T; ++i) {
       femib::types::dtrian<f, d> t = T[i];
       femib::types::dvec<f, d> p = X[j];
-      N[i * size_T + j] = femib::cuda::accurate(p, t);
+      N[j * size_X + i] = femib::cuda::accurate(p, t);
     }
   }
 }
@@ -155,7 +155,10 @@ __global__ void parallel_accurate_kernel(femib::types::dtrian_<f, d> *T,
                                          femib::types::dvec<f, d> *X, bool *N) {
   int blockId = blockIdx.x;
   int threadId = blockId * blockDim.x + threadIdx.x;
-  bool n = femib::cuda::accurate<f, d>(X[blockId], T[threadIdx.x]);
+
+  // femib::types::dtrian_<f, d> t = T[blockId];
+  femib::types::dvec<f, d> p = X[blockId];
+  bool n = femib::cuda::accurate<f, d>(p, T[threadIdx.x]);
   N[threadId] = n;
 }
 
