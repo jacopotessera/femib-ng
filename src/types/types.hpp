@@ -61,5 +61,17 @@ template <typename f, int d> struct mesh {
 
 template <typename f, int d> using box = std::vector<dvec<f, d>>;
 
+template <typename f, int d>
+dtrian_<f, d> *
+vector_dtrian2pointer_dtrian_(const std::vector<dtrian<f, d>> &N) {
+  dtrian_<f, d> *p = new dtrian_<f, d>[N.size()];
+  for (int i = 0; i < N.size(); ++i) {
+    p[i][0] = N[i][0];
+    p[i][1] = N[i][1];
+    p[i][2] = N[i][2];
+  }
+  return p;
+}
+
 } // namespace femib::types
 #endif
