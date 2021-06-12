@@ -30,9 +30,9 @@ TEST_CASE("testing cuda size") {
 
 TEST_CASE("testing cuda copy") {
   double x = 10;
-  double *X = femib::cuda::copyToDevice<double>(x);
-  double y = femib::cuda::copyToHost<double>(X);
-  CHECK(x == y);
+  double *X = femib::cuda::copyToDevice<double>(&x, 1);
+  double *y = femib::cuda::copyToHost<double>(X, 1);
+  CHECK(x == *y);
 }
 
 TEST_CASE("testing cuda in_box") {
@@ -89,7 +89,7 @@ TEST_CASE("testing cuda parallel_accurate") {
       femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(Ps, 5);
   bool *devN = femib::cuda::copyToDevice<bool>(N, 25);
   femib::cuda::parallel_accurate<float, 2>(devX, 5, devT, 5, devN);
-  bool *NN = (bool *)malloc(sizeof(bool) * 25);
+  bool *NN; // = (bool *)malloc(sizeof(bool) * 25);
   NN = femib::cuda::copyToHost<bool>(devN, 25);
   CHECK(NN[0]);
   CHECK_FALSE(NN[1]);
@@ -99,4 +99,5 @@ TEST_CASE("testing cuda parallel_accurate") {
   // ...
   CHECK(NN[23]);
   CHECK_FALSE(NN[24]);
+  free(NN);
 }

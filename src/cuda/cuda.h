@@ -1,7 +1,7 @@
 #ifndef CUDA_H_INCLUDED_
 #define CUDA_H_INCLUDED_
 
-#pragma diag_suppress = 20011, 20040
+#pragma diag_suppress = 20011, 20014, 20040
 
 constexpr int FEMIB_CUDA_MAX_BLOCKS = 1024;
 constexpr int FEMIB_CUDA_STACK_SIZE = 12928;
@@ -13,12 +13,7 @@ int getStackSize();
 int getHeapSize();
 void setStackSize(int stackSize);
 void setHeapSize(int heapSize);
-template <typename T> T *copyToDevice(T x);
-template <typename T> T *copyVectorToDevice(T x);
-template <typename T> T copyToHost(T *X);
-
 template <typename T> T *copyToDevice(T *x, int size);
-template <typename T> T *copyVectorToDevice(T *x, int size);
 template <typename T> T *copyToHost(T *X, int size);
 
 template <typename f, int d>
@@ -30,14 +25,6 @@ bool in_triangle(const femib::types::dvec<f, d> &P,
 template <typename f, int d>
 bool accurate(const femib::types::dvec<f, d> &P,
               const femib::types::dtrian<f, d> &T);
-template <typename f, int d>
-bool serial_accurate(femib::types::dvec<f, d> *P, femib::types::dtrian<f, d> T,
-                     femib::types::dvec<f, d> X);
-
-template <typename f, int d>
-bool parallel_accurate(const femib::types::dvec<f, d> &P,
-                       const femib::types::dtrian<f, d> &T);
-
 template <typename f, int d>
 void serial_accurate(femib::types::dvec<f, d> *X, int size_X,
                      femib::types::dtrian<f, d> *T, int size_T, bool *N);
