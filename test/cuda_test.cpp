@@ -24,6 +24,12 @@ femib::types::dtrian<float, 2> Tss[] = {T, T2, T3, T4, T5};
 femib::types::dvec<float, 2> Ps[] = {P1, P2, P3, P4, P5};
 femib::types::dvec<float, 2> Pss[] = {P1};
 
+std::string mesh_dir = MESH_DIR;
+femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
+    mesh_dir + "p3.mat", mesh_dir + "t3.mat", mesh_dir + "e3.mat");
+femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
+float delta = 0.024;
+
 TEST_CASE("testing cuda size") {
   femib::cuda::setStackSize(FEMIB_CUDA_STACK_SIZE);
   femib::cuda::setHeapSize(FEMIB_CUDA_HEAP_SIZE);
@@ -64,14 +70,9 @@ TEST_CASE("testing cuda accurate") {
 }
 
 TEST_CASE("testing cuda serial_accurate") {
-
-  std::string mesh_dir = MESH_DIR;
-  femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
-      mesh_dir + "p0.mat", mesh_dir + "t0.mat", mesh_dir + "e0.mat");
   mesh.init();
-  femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
   femib::types::box<float, 2> boxx =
-      femib::mesh::lin_spaced<float, 2>(box, 0.49);
+      femib::mesh::lin_spaced<float, 2>(box, delta);
 
   bool N[boxx.size() * mesh.N.size()];
 
@@ -88,19 +89,20 @@ TEST_CASE("testing cuda serial_accurate") {
       }
     }
   }
-  CHECK(NNN[0] == 0);
-  CHECK(NNN[1] == 3);
-  CHECK(NNN[2] == 3);
+  // CHECK(NNN[0] == 0);
+  // CHECK(NNN[1] == 3);
+  // CHECK(NNN[2] == 3);
+
+  for (int i = 0; i < boxx.size(); ++i) {
+    CHECK(NNN[i] >= 0);
+    CHECK(NNN[i] < mesh.N.size());
+  }
 }
 
 TEST_CASE("testing cuda parallel_accurate") {
-  std::string mesh_dir = MESH_DIR;
-  femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
-      mesh_dir + "p0.mat", mesh_dir + "t0.mat", mesh_dir + "e0.mat");
   mesh.init();
-  femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
   femib::types::box<float, 2> boxx =
-      femib::mesh::lin_spaced<float, 2>(box, 0.49);
+      femib::mesh::lin_spaced<float, 2>(box, delta);
 
   bool N[boxx.size() * mesh.N.size()];
 
@@ -129,16 +131,22 @@ TEST_CASE("testing cuda parallel_accurate") {
       }
     }
   }
-  CHECK(NN[0]);
+  // CHECK(NN[0]);
   delete[] NN;
   NN = NULL;
   delete[] T;
   T = NULL;
   for (int i = 0; i < boxx.size(); ++i) {
-    SPDLOG_INFO("[({},{})] found to be in triangle {}", boxx[i](0), boxx[i](1),
-                NNN[i]);
+    // SPDLOG_INFO("[({},{})] found to be in triangle {}", boxx[i](0),
+    // boxx[i](1),
+    //           NNN[i]);
   }
-  CHECK(NNN[0] == 0);
-  CHECK(NNN[1] == 3);
-  CHECK(NNN[2] == 3);
+  // CHECK(NNN[0] == 0);
+  // CHECK(NNN[1] == 3);
+  // CHECK(NNN[2] == 3);
+
+  for (int i = 0; i < boxx.size(); ++i) {
+    CHECK(NNN[i] >= 0);
+    CHECK(NNN[i] < mesh.N.size());
+  }
 }
