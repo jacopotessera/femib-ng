@@ -145,7 +145,7 @@ __host__ void femib::cuda::serial_accurate(femib::types::dvec<f, d> *X,
     for (int i = 0; i < size_T; ++i) {
       femib::types::dtrian<f, d> t = T[i];
       femib::types::dvec<f, d> p = X[j];
-      N[j * size_X + i] = femib::cuda::accurate(p, t);
+      N[j * size_T + i] = femib::cuda::accurate(p, t);
     }
   }
 }

@@ -64,16 +64,33 @@ TEST_CASE("testing cuda accurate") {
 }
 
 TEST_CASE("testing cuda serial_accurate") {
-  bool N[25];
-  femib::cuda::serial_accurate<float, 2>(Ps, 5, Tss, 5, N);
-  CHECK(N[0]);
-  CHECK_FALSE(N[1]);
-  CHECK(N[2]);
-  CHECK_FALSE(N[3]);
-  CHECK_FALSE(N[4]);
-  // ...
-  CHECK(N[23]);
-  CHECK_FALSE(N[24]);
+
+  std::string mesh_dir = MESH_DIR;
+  femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
+      mesh_dir + "p0.mat", mesh_dir + "t0.mat", mesh_dir + "e0.mat");
+  mesh.init();
+  femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
+  femib::types::box<float, 2> boxx =
+      femib::mesh::lin_spaced<float, 2>(box, 0.49);
+
+  bool N[boxx.size() * mesh.N.size()];
+
+  femib::cuda::serial_accurate<float, 2>(boxx.data(), boxx.size(),
+                                         mesh.N.data(), mesh.N.size(), N);
+
+  std::vector<int> NNN;
+
+  for (int i = 0; i < boxx.size(); ++i) {
+    for (int n = 0; n < mesh.N.size(); ++n) {
+      if (N[i * mesh.N.size() + n]) {
+        NNN.push_back(n);
+        break;
+      }
+    }
+  }
+  CHECK(NNN[0] == 0);
+  CHECK(NNN[1] == 3);
+  CHECK(NNN[2] == 3);
 }
 
 TEST_CASE("testing cuda parallel_accurate") {
@@ -84,10 +101,6 @@ TEST_CASE("testing cuda parallel_accurate") {
   femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
   femib::types::box<float, 2> boxx =
       femib::mesh::lin_spaced<float, 2>(box, 0.49);
-
-  spdlog::set_pattern("[%Y-%m-%dT%T] [%l] [%@@%!] %v");
-  SPDLOG_INFO("[boxx.size()] found to be {}", boxx.size());
-  SPDLOG_INFO("[mesh.N.size()] found to be {}", mesh.N.size());
 
   bool N[boxx.size() * mesh.N.size()];
 
@@ -125,12 +138,7 @@ TEST_CASE("testing cuda parallel_accurate") {
     SPDLOG_INFO("[({},{})] found to be in triangle {}", boxx[i](0), boxx[i](1),
                 NNN[i]);
   }
-
-  // CHECK_FALSE(NN[1]);
-  // CHECK(NN[2]);
-  // CHECK_FALSE(NN[3]);
-  // CHECK_FALSE(NN[4]);
-  // ...
-  // CHECK(NN[23]);
-  // CHECK_FALSE(NN[24]);
+  CHECK(NNN[0] == 0);
+  CHECK(NNN[1] == 3);
+  CHECK(NNN[2] == 3);
 }
