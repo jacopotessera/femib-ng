@@ -16,11 +16,11 @@ static void parallel(benchmark::State &state) {
 
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
-      mesh_dir + "p5.mat", mesh_dir + "t5.mat", mesh_dir + "e5.mat");
+      mesh_dir + "p3.mat", mesh_dir + "t3.mat", mesh_dir + "e3.mat");
   mesh.init();
   femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
   femib::types::box<float, 2> boxx =
-      femib::mesh::lin_spaced<float, 2>(box, 0.05);
+      femib::mesh::lin_spaced<float, 2>(box, 0.019);
   bool N[boxx.size() * mesh.N.size()];
 
   femib::types::dtrian_<float, 2> *T =
@@ -64,11 +64,11 @@ static void serial(benchmark::State &state) {
 
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
-      mesh_dir + "p5.mat", mesh_dir + "t5.mat", mesh_dir + "e5.mat");
+      mesh_dir + "p3.mat", mesh_dir + "t3.mat", mesh_dir + "e3.mat");
   mesh.init();
   femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
   femib::types::box<float, 2> boxx =
-      femib::mesh::lin_spaced<float, 2>(box, 0.05);
+      femib::mesh::lin_spaced<float, 2>(box, 0.019);
 
   for (auto _ : state) {
 

@@ -18,7 +18,7 @@ prepare:
 	mkdir -p build
 
 cmake: clean prepare
-	cmake -H. -Bbuild -GNinja -DCMAKE_BUILD_TYPE=Debug
+	cmake -H. -Bbuild -GNinja -DCMAKE_BUILD_TYPE=Release
 
 format:
 	find ./ -type f -regextype egrep  -regex ".*\.(cpp|hpp|cu|h)"  -not -path "./build/*" | xargs clang-format -i
