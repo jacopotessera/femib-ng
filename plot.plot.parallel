@@ -1,0 +1,5 @@
+#set dgrid 20,20
+#set hidden3d
+set mouse
+splot 'parallel' w p palette; pause mouse keypress
+

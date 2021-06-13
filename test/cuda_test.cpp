@@ -28,7 +28,7 @@ std::string mesh_dir = MESH_DIR;
 femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
     mesh_dir + "p3.mat", mesh_dir + "t3.mat", mesh_dir + "e3.mat");
 femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
-float delta = 0.024;
+float delta = 0.019;
 
 TEST_CASE("testing cuda size") {
   femib::cuda::setStackSize(FEMIB_CUDA_STACK_SIZE);
@@ -148,5 +148,8 @@ TEST_CASE("testing cuda parallel_accurate") {
   for (int i = 0; i < boxx.size(); ++i) {
     CHECK(NNN[i] >= 0);
     CHECK(NNN[i] < mesh.N.size());
+
+    std::cerr << boxx[i](0) << "\t" << boxx[i](1) << "\t" << NNN[i]
+              << std::endl;
   }
 }

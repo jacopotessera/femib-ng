@@ -1,6 +1,7 @@
 #ifndef FEMIB_TYPES_HPP
 #define FEMIB_TYPES_HPP
 
+#include "spdlog/spdlog.h"
 #include <Eigen/Core>
 #include <vector>
 
