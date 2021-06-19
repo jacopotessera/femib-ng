@@ -46,7 +46,7 @@ template <typename T, typename W> std::vector<T> read(std::string filename) {
   std::string line;
   std::ifstream file(filename);
 
-  spdlog::debug("[read] filename: {}", filename);
+  SPDLOG_LOGGER_DEBUG("[read] filename: {}", filename);
   if (file.is_open()) {
     for (int i = 0; std::getline(file, line); ++i) {
       T t;

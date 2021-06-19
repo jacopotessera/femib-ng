@@ -16,7 +16,6 @@ template <typename T, int d>
 T integrate(const femib::gauss::rule<T, d> &rule,
             const std::function<T(femib::types::dvec<T, d>)> &f,
             const femib::types::dtrian<T, d> &t) {
-
   std::function<T(femib::types::dvec<T, d>)> g =
       [&t, &f](const femib::types::dvec<T, d> &x) {
         return femib::affine::affineBdet(t) * f(femib::affine::affine(t, x));
@@ -50,17 +49,8 @@ femib::types::box<T, d> find_box(const femib::types::mesh<T, d> &m) {
   femib::types::dvec<T, d> b1 = m.P[0];
   femib::types::dvec<T, d> b2 = m.P[0];
   for (int n = 1; n < m.P.size(); ++n) {
-    femib::types::dvec<T, d> v = m.P[n];
-
-    if (b1(0) > v(0))
-      b1(0) = v(0);
-    if (b1(1) > v(1))
-      b1(1) = v(1);
-
-    if (b2(0) < v(0))
-      b2(0) = v(0);
-    if (b2(1) < v(1))
-      b2(1) = v(1);
+    b1 = b1.array().min(m.P[n].array());
+    b2 = b2.array().max(m.P[n].array());
   }
   box.emplace_back(b1);
   box.emplace_back(b2);
