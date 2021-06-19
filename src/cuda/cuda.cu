@@ -12,7 +12,6 @@
 const float EPSILON = std::numeric_limits<float>::epsilon();
 
 void femib::cuda::printSize() {
-  spdlog::set_pattern("[%Y-%m-%dT%T] [%l] [%@@%!] %v");
   SPDLOG_INFO("[CUDA stack size] found to be {}", getStackSize());
   SPDLOG_INFO("[CUDA heap  size] found to be {}", getHeapSize());
 }
@@ -155,8 +154,6 @@ __global__ void parallel_accurate_kernel(femib::types::dtrian_<f, d> *T,
                                          femib::types::dvec<f, d> *X, bool *N) {
   int blockId = blockIdx.x;
   int threadId = blockId * blockDim.x + threadIdx.x;
-
-  // femib::types::dtrian_<f, d> t = T[blockId];
   femib::types::dvec<f, d> p = X[blockId];
   bool n = femib::cuda::accurate<f, d>(p, T[threadIdx.x]);
   N[threadId] = n;
@@ -167,7 +164,6 @@ __host__ void femib::cuda::parallel_accurate(femib::types::dvec<f, d> *X,
                                              int size_X,
                                              femib::types::dtrian_<f, d> *T,
                                              int size_T, bool *N) {
-
   parallel_accurate_kernel<f, d><<<size_X, size_T>>>(T, X, N);
 }
 
