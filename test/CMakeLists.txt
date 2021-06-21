@@ -58,7 +58,7 @@ target_link_libraries (femib_test read spdlog::spdlog Eigen3::Eigen TBB::tbb  do
 add_test (NAME femib_test COMMAND femib_test)
 
 include_directories (../src/femib)
-add_executable (stokes_test stokes_test.cpp)
+add_executable (stokes_test stokes_t_test.cpp)
 target_compile_definitions(stokes_test PRIVATE MESH_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../mesh/")
 target_compile_features (stokes_test PRIVATE cxx_std_17)
 target_link_libraries (stokes_test read spdlog::spdlog Eigen3::Eigen TBB::tbb  doctest::doctest)
