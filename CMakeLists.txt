@@ -39,3 +39,4 @@ add_subdirectory(bench)
 
 add_subdirectory(${SRC_DIR}/cuda)
 add_subdirectory(${SRC_DIR}/read)
+add_subdirectory(${SRC_DIR}/mongo)

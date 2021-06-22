@@ -3,7 +3,7 @@ find_package (doctest REQUIRED)
 find_package (TBB REQUIRED)
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
-add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test finite_element_test finite_element_space_test femib_test)
+add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test finite_element_test finite_element_space_test femib_test mongo_test)
 
 include_directories (../src/affine)
 add_executable (affine_test affine_test.cpp)
@@ -63,3 +63,9 @@ target_compile_definitions(stokes_test PRIVATE MESH_DIR="${CMAKE_CURRENT_SOURCE_
 target_compile_features (stokes_test PRIVATE cxx_std_17)
 target_link_libraries (stokes_test read spdlog::spdlog Eigen3::Eigen TBB::tbb  doctest::doctest)
 add_test (NAME stokes_test COMMAND stokes_test)
+
+include_directories (../src/mongo)
+add_executable (mongo_test mongo_test.cpp)
+target_compile_features (mongo_test PRIVATE cxx_std_17)
+target_link_libraries (mongo_test mongo doctest::doctest)
+add_test (NAME mongo_test COMMAND mongo_test)

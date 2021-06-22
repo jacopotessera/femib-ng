@@ -50,7 +50,7 @@ int main() {
       femib::mesh::lin_spaced<float, 2>(box, 0.1);
 
   std::cerr << "SOLVE..." << std::endl;
-  int TMAX = 1000;
+  int TMAX = 2;
   for (int t = 0; t < TMAX; t++) {
     femib::stokes_t::advance<float, 2>(stokes);
   }
