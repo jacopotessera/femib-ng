@@ -1,6 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../src/mongo/mongo.hpp"
 #include <doctest/doctest.h>
+#include <string>
 
 TEST_CASE("testing mongo") {
 
@@ -11,7 +12,11 @@ TEST_CASE("testing mongo") {
   std::vector<std::vector<std::vector<double>>> q;
   std::vector<std::vector<std::vector<double>>> x;
 
-  femib::mongo::plot_data p = {"12345", 4, u, q, x};
-  femib::mongo::save_plot_data("femib_test", p);
+  std::string dbname = "femib_test";
+  std::string id = "666";
+  int time = 0;
+  femib::mongo::save_sim(dbname, id);
+  femib::mongo::plot_data p = {id, time, u, q, x};
+  femib::mongo::save_plot_data(dbname, p);
   CHECK(true);
 }

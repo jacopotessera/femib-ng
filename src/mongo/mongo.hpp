@@ -15,6 +15,6 @@ struct plot_data {
 };
 
 void save_plot_data(std::string dbname, plot_data t);
-
+void save_sim(std::string dbname, std::string sim_name);
 } // namespace femib::mongo
 #endif

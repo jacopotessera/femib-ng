@@ -54,7 +54,7 @@ document plot_data2doc(const femib::mongo::plot_data &t) {
 void femib::mongo::save_plot_data(std::string dbname,
                                   femib::mongo::plot_data t) {
 
-  mongocxx::instance inst{};
+  // mongocxx::instance inst{};
   mongocxx::client conn{mongocxx::uri{}};
   auto plot_data_collection = conn[dbname]["plot_data"];
   if (plot_data_collection.count_documents(
@@ -64,5 +64,19 @@ void femib::mongo::save_plot_data(std::string dbname,
   } else {
     SPDLOG_ERROR("plot_data id = {}, time = {} already present in collection!",
                  t.id, t.time);
+  }
+}
+
+void femib::mongo::save_sim(std::string dbname, std::string sim_name) {
+
+  // mongocxx::instance inst{};
+  mongocxx::client conn{mongocxx::uri{}};
+  auto collection = conn[dbname]["sim"];
+  if (collection.count_documents(document{} << "id" << sim_name << finalize) ==
+      0) {
+    collection.insert_one(document{} << "id" << sim_name << finalize);
+    SPDLOG_INFO("Saved sim id = {}", sim_name);
+  } else {
+    SPDLOG_ERROR("sim id = {} already present in collection!", sim_name);
   }
 }
