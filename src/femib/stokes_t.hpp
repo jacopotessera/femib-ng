@@ -30,6 +30,7 @@ template <typename T, int d> struct stokes {
 
   T deltat = 0.1;
   std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1>> solution;
+  std::vector<std::vector<std::vector<std::vector<double>>>> plot;
 };
 
 template <typename T, int d>
@@ -196,6 +197,12 @@ template <typename T, int d> void advance(stokes<T, d> &s) {
 
   // TODO
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx = solve<T, d, 1>(s);
+
+  std::vector<std::vector<std::vector<double>>> uuu = {
+      {{0, 0}, {0, 0}},   {{0.5, 0}, {1, 1}},   {{1, 0}, {0, 0}},
+      {{0, 0.5}, {1, 1}}, {{0.5, 0.5}, {2, 2}}, {{1, 0.5}, {1, 1}},
+      {{0, 1}, {0, 0}},   {{0.5, 1}, {1, 1}},   {{1, 1}, {0, 0}}};
+  s.plot.emplace_back(uuu);
   s.solution.emplace_back(xx);
 }
 
