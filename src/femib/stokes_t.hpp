@@ -1,6 +1,7 @@
 #ifndef FEMIB_STOKES_HPP_INCLUDED_
 #define FEMIB_STOKES_HPP_INCLUDED_
 
+#include "../cuda/cuda.h"
 #include "../femib/femib.hpp"
 #include "../finite_element_space/finite_element_space.hpp"
 #include "../gauss/gauss.hpp"
@@ -30,7 +31,7 @@ template <typename T, int d> struct stokes {
 
   T deltat = 0.1;
   std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1>> solution;
-  std::vector<std::vector<std::vector<std::vector<double>>>> plot;
+  std::vector<std::vector<std::vector<std::vector<float>>>> plot;
 };
 
 template <typename T, int d>
@@ -198,10 +199,36 @@ template <typename T, int d> void advance(stokes<T, d> &s) {
   // TODO
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx = solve<T, d, 1>(s);
 
-  std::vector<std::vector<std::vector<double>>> uuu = {
-      {{0, 0}, {0, 0}},   {{0.5, 0}, {1, 1}},   {{1, 0}, {0, 0}},
-      {{0, 0.5}, {1, 1}}, {{0.5, 0.5}, {2, 2}}, {{1, 0.5}, {1, 1}},
-      {{0, 1}, {0, 0}},   {{0.5, 1}, {1, 1}},   {{1, 1}, {0, 0}}};
+  std::vector<std::vector<std::vector<float>>> uuu;
+
+  femib::types::mesh mesh = s.V.mesh;
+  femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
+
+  femib::types::box<float, 2> boxx =
+      femib::mesh::lin_spaced<float, 2>(box, 0.1);
+  bool N[boxx.size() * mesh.N.size()];
+
+  femib::cuda::serial_accurate<float, 2>(boxx.data(), boxx.size(),
+                                         mesh.N.data(), mesh.N.size(), N);
+
+  std::vector<int> NNN;
+
+  for (int i = 0; i < boxx.size(); ++i) {
+    for (int n = 0; n < mesh.N.size(); ++n) {
+      if (N[i * mesh.N.size() + n]) {
+        NNN.push_back(n);
+        break;
+      }
+    }
+  }
+
+  for (int i = 0; i < boxx.size(); ++i) {
+    femib::types::dvec<T, d> point = boxx[i];
+    mesh.N[NNN[i]];
+    std::vector<std::vector<float>> uuuu = {{point(0), point(1)}, {1.0, 1.0}};
+    uuu.emplace_back(uuuu);
+  }
+
   s.plot.emplace_back(uuu);
   s.solution.emplace_back(xx);
 }

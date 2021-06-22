@@ -5,12 +5,12 @@
 
 TEST_CASE("testing mongo") {
 
-  std::vector<std::vector<std::vector<double>>> u = {
+  std::vector<std::vector<std::vector<float>>> u = {
       {{0, 0}, {0, 0}},   {{0.5, 0}, {1, 1}},   {{1, 0}, {0, 0}},
       {{0, 0.5}, {1, 1}}, {{0.5, 0.5}, {2, 2}}, {{1, 0.5}, {1, 1}},
       {{0, 1}, {0, 0}},   {{0.5, 1}, {1, 1}},   {{1, 1}, {0, 0}}};
-  std::vector<std::vector<std::vector<double>>> q;
-  std::vector<std::vector<std::vector<double>>> x;
+  std::vector<std::vector<std::vector<float>>> q;
+  std::vector<std::vector<std::vector<float>>> x;
 
   std::string dbname = "femib_test";
   std::string id = "666";

@@ -23,7 +23,7 @@ using bsoncxx::builder::stream::open_array;
 using bsoncxx::builder::stream::open_document;
 
 void add_array(document &data_builder, const std::string array_name,
-               const std::vector<std::vector<std::vector<double>>> &u) {
+               const std::vector<std::vector<std::vector<float>>> &u) {
 
   auto array_builder_u = data_builder << array_name << open_array;
   for (int i = 0; i < u.size(); ++i) {

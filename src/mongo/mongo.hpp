@@ -9,9 +9,9 @@ namespace femib::mongo {
 struct plot_data {
   std::string id;
   int time;
-  std::vector<std::vector<std::vector<double>>> u;
-  std::vector<std::vector<std::vector<double>>> q;
-  std::vector<std::vector<std::vector<double>>> x;
+  std::vector<std::vector<std::vector<float>>> u;
+  std::vector<std::vector<std::vector<float>>> q;
+  std::vector<std::vector<std::vector<float>>> x;
 };
 
 void save_plot_data(std::string dbname, plot_data t);

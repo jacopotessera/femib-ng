@@ -61,7 +61,7 @@ include_directories (../src/femib)
 add_executable (stokes_test stokes_t_test.cpp)
 target_compile_definitions(stokes_test PRIVATE MESH_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../mesh/")
 target_compile_features (stokes_test PRIVATE cxx_std_17)
-target_link_libraries (stokes_test read mongo spdlog::spdlog Eigen3::Eigen TBB::tbb  doctest::doctest)
+target_link_libraries (stokes_test read mongo cuda spdlog::spdlog Eigen3::Eigen TBB::tbb  doctest::doctest)
 add_test (NAME stokes_test COMMAND stokes_test)
 
 include_directories (../src/mongo)
