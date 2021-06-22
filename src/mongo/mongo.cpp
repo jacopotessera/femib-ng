@@ -76,9 +76,9 @@ void femib::mongo::save_plot_data(std::string dbname,
 
   mongocxx::instance inst{};
   mongocxx::client conn{mongocxx::uri{}};
-  auto plot_data_collection = conn[db.dbname]["plot_data"];
-  if (plot_data_collection.count(document{} << "id" << t.id << "time" << t.time
-                                            << finalize) == 0) {
+  auto plot_data_collection = conn[dbname]["plot_data"];
+  if (plot_data_collection.count_documents(
+          document{} << "id" << t.id << "time" << t.time << finalize) == 0) {
     plot_data_collection.insert_one(plot_data2doc(t).view());
     SPDLOG_INFO("Saved plot_data id = {}, time = {}", t.id, t.time);
   } else {
