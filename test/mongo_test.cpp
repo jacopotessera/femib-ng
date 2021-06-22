@@ -14,7 +14,7 @@ TEST_CASE("testing mongo") {
       {{0, 1, 0}, {0.5, 1, 1}, {1, 1, 0}}};
   std::vector<std::vector<std::vector<double>>> x;
 
-  femib::mongo::plot_data p = {"12345", 0, u, q, x};
+  femib::mongo::plot_data p = {"12345", 2, u, q, x};
   femib::mongo::save_plot_data("femib_test", p);
   CHECK(true);
 }

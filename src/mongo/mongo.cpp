@@ -22,51 +22,31 @@ using bsoncxx::builder::stream::finalize;
 using bsoncxx::builder::stream::open_array;
 using bsoncxx::builder::stream::open_document;
 
-document plot_data2doc(femib::mongo::plot_data t) {
-  document data_builder{};
-  data_builder << "id" << t.id << "time" << t.time;
+void add_array(document &data_builder, const std::string array_name,
+               const std::vector<std::vector<std::vector<double>>> &u) {
 
-  auto array_builder_u = data_builder << "u" << open_array;
-  for (int i = 0; i < t.u.size(); ++i) {
+  auto array_builder_u = data_builder << array_name << open_array;
+  for (int i = 0; i < u.size(); ++i) {
     auto doc = array_builder_u << bsoncxx::builder::stream::open_array;
-    for (int j = 0; j < t.u[i].size(); ++j) {
+    for (int j = 0; j < u[i].size(); ++j) {
       auto doc_ = doc << bsoncxx::builder::stream::open_array;
-      for (int k = 0; k < t.u[i][j].size(); ++k) {
-        doc_ << t.u[i][j][k];
+      for (int k = 0; k < u[i][j].size(); ++k) {
+        doc_ << u[i][j][k];
       }
       doc_ << bsoncxx::builder::stream::close_array;
     }
     doc << bsoncxx::builder::stream::close_array;
   }
   array_builder_u << close_array;
+}
 
-  auto array_builder_q = data_builder << "q" << open_array;
-  for (int i = 0; i < t.q.size(); ++i) {
-    auto doc = array_builder_q << bsoncxx::builder::stream::open_array;
-    for (int j = 0; j < t.q[i].size(); ++j) {
-      auto doc_ = doc << bsoncxx::builder::stream::open_array;
-      for (int k = 0; k < t.q[i][j].size(); ++k) {
-        doc_ << t.q[i][j][k];
-      }
-      doc_ << bsoncxx::builder::stream::close_array;
-    }
-    doc << bsoncxx::builder::stream::close_array;
-  }
-  array_builder_q << close_array;
+document plot_data2doc(const femib::mongo::plot_data &t) {
+  document data_builder{};
+  data_builder << "id" << t.id << "time" << t.time;
 
-  auto array_builder_x = data_builder << "x" << open_array;
-  for (int i = 0; i < t.x.size(); ++i) {
-    auto doc = array_builder_x << bsoncxx::builder::stream::open_array;
-    for (int j = 0; j < t.x[i].size(); ++j) {
-      auto doc_ = doc << bsoncxx::builder::stream::open_array;
-      for (int k = 0; k < t.x[i][j].size(); ++k) {
-        doc_ << t.x[i][j][k];
-      }
-      doc_ << bsoncxx::builder::stream::close_array;
-    }
-    doc << bsoncxx::builder::stream::close_array;
-  }
-  array_builder_x << close_array;
+  add_array(data_builder, "u", t.u);
+  add_array(data_builder, "q", t.q);
+  add_array(data_builder, "x", t.x);
 
   return data_builder;
 }
