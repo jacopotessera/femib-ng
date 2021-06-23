@@ -205,7 +205,7 @@ template <typename T, int d> void advance(stokes<T, d> &s) {
   femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
 
   femib::types::box<float, 2> boxx =
-      femib::mesh::lin_spaced<float, 2>(box, 0.1);
+      femib::mesh::lin_spaced<float, 2>(box, 0.027);
   bool N[boxx.size() * mesh.N.size()];
 
   femib::cuda::serial_accurate<float, 2>(boxx.data(), boxx.size(),
@@ -224,8 +224,25 @@ template <typename T, int d> void advance(stokes<T, d> &s) {
 
   for (int i = 0; i < boxx.size(); ++i) {
     femib::types::dvec<T, d> point = boxx[i];
-    mesh.N[NNN[i]];
-    std::vector<std::vector<float>> uuuu = {{point(0), point(1)}, {1.0, 1.0}};
+    femib::types::dvec<T, d> res = {0, 0};
+    // if (NNN[i] < s.V.mesh.T.size()) {
+    femib::types::dtrian<T, d> t = mesh.N[NNN[i]];
+
+    for (int j = 0; j < s.V.finite_element.base_functions.size(); ++j) {
+
+      femib::types::F<T, d, d> f = s.V.finite_element.base_functions[j];
+
+      std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)> g =
+          [&](const femib::types::dvec<T, d> &x) {
+            return xx(s.V.nodes.get_index(j, NNN[i])) *
+                   f.x(femib::affine::affine_inv(t, x));
+          };
+      res += g(point);
+    }
+    //}
+
+    std::vector<std::vector<float>> uuuu = {{point(0), point(1)},
+                                            {res(0), res(1)}};
     uuu.emplace_back(uuuu);
   }
 
@@ -235,9 +252,6 @@ template <typename T, int d> void advance(stokes<T, d> &s) {
 
 template <typename T, int d, int e>
 Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &s) {
-
-  std::cerr << s.solvable_equations.A.rows() << " x "
-            << s.solvable_equations.A.cols() << std::endl;
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> x =
       s.solvable_equations.A.colPivHouseholderQr().solve(

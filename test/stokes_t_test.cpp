@@ -61,13 +61,9 @@ int main() {
   femib::stokes_t::init<float, 2>(stokes, rule);
 
   femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
-  std::cerr << box[0] << std::endl;
-  std::cerr << box[1] << std::endl;
 
   femib::types::box<float, 2> boxx =
       femib::mesh::lin_spaced<float, 2>(box, 0.1);
-
-  std::cerr << "SOLVE..." << std::endl;
 
   std::string id = getTime();
 
@@ -75,7 +71,7 @@ int main() {
   femib::mongo::save_sim(dbname, id);
 
   // std::string id = "666";
-  int TMAX = 5;
+  int TMAX = 100;
   for (int t = 0; t < TMAX; t++) {
     femib::stokes_t::advance<float, 2>(stokes);
     femib::mongo::plot_data p = {id, t, stokes.plot[t], {}, {}};

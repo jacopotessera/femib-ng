@@ -82,7 +82,7 @@ class PlotSimulation():
 
 		#self.plotData = calcPlotData(timesteps,parameters,TMAX,self.plotConfig)
 
-		fig, ax = pyplot.subplots(2,3)
+		fig, ax = pyplot.subplots(1,1)
 		fig.set_tight_layout(True)
 		#print('fig size: {0} DPI, size in inches {1}'.format(fig.get_dpi(), fig.get_size_inches()))
 
@@ -107,19 +107,19 @@ class PlotSimulation():
 		def update(i):
 			uu = list(map(lambda x : x[1][0],timesteps[i]["u"] ))
 			vv = list(map(lambda x : x[1][1],timesteps[i]["u"] ))
-			ax[0][0].cla()
+			ax.cla()
 			#ax[0][0].plot(self.plotData["X"][0][i],self.plotData["X"][1][i],".-")
-			ax[0][0].set_xlim([0,1])
-			ax[0][0].set_ylim([0,1])
+			ax.set_xlim([0,1])
+			ax.set_ylim([0,1])
 			#label = 'timestep {0},time {3:.2f}, area {1:.4f}, ratio {2:.4f}'.format(ffw*i,area/area0,_min/_max,ffw*i*0.01)
 			label = 'time {0:.2f}'.format(i)	
-			ax[0][0].set_xlabel(label)
-			ax[0][0].quiver(grid_x,grid_y,uu,vv,pivot='mid',units='inches')
+			ax.set_xlabel(label)
+			ax.quiver(grid_x,grid_y,uu,vv,pivot='tail',units='xy',scale=2)
 			#circle = pyplot.Circle((0,0), 0.8, color='r',fill=False)
 			#ax[0][0].add_artist(circle)
 			#circle = pyplot.Circle((0,0), 0.6, color='r',fill=False)
 			#ax[0][0].add_artist(circle)
-			ax[0][0].axis('equal')
+			ax.axis('equal')
 
 			#ax[0][1].cla()
 			#ax[0][1].set_xlim([-1,1])
