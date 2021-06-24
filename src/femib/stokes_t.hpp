@@ -199,54 +199,7 @@ template <typename T, int d> void advance(stokes<T, d> &s) {
   // TODO
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx = solve<T, d, 1>(s);
 
-  std::vector<std::vector<std::vector<float>>> uuu;
-
-  femib::types::mesh mesh = s.V.mesh;
-  femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
-
-  femib::types::box<float, 2> boxx =
-      femib::mesh::lin_spaced<float, 2>(box, 0.027);
-  bool N[boxx.size() * mesh.N.size()];
-
-  femib::cuda::serial_accurate<float, 2>(boxx.data(), boxx.size(),
-                                         mesh.N.data(), mesh.N.size(), N);
-
-  std::vector<int> NNN;
-
-  for (int i = 0; i < boxx.size(); ++i) {
-    for (int n = 0; n < mesh.N.size(); ++n) {
-      if (N[i * mesh.N.size() + n]) {
-        NNN.push_back(n);
-        break;
-      }
-    }
-  }
-
-  for (int i = 0; i < boxx.size(); ++i) {
-    femib::types::dvec<T, d> point = boxx[i];
-    femib::types::dvec<T, d> res = {0, 0};
-    // if (NNN[i] < s.V.mesh.T.size()) {
-    femib::types::dtrian<T, d> t = mesh.N[NNN[i]];
-
-    for (int j = 0; j < s.V.finite_element.base_functions.size(); ++j) {
-
-      femib::types::F<T, d, d> f = s.V.finite_element.base_functions[j];
-
-      std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)> g =
-          [&](const femib::types::dvec<T, d> &x) {
-            return xx(s.V.nodes.get_index(j, NNN[i])) *
-                   f.x(femib::affine::affine_inv(t, x));
-          };
-      res += g(point);
-    }
-    //}
-
-    std::vector<std::vector<float>> uuuu = {{point(0), point(1)},
-                                            {res(0), res(1)}};
-    uuu.emplace_back(uuuu);
-  }
-
-  s.plot.emplace_back(uuu);
+  s.plot.emplace_back(s.V.plot(xx));
   s.solution.emplace_back(xx);
 }
 
