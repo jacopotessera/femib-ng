@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9.1)
+cmake_minimum_required(VERSION 3.10)
 
 enable_language(CUDA)
 include(CheckLanguage)
@@ -6,7 +6,7 @@ check_language(CUDA)
 
 if(NOT DEFINED CMAKE_CUDA_STANDARD)
     set(CMAKE_CUDA_STANDARD 17)
-    set(CMAKE_CUDA_ARCHITECTURES 61)
+    set(CMAKE_CUDA_ARCHITECTURES 89)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 endif()
 
@@ -22,7 +22,7 @@ FATAL:
 ")
 endif()
 
-find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+find_package (Eigen3 REQUIRED NO_MODULE)
 if(Eigen3_FOUND)
     target_link_libraries (cuda Eigen3::Eigen)
 elseif(NOT Eigen3_FOUND)

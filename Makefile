@@ -33,7 +33,7 @@ lib:
 	mkdir -p $(LIB_SRC_DIR)
 	#LIB CMAKE
 	touch $(LIB_CMAKE)
-	echo 'cmake_minimum_required(VERSION 3.9.1)' > src/$(LIB)/CMakeLists.txt
+	echo 'cmake_minimum_required(VERSION 3.10)' > src/$(LIB)/CMakeLists.txt
 	echo 'set(LIBRARY_OUTPUT_PATH  $${CMAKE_BINARY_DIR}/lib)' >> src/$(LIB)/CMakeLists.txt
 	echo 'add_library($(LIB) SHARED $(LIB).cpp)' >> src/$(LIB)/CMakeLists.txt
 	echo 'find_package (spdlog)' >> src/$(LIB)/CMakeLists.txt
@@ -46,7 +46,7 @@ lib:
 	echo '        spdlog Not Found.' >> src/$(LIB)/CMakeLists.txt
 	echo '")' >> src/$(LIB)/CMakeLists.txt
 	echo 'endif()' >> src/$(LIB)/CMakeLists.txt
-	echo 'find_package (Eigen3 3.3 REQUIRED NO_MODULE)' >> src/$(LIB)/CMakeLists.txt
+	echo 'find_package (Eigen3 REQUIRED NO_MODULE)' >> src/$(LIB)/CMakeLists.txt
 	echo 'if(Eigen3_FOUND)' >> src/$(LIB)/CMakeLists.txt
 	echo 'message("Eigen3 found.")' >> src/$(LIB)/CMakeLists.txt
 	echo 'target_link_libraries ($(LIB) Eigen3::Eigen)' >> src/$(LIB)/CMakeLists.txt

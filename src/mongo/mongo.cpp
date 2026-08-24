@@ -12,7 +12,6 @@
 
 #include <bsoncxx/json.hpp>
 #include <mongocxx/client.hpp>
-#include <mongocxx/stdx.hpp>
 #include <mongocxx/uri.hpp>
 
 using bsoncxx::builder::stream::close_array;
@@ -21,6 +20,10 @@ using bsoncxx::builder::stream::document;
 using bsoncxx::builder::stream::finalize;
 using bsoncxx::builder::stream::open_array;
 using bsoncxx::builder::stream::open_document;
+
+void get_mongocxx_instance() {
+  static mongocxx::instance inst{};
+}
 
 void add_array(document &data_builder, const std::string array_name,
                const std::vector<std::vector<std::vector<float>>> &u) {
@@ -54,7 +57,7 @@ document plot_data2doc(const femib::mongo::plot_data &t) {
 void femib::mongo::save_plot_data(std::string dbname,
                                   femib::mongo::plot_data t) {
 
-  // mongocxx::instance inst{};
+  get_mongocxx_instance();
   mongocxx::client conn{mongocxx::uri{}};
   auto plot_data_collection = conn[dbname]["plot_data"];
   if (plot_data_collection.count_documents(
@@ -69,7 +72,7 @@ void femib::mongo::save_plot_data(std::string dbname,
 
 void femib::mongo::save_sim(std::string dbname, std::string sim_name) {
 
-  // mongocxx::instance inst{};
+  get_mongocxx_instance();
   mongocxx::client conn{mongocxx::uri{}};
   auto collection = conn[dbname]["sim"];
   if (collection.count_documents(document{} << "id" << sim_name << finalize) ==

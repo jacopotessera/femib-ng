@@ -1,7 +1,7 @@
 find_package (spdlog REQUIRED)
 find_package (doctest REQUIRED)
 find_package (TBB REQUIRED)
-find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+find_package (Eigen3 REQUIRED NO_MODULE)
 
 add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test finite_element_test finite_element_space_test femib_test mongo_test)
 

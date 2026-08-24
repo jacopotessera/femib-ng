@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9.1)
+cmake_minimum_required(VERSION 3.10)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 add_library(mongo SHARED mongo.cpp)
 find_package (spdlog)
@@ -10,7 +10,7 @@ FATAL:
         spdlog Not Found.
 ")
 endif()
-find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+find_package (Eigen3 REQUIRED NO_MODULE)
 if(Eigen3_FOUND)
 target_link_libraries (mongo Eigen3::Eigen)
 elseif(NOT Eigen3_FOUND)
@@ -20,13 +20,12 @@ FATAL:
 ")
 endif()
 
-find_package(libmongocxx REQUIRED)
-find_package(libbsoncxx REQUIRED)
+find_package(mongocxx REQUIRED)
+find_package(bsoncxx REQUIRED)
 include_directories(${LIBMONGOCXX_INCLUDE_DIR})
 include_directories(${LIBBSONCXX_INCLUDE_DIR})
-include_directories("/usr/include/mongocxx/v_noabi")
-include_directories("/usr/include/bsoncxx/v_noabi")
+include_directories("/usr/local/include/mongocxx/v_noabi")
+include_directories("/usr/local/include/bsoncxx/v_noabi/")
 
-target_link_libraries(mongo ${LIBMONGOCXX_LIBRARIES})
-target_link_libraries(mongo ${LIBBSONCXX_LIBRARIES})
-
+target_link_libraries(mongo mongo::mongocxx_shared)
+target_link_libraries(mongo mongo::bsoncxx_shared)

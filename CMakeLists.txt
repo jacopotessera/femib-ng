@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9.1)
+cmake_minimum_required(VERSION 3.10)
 
 project(femib LANGUAGES CXX CUDA)
 
@@ -22,7 +22,7 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 SET(GCC_COVERAGE_COMPILE_FLAGS "-fprofile-arcs -ftest-coverage --coverage -g -fno-omit-frame-pointer")
 SET(GCC_COVERAGE_LINK_FLAGS    "-lgcov")
 
-SET(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G -Xcudafe --display_error_number")
+SET(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G -Xcudafe --display_error_number --expt-relaxed-constexpr")
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}")
 SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_COVERAGE_LINK_FLAGS}")
 
