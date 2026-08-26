@@ -44,6 +44,7 @@ template <typename f, int d> struct mesh {
   std::vector<dtrian<f, d>> N;
   bool initialized = false;
 
+  // TODO why not using a constructor?
   void init() {
     if (!initialized) {
       for (ditrian<d> t : T) {
@@ -55,6 +56,7 @@ template <typename f, int d> struct mesh {
         N.emplace_back(n);
       }
     }
+    initialized = true;
   }
 
   inline dtrian<f, d> operator[](int i) const { return N[i]; }
