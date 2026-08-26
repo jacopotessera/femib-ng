@@ -25,7 +25,8 @@ T integrate(const femib::gauss::rule<T, d> &rule,
     return node.weight * f(node.node);
   };
   return std::transform_reduce(std::execution::seq, rule.nodes.begin(),
-                               rule.nodes.end(), 0.0, std::plus<>(), unary_op);
+                               rule.nodes.end(), T(0.0), std::plus<>(),
+                               unary_op);
 }
 
 } // namespace femib::gauss
