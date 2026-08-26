@@ -4,6 +4,14 @@ project(femib LANGUAGES CXX CUDA)
 
 set(SRC_DIR src)
 
+include(FetchContent)
+FetchContent_Declare(
+        rapidcsv
+        GIT_REPOSITORY "https://github.com/d99kris/rapidcsv.git"
+        GIT_TAG cbd8a0a937b249cc07e2db3bfa9cd2cc1689708f
+)
+FetchContent_MakeAvailable(rapidcsv)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)

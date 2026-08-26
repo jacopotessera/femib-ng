@@ -1,27 +1,13 @@
 #include "read.hpp"
 #include "spdlog/spdlog.h"
 #include <fstream>
-#include <iostream>
+#include <rapidcsv.h>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <vector>
 
-template <class T, class W> void set(T &a, int i, std::string token);
-template <class T> T castToT(std::string s);
-template <class W> void castToT(std::string s, W &w);
 template <typename T, typename W> std::vector<T> read(std::string filename);
-
-template <> double castToT<double>(std::string s) { return std::stod(s); }
-template <> float castToT<float>(std::string s) { return std::stof(s); }
-template <> int castToT<int>(std::string s) { return std::stoi(s); }
-
-template <class T, class W> void set(T &a, int i, std::string token) {
-  a(i) = castToT<W>(token);
-}
-
-template <> void set<int, int>(int &a, int i, std::string token) {
-  a = castToT<int>(token);
-}
 
 template std::vector<femib::types::dvec<float, 2>>
 read<femib::types::dvec<float, 2>, float>(std::string file);
@@ -29,39 +15,24 @@ template std::vector<femib::types::ditrian<2>>
 read<femib::types::ditrian<2>, int>(std::string file);
 template std::vector<int> read<int, int>(std::string file);
 
-template double castToT<double>(std::string file);
-template float castToT<float>(std::string file);
-template int castToT<int>(std::string file);
-
-template void
-set<femib::types::dvec<float, 2>, float>(femib::types::dvec<float, 2> &a, int i,
-                                         std::string token);
-template void set<femib::types::ditrian<2>, int>(femib::types::ditrian<2> &a,
-                                                 int i, std::string token);
-template void set<int, int>(int &a, int i, std::string token);
-
 template <typename T, typename W> std::vector<T> read(std::string filename) {
-  std::string tab = "\t";
-  std::vector<T> a;
-  std::string line;
-  std::ifstream file(filename);
-
   SPDLOG_LOGGER_DEBUG("[read] filename: {}", filename);
-  if (file.is_open()) {
-    for (int i = 0; std::getline(file, line); ++i) {
-      T t;
-      a.push_back(t);
-      size_t pos = 0;
-      std::string token;
-      for (int j = 0; (pos = line.find(tab)) != std::string::npos; ++j) {
-        token = line.substr(0, pos);
-        line.erase(0, pos + tab.length());
-        set<T, W>(a[i], j, token);
+
+  rapidcsv::Document doc(filename, rapidcsv::LabelParams(-1, -1),
+                         rapidcsv::SeparatorParams('\t'));
+
+  std::vector<T> a(doc.GetRowCount());
+  for (size_t i = 0; i < doc.GetRowCount(); ++i) {
+    if constexpr (std::is_integral_v<T>) {
+      // edges file
+      a[i] = doc.GetCell<W>(0, i);
+    } else {
+      // points and triangles files
+      // TODO replace size_t with Eigen::Index when looping on rows and cols
+      for (size_t j = 0; j < a[i].size(); ++j) {
+        a[i](j) = doc.GetCell<W>(j, i);
       }
     }
-    file.close();
-  } else {
-    throw std::runtime_error("Unable to open file " + filename);
   }
 
   return a;

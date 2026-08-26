@@ -3,7 +3,7 @@ find_package (doctest REQUIRED)
 find_package (TBB REQUIRED)
 find_package (Eigen3 REQUIRED NO_MODULE)
 
-add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test finite_element_test finite_element_space_test femib_test mongo_test)
+add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test read_test finite_element_test finite_element_space_test femib_test mongo_test)
 
 include_directories (../src/affine)
 add_executable (affine_test affine_test.cpp)
@@ -36,6 +36,13 @@ target_compile_definitions(mesh_test PRIVATE MESH_DIR="${CMAKE_CURRENT_SOURCE_DI
 target_compile_features (mesh_test PRIVATE cxx_std_17)
 target_link_libraries (mesh_test read spdlog::spdlog TBB::tbb doctest::doctest)
 add_test (NAME mesh_test COMMAND mesh_test)
+
+include_directories (../src/read)
+add_executable (read_test read_test.cpp)
+target_compile_definitions(read_test PRIVATE MESH_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../mesh/")
+target_compile_features (read_test PRIVATE cxx_std_17)
+target_link_libraries (read_test read spdlog::spdlog Eigen3::Eigen doctest::doctest)
+add_test (NAME read_test COMMAND read_test)
 
 include_directories (../src/finite_element)
 add_executable (finite_element_test finite_element_test.cpp)

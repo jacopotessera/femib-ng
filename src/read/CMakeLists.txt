@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 add_library(read SHARED read.cpp)
+target_link_libraries (read rapidcsv)
 find_package (spdlog)
 if(spdlog_FOUND)
        target_link_libraries (read spdlog::spdlog)
