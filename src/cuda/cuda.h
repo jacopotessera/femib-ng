@@ -9,11 +9,12 @@ constexpr int FEMIB_CUDA_HEAP_SIZE = 20000000;
 
 namespace femib::cuda {
 void printSize();
-int getStackSize();
-int getHeapSize();
-void setStackSize(int stackSize);
-void setHeapSize(int heapSize);
+size_t getStackSize();
+size_t getHeapSize();
+void setStackSize(size_t stackSize);
+void setHeapSize(size_t heapSize);
 
+// TODO size are probably not int
 template <typename T> T *copyToDevice(T *x, int size);
 template <typename T> T *copyToHost(T *X, int size);
 

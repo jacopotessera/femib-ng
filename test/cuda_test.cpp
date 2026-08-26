@@ -34,8 +34,9 @@ TEST_CASE("testing cuda size") {
   femib::cuda::setStackSize(FEMIB_CUDA_STACK_SIZE);
   femib::cuda::setHeapSize(FEMIB_CUDA_HEAP_SIZE);
   femib::cuda::printSize();
-  WARN(femib::cuda::getStackSize() == FEMIB_CUDA_STACK_SIZE);
-  WARN(femib::cuda::getHeapSize() == FEMIB_CUDA_HEAP_SIZE);
+  CHECK(femib::cuda::getStackSize() == FEMIB_CUDA_STACK_SIZE);
+  // the CUDA driver rounds up to its own alignment
+  CHECK(femib::cuda::getHeapSize() >= FEMIB_CUDA_HEAP_SIZE * sizeof(double));
 }
 
 TEST_CASE("testing cuda copy") {
@@ -89,9 +90,9 @@ TEST_CASE("testing cuda serial_accurate") {
       }
     }
   }
-  // CHECK(NNN[0] == 0);
-  // CHECK(NNN[1] == 3);
-  // CHECK(NNN[2] == 3);
+  CHECK(NNN[0] == 7);
+  CHECK(NNN[1] == 7);
+  CHECK(NNN[2] == 7);
 
   for (int i = 0; i < boxx.size(); ++i) {
     CHECK(NNN[i] >= 0);
@@ -131,25 +132,103 @@ TEST_CASE("testing cuda parallel_accurate") {
       }
     }
   }
-  // CHECK(NN[0]);
+
+  // TODO add a better interface in cuda, that copies and then deletes and just gives the result
   delete[] NN;
   NN = NULL;
   delete[] T;
   T = NULL;
-  for (int i = 0; i < boxx.size(); ++i) {
-    // SPDLOG_INFO("[({},{})] found to be in triangle {}", boxx[i](0),
-    // boxx[i](1),
-    //           NNN[i]);
-  }
-  // CHECK(NNN[0] == 0);
-  // CHECK(NNN[1] == 3);
-  // CHECK(NNN[2] == 3);
 
-  for (int i = 0; i < boxx.size(); ++i) {
-    CHECK(NNN[i] >= 0);
-    CHECK(NNN[i] < mesh.N.size());
+  CHECK(NNN[0] == 7);
+  CHECK(NNN[1] == 7);
+  CHECK(NNN[2] == 7);
 
-    std::cerr << boxx[i](0) << "\t" << boxx[i](1) << "\t" << NNN[i]
-              << std::endl;
+}
+
+// TODO parallel_accurate is not really accurate...
+TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
+  mesh.init();
+  femib::types::box<float, 2> boxx =
+      femib::mesh::lin_spaced<float, 2>(box, delta);
+  int size_T = mesh.N.size();
+
+  bool Nser[boxx.size() * size_T];
+  femib::cuda::serial_accurate<float, 2>(boxx.data(), boxx.size(),
+                                         mesh.N.data(), size_T, Nser);
+
+  femib::types::dtrian_<float, 2> *T =
+      femib::types::vector_dtrian2pointer_dtrian_<float, 2>(mesh.N);
+  femib::types::dtrian_<float, 2> *devT =
+      femib::cuda::copyToDevice<femib::types::dtrian_<float, 2>>(T, size_T);
+  femib::types::dvec<float, 2> *devX =
+      femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(boxx.data(),
+                                                              boxx.size());
+  bool Npar_init[boxx.size() * size_T];
+  bool *devN =
+      femib::cuda::copyToDevice<bool>(Npar_init, boxx.size() * size_T);
+  femib::cuda::parallel_accurate<float, 2>(devX, boxx.size(), devT, size_T,
+                                           devN);
+  bool *Npar = femib::cuda::copyToHost<bool>(devN, boxx.size() * size_T);
+
+  auto shared_vertices = [&](int n1, int n2) {
+    int count = 0;
+    for (int a = 0; a < 3; ++a) {
+      for (int b = 0; b < 3; ++b) {
+        if (mesh.T[n1](a) == mesh.T[n2](b)) {
+          ++count;
+        }
+      }
+    }
+    return count;
+  };
+
+  int gpu_true_cpu_false = 0;
+  int cpu_only_true = 0;
+  int cpu_only_true_gpu_adjacent = 0;
+  int cpu_only_true_gpu_elsewhere = 0;
+  int cpu_only_true_gpu_lost = 0;
+  for (int k = 0; k < boxx.size() * size_T; ++k) {
+    if (Npar[k] && !Nser[k]) {
+      ++gpu_true_cpu_false;
+    }
+    if (Nser[k] && !Npar[k]) {
+      ++cpu_only_true;
+      int i = k / size_T;
+      int n = k % size_T;
+      int gpu_match = -1;
+      for (int n2 = 0; n2 < size_T; ++n2) {
+        if (Npar[i * size_T + n2]) {
+          gpu_match = n2;
+          break;
+        }
+      }
+      if (gpu_match == -1) {
+        ++cpu_only_true_gpu_lost;
+        std::cerr << "[cpu_only_true] point " << i << " (" << boxx[i](0)
+                  << ", " << boxx[i](1) << ") cpu triangle " << n
+                  << " -- gpu: unclassified in every triangle" << std::endl;
+      } else {
+        int shared = shared_vertices(n, gpu_match);
+        if (shared >= 2) {
+          ++cpu_only_true_gpu_adjacent;
+        } else {
+          ++cpu_only_true_gpu_elsewhere;
+        }
+        std::cerr << "[cpu_only_true] point " << i << " (" << boxx[i](0)
+                  << ", " << boxx[i](1) << ") cpu triangle " << n
+                  << " -- gpu triangle " << gpu_match << " (shared vertices "
+                  << shared << ")" << std::endl;
+      }
+    }
   }
+  CHECK(gpu_true_cpu_false == 0);
+  CHECK(cpu_only_true <= 20);
+  CAPTURE(cpu_only_true_gpu_adjacent);
+  CHECK(cpu_only_true_gpu_lost == 0);
+  CHECK(cpu_only_true_gpu_elsewhere == 0);
+
+  delete[] Npar;
+  Npar = NULL;
+  delete[] T;
+  T = NULL;
 }

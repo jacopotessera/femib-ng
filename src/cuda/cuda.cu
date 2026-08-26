@@ -8,31 +8,31 @@
 #include "spdlog/spdlog.h"
 
 #include <cmath>
-
-const float EPSILON = std::numeric_limits<float>::epsilon();
+#include <limits>
 
 void femib::cuda::printSize() {
   SPDLOG_INFO("[CUDA stack size] found to be {}", getStackSize());
   SPDLOG_INFO("[CUDA heap  size] found to be {}", getHeapSize());
 }
 
-int femib::cuda::getStackSize() {
+size_t femib::cuda::getStackSize() {
   size_t size_stack;
   cudaDeviceGetLimit(&size_stack, cudaLimitStackSize);
-  return (int)size_stack;
+  return size_stack;
 }
 
-int femib::cuda::getHeapSize() {
+size_t femib::cuda::getHeapSize() {
   size_t size_heap;
   cudaDeviceGetLimit(&size_heap, cudaLimitMallocHeapSize);
-  return (int)size_heap;
+  return size_heap;
 }
 
-void femib::cuda::setStackSize(int stackSize) {
+void femib::cuda::setStackSize(size_t stackSize) {
   cudaDeviceSetLimit(cudaLimitStackSize, stackSize);
 }
 
-void femib::cuda::setHeapSize(int heapSize) {
+// TODO why mess with this?
+void femib::cuda::setHeapSize(size_t heapSize) {
   cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapSize * sizeof(double));
 }
 
@@ -54,6 +54,7 @@ template <typename T> T *femib::cuda::copyToHost(T *X, int size) {
 template <typename f, int d>
 __host__ bool femib::cuda::in_box(const femib::types::dvec<f, d> &P,
                                   const femib::types::dtrian<f, d> &T) {
+  f EPSILON = std::numeric_limits<f>::epsilon();
   femib::types::mesh<f, d> mesh = {T};
   femib::types::box<f, d> box = femib::mesh::find_box<f, d>(mesh);
   bool e = true;
@@ -88,9 +89,11 @@ __host__ f distance_point_segment(const femib::types::dvec<f, d> &P,
   }
 }
 
+// TODO what algoritm is this? source?
 template <typename f, int d>
 __host__ bool femib::cuda::accurate(const femib::types::dvec<f, d> &P,
                                     const femib::types::dtrian<f, d> &T) {
+  f EPSILON = std::numeric_limits<f>::epsilon();
   if (not femib::cuda::in_box(P, T)) {
     return false;
   }
@@ -99,11 +102,11 @@ __host__ bool femib::cuda::accurate(const femib::types::dvec<f, d> &P,
   }
   if (false) {
     return false;
-  } else if (distance_point_segment(P, {T[0], T[1]}) <= EPSILON) {
+  } else if (distance_point_segment(P, {T[0], T[1]}) <= EPSILON * EPSILON) {
     return true;
-  } else if (distance_point_segment(P, {T[1], T[2]}) <= EPSILON) {
+  } else if (distance_point_segment(P, {T[1], T[2]}) <= EPSILON * EPSILON) {
     return true;
-  } else if (distance_point_segment(P, {T[2], T[0]}) <= EPSILON) {
+  } else if (distance_point_segment(P, {T[2], T[0]}) <= EPSILON * EPSILON) {
     return true;
   } else {
     return false;

@@ -14,12 +14,14 @@ template <typename T, int d, int e> struct finite_element_space {
   femib::types::nodes<T, d> nodes;
 
   std::vector<std::vector<std::vector<T>>>
+
+  // TODO plot
   plot(Eigen::Matrix<T, Eigen::Dynamic, 1> xx) {
     std::vector<std::vector<std::vector<float>>> uuu;
 
     femib::types::box<T, d> box = femib::mesh::find_box<T, d>(mesh);
 
-    femib::types::box<T, d> boxx = femib::mesh::lin_spaced<T, d>(box, 0.027);
+    femib::types::box<T, d> boxx = femib::mesh::lin_spaced<T, d>(box, 0.027); // TODO uh? mesh size
     bool N[boxx.size() * mesh.N.size()];
 
     femib::cuda::serial_accurate<T, d>(boxx.data(), boxx.size(), mesh.N.data(),

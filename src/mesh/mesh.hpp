@@ -57,6 +57,7 @@ femib::types::box<T, d> find_box(const femib::types::mesh<T, d> &m) {
   return box;
 }
 
+// TODO this is a rectangular grid? only used for tests? NO used also in plot!
 template <typename T, int d>
 femib::types::box<T, d> lin_spaced(const femib::types::box<T, d> &b, T delta) {
   T x_min = b[0](0);
