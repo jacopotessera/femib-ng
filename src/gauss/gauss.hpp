@@ -14,7 +14,9 @@ template <typename T, int d> struct node {
   femib::types::dvec<T, d> node;
 };
 
-template <typename T, int d> struct rule { std::vector<node<T, d>> nodes; };
+template <typename T, int d> struct rule {
+  std::vector<node<T, d>> nodes;
+};
 
 template <typename T, int d>
 T integrate(const femib::gauss::rule<T, d> &rule,

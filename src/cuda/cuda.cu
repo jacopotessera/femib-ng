@@ -52,9 +52,8 @@ template <typename T> T *femib::cuda::copyToHost(T *X, int size) {
 /******************************************************************************/
 
 template <typename f, int d>
-__host__ bool
-femib::cuda::in_box(const femib::types::dvec<f, d> &P,
-                    const femib::types::dtrian<f, d> &T) {
+__host__ bool femib::cuda::in_box(const femib::types::dvec<f, d> &P,
+                                  const femib::types::dtrian<f, d> &T) {
   femib::types::mesh<f, d> mesh = {T};
   femib::types::box<f, d> box = femib::mesh::find_box<f, d>(mesh);
   bool e = true;
@@ -65,16 +64,15 @@ femib::cuda::in_box(const femib::types::dvec<f, d> &P,
 }
 
 template <typename f, int d>
-__host__ bool
-femib::cuda::in_triangle(const femib::types::dvec<f, d> &P,
-                         const femib::types::dtrian<f, d> &T) {
+__host__ bool femib::cuda::in_triangle(const femib::types::dvec<f, d> &P,
+                                       const femib::types::dtrian<f, d> &T) {
   femib::types::dvec<f, d> x = femib::affine::affine_inv<f, d>(T, P);
   return (x(0) >= 0) && (x(1) >= 0) && (x(0) + x(1) <= 1);
 }
 
 template <typename f, int d>
-__host__ f distance_point_segment(
-    const femib::types::dvec<f, d> &P, const femib::types::dtrian<f, d> &T) {
+__host__ f distance_point_segment(const femib::types::dvec<f, d> &P,
+                                  const femib::types::dtrian<f, d> &T) {
   femib::types::dvec<f, d> D = T[1] - T[0];
   femib::types::dvec<f, d> E = P - T[0];
   femib::types::dvec<f, d> F = P - T[0];
@@ -91,9 +89,8 @@ __host__ f distance_point_segment(
 }
 
 template <typename f, int d>
-__host__ bool
-femib::cuda::accurate(const femib::types::dvec<f, d> &P,
-                      const femib::types::dtrian<f, d> &T) {
+__host__ bool femib::cuda::accurate(const femib::types::dvec<f, d> &P,
+                                    const femib::types::dtrian<f, d> &T) {
   if (not femib::cuda::in_box(P, T)) {
     return false;
   }

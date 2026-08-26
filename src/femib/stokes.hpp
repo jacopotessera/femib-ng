@@ -59,7 +59,8 @@ remove_edges(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM,
              std::vector<int> not_edges) {
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> ss =
-      dM(Eigen::placeholders::all, Eigen::placeholders::all) * bV(Eigen::placeholders::all, Eigen::placeholders::all);
+      dM(Eigen::placeholders::all, Eigen::placeholders::all) *
+      bV(Eigen::placeholders::all, Eigen::placeholders::all);
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> bbb = (dF - ss)(not_edges, 0);
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> AAA =

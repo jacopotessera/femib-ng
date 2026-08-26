@@ -21,9 +21,7 @@ using bsoncxx::builder::stream::finalize;
 using bsoncxx::builder::stream::open_array;
 using bsoncxx::builder::stream::open_document;
 
-void get_mongocxx_instance() {
-  static mongocxx::instance inst{};
-}
+void get_mongocxx_instance() { static mongocxx::instance inst{}; }
 
 void add_array(document &data_builder, const std::string array_name,
                const std::vector<std::vector<std::vector<float>>> &u) {
