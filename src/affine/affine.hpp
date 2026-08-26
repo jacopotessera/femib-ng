@@ -7,6 +7,7 @@
 
 #include "../types/types.hpp"
 
+// TODO add comments on types, methods, etc
 namespace femib::affine {
 
 template <typename T, int d>
@@ -35,7 +36,7 @@ femib::types::dmat<T, d> affineBinv(const femib::types::dtrian<T, d> &t) {
 }
 
 template <typename T, int d> T affineBdet(const femib::types::dtrian<T, d> &t) {
-  return abs(affineB(t).determinant());
+  return std::abs(affineB(t).determinant());
 }
 
 template <typename T, int d>

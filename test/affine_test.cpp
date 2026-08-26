@@ -22,6 +22,7 @@ dvec base_linear_combination(const std::vector<float> &a) {
   return linear_combination(base_triangle, a);
 };
 
+// TODO use meaningful test descriptions
 TEST_CASE("testing affine") {
 
   std::vector<std::vector<float>> coefficients = {
@@ -46,4 +47,18 @@ TEST_CASE("testing affine") {
             EPSILON * 1);
     }
   }
+}
+
+TEST_CASE("testing affineBdet") {
+  femib::types::dtrian<float, 2> t = {{0.0, 0.0}, {2.0, 0.0}, {0.0, 2.0}};
+  // affineBdet must be twice the triangle area
+  float det = femib::affine::affineBdet<float, 2>(t);
+  CHECK(det == doctest::Approx(4.0));
+}
+
+TEST_CASE("testing affineBdet: degenerate triangle") {
+  femib::types::dtrian<float, 2> degenerate = {
+      {0.0, 0.0}, {1.0, 0.0}, {2.0, 0.0}};
+  float det = femib::affine::affineBdet<float, 2>(degenerate);
+  CHECK(det == doctest::Approx(0.0));
 }
