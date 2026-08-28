@@ -15,7 +15,7 @@ template <typename T, int d, int e> struct finite_element_space {
 
   std::vector<std::vector<std::vector<T>>>
 
-  // TODO plot
+  // TODO plot is a mess
   plot(Eigen::Matrix<T, Eigen::Dynamic, 1> xx) {
     std::vector<std::vector<std::vector<float>>> uuu;
 
@@ -25,24 +25,31 @@ template <typename T, int d, int e> struct finite_element_space {
         femib::mesh::lin_spaced<T, d>(box, 0.027); // TODO uh? mesh size
     bool N[boxx.size() * mesh.N.size()];
 
+    // TODO use parallel_accurate? keep mesh on GPU
     femib::cuda::serial_accurate<T, d>(boxx.data(), boxx.size(), mesh.N.data(),
                                        mesh.N.size(), N);
 
     std::vector<int> NNN;
 
     for (int i = 0; i < boxx.size(); ++i) {
+      int found = -1;
       for (int n = 0; n < mesh.N.size(); ++n) {
         if (N[i * mesh.N.size() + n]) {
-          NNN.push_back(n);
+          found = n;
           break;
         }
       }
+      NNN.push_back(found);
     }
 
     for (int i = 0; i < boxx.size(); ++i) {
+      if (NNN[i] < 0) {
+        // just skip the point that was not found
+        continue;
+      }
       femib::types::dvec<T, d> point = boxx[i];
       femib::types::dvec<T, d> res = {0, 0};
-      // if (NNN[i] < mesh.T.size()) {
+
       femib::types::dtrian<T, d> t = mesh.N[NNN[i]];
 
       for (int j = 0; j < finite_element.base_functions.size(); ++j) {
@@ -56,7 +63,6 @@ template <typename T, int d, int e> struct finite_element_space {
             };
         res += g(point);
       }
-      //}
 
       std::vector<std::vector<float>> uuuu = {{point(0), point(1)},
                                               {res(0), res(1)}};

@@ -54,7 +54,7 @@ include_directories (../src/finite_element_space)
 add_executable (finite_element_space_test finite_element_space_test.cpp)
 target_compile_definitions(finite_element_space_test PRIVATE MESH_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../mesh/")
 target_compile_features (finite_element_space_test PRIVATE cxx_std_17)
-target_link_libraries (finite_element_space_test read spdlog::spdlog Eigen3::Eigen TBB::tbb doctest::doctest)
+target_link_libraries (finite_element_space_test read cuda spdlog::spdlog Eigen3::Eigen TBB::tbb doctest::doctest)
 add_test (NAME finite_element_space_test COMMAND finite_element_space_test)
 
 include_directories (../src/femib)
