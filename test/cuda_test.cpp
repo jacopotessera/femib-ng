@@ -133,7 +133,8 @@ TEST_CASE("testing cuda parallel_accurate") {
     }
   }
 
-  // TODO add a better interface in cuda, that copies and then deletes and just gives the result
+  // TODO add a better interface in cuda, that copies and then deletes and just
+  //  gives the result
   delete[] NN;
   NN = NULL;
   delete[] T;
@@ -142,7 +143,6 @@ TEST_CASE("testing cuda parallel_accurate") {
   CHECK(NNN[0] == 7);
   CHECK(NNN[1] == 7);
   CHECK(NNN[2] == 7);
-
 }
 
 // TODO parallel_accurate is not really accurate...
@@ -164,8 +164,7 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
       femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(boxx.data(),
                                                               boxx.size());
   bool Npar_init[boxx.size() * size_T];
-  bool *devN =
-      femib::cuda::copyToDevice<bool>(Npar_init, boxx.size() * size_T);
+  bool *devN = femib::cuda::copyToDevice<bool>(Npar_init, boxx.size() * size_T);
   femib::cuda::parallel_accurate<float, 2>(devX, boxx.size(), devT, size_T,
                                            devN);
   bool *Npar = femib::cuda::copyToHost<bool>(devN, boxx.size() * size_T);
@@ -204,8 +203,8 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
       }
       if (gpu_match == -1) {
         ++cpu_only_true_gpu_lost;
-        std::cerr << "[cpu_only_true] point " << i << " (" << boxx[i](0)
-                  << ", " << boxx[i](1) << ") cpu triangle " << n
+        std::cerr << "[cpu_only_true] point " << i << " (" << boxx[i](0) << ", "
+                  << boxx[i](1) << ") cpu triangle " << n
                   << " -- gpu: unclassified in every triangle" << std::endl;
       } else {
         int shared = shared_vertices(n, gpu_match);
@@ -214,10 +213,10 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
         } else {
           ++cpu_only_true_gpu_elsewhere;
         }
-        std::cerr << "[cpu_only_true] point " << i << " (" << boxx[i](0)
-                  << ", " << boxx[i](1) << ") cpu triangle " << n
-                  << " -- gpu triangle " << gpu_match << " (shared vertices "
-                  << shared << ")" << std::endl;
+        std::cerr << "[cpu_only_true] point " << i << " (" << boxx[i](0) << ", "
+                  << boxx[i](1) << ") cpu triangle " << n << " -- gpu triangle "
+                  << gpu_match << " (shared vertices " << shared << ")"
+                  << std::endl;
       }
     }
   }

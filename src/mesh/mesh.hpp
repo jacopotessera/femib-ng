@@ -8,6 +8,7 @@
 #include <execution>
 #include <functional>
 #include <numeric>
+#include <stdexcept>
 #include <string>
 
 namespace femib::mesh {
@@ -31,7 +32,7 @@ T integrate(const femib::gauss::rule<T, d> &rule,
     return femib::mesh::integrate(rule, f, t);
   };
   return std::transform_reduce(std::execution::seq, mesh.N.begin(),
-                               mesh.N.end(), 0.0, std::plus<>(), unary_op);
+                               mesh.N.end(), T(0.0), std::plus<>(), unary_op);
 }
 
 template <typename T, int d>
@@ -45,6 +46,9 @@ femib::types::mesh<T, d> read(const std::string &filename_p,
 
 template <typename T, int d>
 femib::types::box<T, d> find_box(const femib::types::mesh<T, d> &m) {
+  if (m.P.empty()) {
+    throw std::invalid_argument("find_box: mesh is empty");
+  }
   femib::types::box<T, d> box;
   femib::types::dvec<T, d> b1 = m.P[0];
   femib::types::dvec<T, d> b2 = m.P[0];

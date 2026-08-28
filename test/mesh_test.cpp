@@ -1,22 +1,21 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../src/gauss/gauss.hpp"
+#include "../src/gauss/gauss_lagrange_2_2d.hpp"
 #include "../src/mesh/mesh.hpp"
 #include "../src/types/types.hpp"
 #include <doctest/doctest.h>
 
 const float EPSILON = std::numeric_limits<float>::epsilon();
 
+// TODO split in multiple tests
 TEST_CASE("testing mesh") {
-
-  femib::gauss::node<float, 2> node1 = {1.0 / 6.0, {1.0 / 6.0, 1.0 / 6.0}};
-  femib::gauss::node<float, 2> node2 = {1.0 / 6.0, {1.0 / 6.0, 2.0 / 3.0}};
-  femib::gauss::node<float, 2> node3 = {1.0 / 6.0, {2.0 / 3.0, 1.0 / 6.0}};
-  femib::gauss::rule<float, 2> rule = {{node1, node2, node3}};
+  femib::gauss::rule<float, 2> rule =
+      femib::gauss::create_gauss_2_2d<float, 2>();
 
   femib::types::mesh<float, 2> mesh = {
-      {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
-      {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}},
-      {0, 1, 2, 3}};
+      .P = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
+      .T = {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}},
+      .E = {0, 1, 2, 3}};
   mesh.init();
 
   {
@@ -49,4 +48,33 @@ TEST_CASE("testing mesh") {
   CHECK(mesh_from_file.E.size() == 4);
 
   CHECK_THROWS(femib::mesh::read<float, 2>("a", "b", "c"));
+}
+
+TEST_CASE("testing find_box") {
+  femib::types::mesh<float, 2> mesh;
+  mesh.P = {{1.0, 5.0}, {-2.0, 3.0}, {4.0, -1.0}, {0.0, 0.0}};
+  femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
+  CHECK(box.size() == 2);
+  CHECK(box[0](0) == doctest::Approx(-2.0));
+  CHECK(box[0](1) == doctest::Approx(-1.0));
+  CHECK(box[1](0) == doctest::Approx(4.0));
+  CHECK(box[1](1) == doctest::Approx(5.0));
+}
+
+TEST_CASE("testing find_box: empty mesh") {
+  femib::types::mesh<float, 2> empty_mesh;
+  CHECK_THROWS(femib::mesh::find_box<float, 2>(empty_mesh));
+}
+
+TEST_CASE("testing lin_spaced") {
+  femib::types::box<float, 2> box = {{0.0, 0.0}, {1.0, 1.0}};
+  std::vector<femib::types::dvec<float, 2>> points =
+      femib::mesh::lin_spaced<float, 2>(box, 0.25);
+  CHECK(points.size() > 0);
+  for (const auto &p : points) {
+    CHECK(p(0) >= 0.0);
+    CHECK(p(0) <= 1.0);
+    CHECK(p(1) >= 0.0);
+    CHECK(p(1) <= 1.0);
+  }
 }
