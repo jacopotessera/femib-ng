@@ -57,10 +57,10 @@ template <typename T, int d, int e> struct finite_element_space {
         femib::types::F<T, d, d> f = finite_element.base_functions[j];
 
         std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)> g =
-            [&](const femib::types::dvec<T, d> &x) {
-              return xx(nodes.get_index(j, NNN[i])) *
-                     f.x(femib::affine::affine_inv(t, x));
-            };
+            [&](const femib::types::dvec<T, d> &x) -> femib::types::dvec<T, d> {
+          return xx(nodes.get_index(j, NNN[i])) *
+                 f.x(femib::affine::affine_inv(t, x));
+        };
         res += g(point);
       }
 

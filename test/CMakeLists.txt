@@ -3,7 +3,7 @@ find_package (doctest REQUIRED)
 find_package (TBB REQUIRED)
 find_package (Eigen3 REQUIRED NO_MODULE)
 
-add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test read_test finite_element_test finite_element_space_test femib_test mongo_test)
+add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test read_test finite_element_test finite_element_space_test femib_test mongo_test stokes_test stokes_t_test)
 
 include_directories (../src/affine)
 add_executable (affine_test affine_test.cpp)
@@ -65,11 +65,18 @@ target_link_libraries (femib_test read spdlog::spdlog Eigen3::Eigen TBB::tbb  do
 add_test (NAME femib_test COMMAND femib_test)
 
 include_directories (../src/femib)
-add_executable (stokes_test stokes_t_test.cpp)
+add_executable (stokes_test stokes_test.cpp)
 target_compile_definitions(stokes_test PRIVATE MESH_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../mesh/")
 target_compile_features (stokes_test PRIVATE cxx_std_17)
-target_link_libraries (stokes_test read mongo cuda spdlog::spdlog Eigen3::Eigen TBB::tbb  doctest::doctest)
+target_link_libraries (stokes_test read spdlog::spdlog Eigen3::Eigen TBB::tbb doctest::doctest)
 add_test (NAME stokes_test COMMAND stokes_test)
+
+include_directories (../src/femib)
+add_executable (stokes_t_test stokes_t_test.cpp)
+target_compile_definitions(stokes_t_test PRIVATE MESH_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../mesh/")
+target_compile_features (stokes_t_test PRIVATE cxx_std_17)
+target_link_libraries (stokes_t_test read mongo cuda spdlog::spdlog Eigen3::Eigen TBB::tbb  doctest::doctest)
+add_test (NAME stokes_t_test COMMAND stokes_t_test)
 
 include_directories (../src/mongo)
 add_executable (mongo_test mongo_test.cpp)

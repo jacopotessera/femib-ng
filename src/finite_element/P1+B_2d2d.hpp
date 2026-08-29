@@ -76,9 +76,9 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
 
   f.dx = [](const dvec<T, d> &x) {
     if (in_std(x))
-      return dmat<T, d>({{18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1) - 1,
-                          9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0) - 1},
-                         {0, 0}});
+      return dmat<T, d>(
+          {{18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1) - 1, 0},
+           {9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0) - 1, 0}});
     else
       return dmat<T, d>({{0, 0}, {0, 0}});
   };
@@ -96,9 +96,8 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
 
   f.dx = [](const dvec<T, d> &x) {
     if (in_std(x))
-      return dmat<T, d>({{18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1) + 1,
-                          9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0)},
-                         {0, 0}});
+      return dmat<T, d>({{18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1) + 1, 0},
+                         {9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0), 0}});
     else
       return dmat<T, d>({{0, 0}, {0, 0}});
   };
@@ -116,9 +115,9 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
 
   f.dx = [](const dvec<T, d> &x) {
     if (in_std(x))
-      return dmat<T, d>({{18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1),
-                          9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0) + 1},
-                         {0, 0}});
+      return dmat<T, d>(
+          {{18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1), 0},
+           {9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0) + 1, 0}});
     else
       return dmat<T, d>({{0, 0}, {0, 0}});
   };
@@ -135,9 +134,9 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
 
   f.dx = [](const dvec<T, d> &x) {
     if (in_std(x))
-      return dmat<T, d>({{0, 0},
-                         {18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1) - 1,
-                          9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0) - 1}});
+      return dmat<T, d>(
+          {{0, 18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1) - 1},
+           {0, 9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0) - 1}});
     else
       return dmat<T, d>({{0, 0}, {0, 0}});
   };
@@ -154,9 +153,8 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
 
   f.dx = [](const dvec<T, d> &x) {
     if (in_std(x))
-      return dmat<T, d>({{0, 0},
-                         {18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1) + 1,
-                          9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0)}});
+      return dmat<T, d>({{0, 18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1) + 1},
+                         {0, 9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0)}});
     else
       return dmat<T, d>({{0, 0}, {0, 0}});
   };
@@ -173,9 +171,9 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
 
   f.dx = [](const dvec<T, d> &x) {
     if (in_std(x))
-      return dmat<T, d>({{0, 0},
-                         {18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1),
-                          9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0) + 1}});
+      return dmat<T, d>(
+          {{0, 18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1)},
+           {0, 9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0) + 1}});
     else
       return dmat<T, d>({{0, 0}, {0, 0}});
   };
@@ -191,9 +189,9 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
 
   f.dx = [](const dvec<T, d> &x) {
     if (in_std(x))
-      return dmat<T, d>({{-54 * x(0) * x(1) - 27 * x(1) * x(1) + 27 * x(1),
-                          -27 * x(0) * x(0) - 54 * x(0) * x(1) + 27 * x(0)},
-                         {0, 0}});
+      return dmat<T, d>(
+          {{-54 * x(0) * x(1) - 27 * x(1) * x(1) + 27 * x(1), 0},
+           {-27 * x(0) * x(0) - 54 * x(0) * x(1) + 27 * x(0), 0}});
     else
       return dmat<T, d>({{0, 0}, {0, 0}});
   };
@@ -209,9 +207,9 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
 
   f.dx = [](const dvec<T, d> &x) {
     if (in_std(x))
-      return dmat<T, d>({{0, 0},
-                         {-54 * x(0) * x(1) - 27 * x(1) * x(1) + 27 * x(1),
-                          -27 * x(0) * x(0) - 54 * x(0) * x(1) + 27 * x(0)}});
+      return dmat<T, d>(
+          {{0, -54 * x(0) * x(1) - 27 * x(1) * x(1) + 27 * x(1)},
+           {0, -27 * x(0) * x(0) - 54 * x(0) * x(1) + 27 * x(0)}});
     else
       return dmat<T, d>({{0, 0}, {0, 0}});
   };

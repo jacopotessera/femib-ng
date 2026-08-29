@@ -23,27 +23,29 @@ template <typename T, int d> struct stokes {
   femib::util::build_diagonal_result<T> result;
 
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> bQ;
+  Eigen::Matrix<T, 1, Eigen::Dynamic> domain_integral_row;
 
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> AA;
   Eigen::Matrix<T, Eigen::Dynamic, 1> ff;
 
   femib::util::solvable_equations<T> solvable_equations;
 
-  T deltat = 0.1;
+  T deltat = 0.1; // TODO eh
   std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1>> solution;
   std::vector<std::vector<std::vector<std::vector<float>>>> plot;
 };
 
+// TODO unify with stokes
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
-stokes_a(const femib::types::F<T, d, d> &u, const femib::types::F<T, d, d> &v) {
-  return [&u, &v](const femib::types::dvec<T, d> &x) { return dpi(u, v)(x); };
+stokes_a(femib::types::F<T, d, d> u, femib::types::F<T, d, d> v) {
+  return [u, v](const femib::types::dvec<T, d> &x) { return dpi(u, v)(x); };
 }
 
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
-stokes_b(const femib::types::F<T, d, d> &u, const femib::types::F<T, d, 1> &q) {
-  return [&u, &q](const femib::types::dvec<T, d> &x) {
+stokes_b(femib::types::F<T, d, d> u, femib::types::F<T, d, 1> q) {
+  return [u, q](const femib::types::dvec<T, d> &x) {
     return div(u)(x) * q.x(x)(0);
   };
 }
@@ -51,8 +53,9 @@ stokes_b(const femib::types::F<T, d, d> &u, const femib::types::F<T, d, 1> &q) {
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
 external_force(femib::types::F<T, d, d> a) {
-  return
-      [a](const femib::types::dvec<T, d> &x) { return a.x(x)[0] + a.x(x)[1]; };
+  return [a](const femib::types::dvec<T, d> &x) {
+    return a.x(x)[0] + a.x(x)[1];
+  }; // TODO same fix as poisson?
 }
 
 template <typename T>
@@ -60,7 +63,6 @@ femib::util::solvable_equations<T>
 remove_edges(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM,
              Eigen::Matrix<T, Eigen::Dynamic, 1> dF,
              Eigen::Matrix<T, Eigen::Dynamic, 1> bV,
-             Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> bQ,
 
              std::vector<int> not_edges) {
 
@@ -70,7 +72,7 @@ remove_edges(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM,
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> bbb = (dF - ss)(not_edges, 0);
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> AAA =
-      (dM - bQ)(not_edges, not_edges);
+      dM(not_edges, not_edges);
 
   return {AAA, bbb};
 }
@@ -80,13 +82,12 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> add_edges(
 
     Eigen::Matrix<T, Eigen::Dynamic, 1> xxx,
     Eigen::Matrix<T, Eigen::Dynamic, 1> bV, int rowsV, int rowsQ,
-    std::vector<int> not_edges, std::vector<int> nodesE,
-    Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> bQ) {
+    std::vector<int> not_edges, std::vector<int> nodesE) {
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx;
   xx.resize(rowsV + rowsQ, 1);
 
-  for (int i = 0; i < rowsV; i++) {
+  for (int i = 0; i < rowsV + rowsQ; i++) {
     xx(i, 0) = 0.0;
     auto k = std::find(not_edges.begin(), not_edges.end(), i);
     if (k != not_edges.end()) {
@@ -98,21 +99,50 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> add_edges(
     }
   }
 
-  Eigen::Matrix<T, Eigen::Dynamic, 1> ppp = xxx.bottomRows(rowsQ - 1);
+  return xx;
+}
 
-  Eigen::Matrix<T, 1, Eigen::Dynamic> PPP = bQ.block(0, 1, 1, rowsQ - 1);
+template <typename T, int d>
+std::vector<int> build_stokes_t_not_edges(const stokes<T, d> &s) {
+  std::vector<int> not_edges = femib::util::build_not_edges<T, d, d>(s.V);
+  for (int i = 0; i < s.Q.nodes.P.size(); ++i) {
+    not_edges.push_back(s.V.nodes.P.size() + i);
+  }
+  return not_edges;
+}
 
-  for (int i = rowsV; i < rowsV + rowsQ; i++) {
-    xx(i, 0) = 0.0;
-    if (i == rowsV) {
-      xx(i, 0) = -PPP * ppp;
-    } else {
-      auto k = std::find(not_edges.begin(), not_edges.end(), i);
-      xx(i, 0) = xxx(k - not_edges.begin(), 0);
+template <typename T, int d>
+femib::util::solvable_equations<T> augment_with_pressure_gauge(
+    const stokes<T, d> &s,
+    const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &AA,
+    const Eigen::Matrix<T, Eigen::Dynamic, 1> &ff,
+    const std::vector<int> &not_edges) {
+
+  femib::util::solvable_equations<T> base =
+      remove_edges<T>(AA, ff, s.bV, not_edges);
+
+  int n = not_edges.size();
+  Eigen::Matrix<T, Eigen::Dynamic, 1> constraint_row_reduced =
+      Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(n);
+  for (int k = 0; k < n; ++k) {
+    int global_i = not_edges[k];
+    if (global_i >= s.V.nodes.P.size()) {
+      int pressure_i = global_i - s.V.nodes.P.size();
+      constraint_row_reduced(k) = s.domain_integral_row(pressure_i);
     }
   }
 
-  return xx;
+  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> AAA_aug =
+      Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>::Zero(n + 1, n + 1);
+  AAA_aug.block(0, 0, n, n) = base.A;
+  AAA_aug.block(0, n, n, 1) = constraint_row_reduced;
+  AAA_aug.block(n, 0, 1, n) = constraint_row_reduced.transpose();
+
+  Eigen::Matrix<T, Eigen::Dynamic, 1> bbb_aug =
+      Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(n + 1);
+  bbb_aug.topRows(n) = base.b;
+
+  return {AAA_aug, bbb_aug};
 }
 
 template <typename T, int d>
@@ -136,7 +166,8 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
       femib::util::triplets2dense(femib::util::build_edges<T, d, d>(s.V, b),
                                   s.V.nodes.P.size() + s.Q.nodes.P.size(), 1);
 
-  s.bQ = femib::util::build_zero_mean_edges<T, d>(s.Q, rule);
+  s.domain_integral_row =
+      femib::util::build_domain_integral_row<T, d>(s.Q, rule);
 
   s.AA = Eigen::ArrayXXf::Zero(s.V.nodes.P.size() + s.Q.nodes.P.size(),
                                s.V.nodes.P.size() + s.Q.nodes.P.size());
@@ -154,18 +185,10 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
   s.ff.block(0, 0, s.V.nodes.P.size(), 1) =
       femib::util::triplets2dense(s.result.F, s.V.nodes.P.size(), 1);
 
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> bbQ =
-      Eigen::ArrayXXf::Zero(s.V.nodes.P.size() + s.Q.nodes.P.size(),
-                            s.V.nodes.P.size() + s.Q.nodes.P.size());
-  bbQ.block(s.V.nodes.P.size(), s.V.nodes.P.size(), s.Q.nodes.P.size(),
-            s.Q.nodes.P.size()) = s.bQ;
+  std::vector<int> not_edges = build_stokes_t_not_edges<T, d>(s);
 
-  std::vector<int> not_edges = femib::util::build_not_edges<T, d, d>(s.V);
-  for (int i = 1; i < s.Q.nodes.P.size(); ++i) {
-    not_edges.push_back(s.V.nodes.P.size() + i);
-  }
-
-  s.solvable_equations = remove_edges<T>(s.AA, s.ff, s.bV, bbQ, not_edges);
+  s.solvable_equations =
+      augment_with_pressure_gauge<T, d>(s, s.AA, s.ff, not_edges);
 }
 
 template <typename T, int d> void advance(stokes<T, d> &s) {
@@ -173,7 +196,8 @@ template <typename T, int d> void advance(stokes<T, d> &s) {
   if (s.solution.size() == 0)
     u_1 = Eigen::ArrayXf::Zero(s.V.nodes.P.size(), 1);
   else
-    u_1 = s.solution[s.solution.size() - 1];
+    // last timestep velocity
+    u_1 = s.solution[s.solution.size() - 1].topRows(s.V.nodes.P.size());
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> DD =
       (1 / s.deltat) *
       Eigen::MatrixXf::Identity(s.V.nodes.P.size(), s.V.nodes.P.size());
@@ -184,20 +208,11 @@ template <typename T, int d> void advance(stokes<T, d> &s) {
   s.ff.block(0, 0, s.V.nodes.P.size(), 1) =
       femib::util::triplets2dense(s.result.F, s.V.nodes.P.size(), 1) + dd;
 
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> bbQ =
-      Eigen::ArrayXXf::Zero(s.V.nodes.P.size() + s.Q.nodes.P.size(),
-                            s.V.nodes.P.size() + s.Q.nodes.P.size());
-  bbQ.block(s.V.nodes.P.size(), s.V.nodes.P.size(), s.Q.nodes.P.size(),
-            s.Q.nodes.P.size()) = s.bQ;
+  std::vector<int> not_edges = build_stokes_t_not_edges<T, d>(s);
 
-  std::vector<int> not_edges = femib::util::build_not_edges<T, d, d>(s.V);
-  for (int i = 1; i < s.Q.nodes.P.size(); ++i) {
-    not_edges.push_back(s.V.nodes.P.size() + i);
-  }
+  s.solvable_equations =
+      augment_with_pressure_gauge<T, d>(s, s.AA, s.ff, not_edges);
 
-  s.solvable_equations = remove_edges<T>(s.AA, s.ff, s.bV, bbQ, not_edges);
-
-  // TODO
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx = solve<T, d, 1>(s);
 
   s.plot.emplace_back(s.V.plot(xx));
@@ -211,14 +226,14 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &s) {
       s.solvable_equations.A.colPivHouseholderQr().solve(
           s.solvable_equations.b);
 
-  std::vector<int> not_edges = femib::util::build_not_edges<T, d, d>(s.V);
-  for (int i = 1; i < s.Q.nodes.P.size(); ++i) {
-    not_edges.push_back(s.V.nodes.P.size() + i);
-  }
+  // drop the last row, constraint on pressure
+  Eigen::Matrix<T, Eigen::Dynamic, 1> x_no_lambda = x.topRows(x.rows() - 1);
+
+  std::vector<int> not_edges = build_stokes_t_not_edges<T, d>(s);
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx =
-      add_edges<T>(x, s.bV, s.V.nodes.P.size(), s.Q.nodes.P.size(), not_edges,
-                   s.V.nodes.E, s.bQ);
+      add_edges<T>(x_no_lambda, s.bV, s.V.nodes.P.size(), s.Q.nodes.P.size(),
+                   not_edges, s.V.nodes.E);
 
   return xx;
 }

@@ -27,20 +27,17 @@ triplets2dense(std::vector<Eigen::Triplet<T>> triplets, int rows, int cols) {
 
 template <typename T, int d, int e>
 femib::types::F<T, d, e> base_function2real_function(
-    const femib::finite_element_space::finite_element_space<T, d, e> &v, int n,
-    int i) {
+    const femib::finite_element_space::finite_element_space<T, d, e> &v, int i,
+    const femib::types::dmat<T, d> &Binv, const femib::types::dvec<T, d> &b) {
   femib::types::F<T, d, e> a;
   a.x =
-      [&v, n, i](const femib::types::dvec<T, d> &x) {
-        return (v.finite_element.base_functions[i].x(
-            femib::affine::affineBinv(v.mesh[n]) *
-            (x - femib::affine::affineb(v.mesh[n]))));
+      [&v, i, Binv, b](const femib::types::dvec<T, d> &x) {
+        return (v.finite_element.base_functions[i].x(Binv * (x - b)));
       },
-  a.dx = [&v, n, i](const femib::types::dvec<T, d> &x) {
-    return (femib::affine::affineBinv(v.mesh[n]) *
-            v.finite_element.base_functions[i].dx(
-                femib::affine::affineBinv(v.mesh[n]) *
-                (x - femib::affine::affineb(v.mesh[n]))));
+  a.dx = [&v, i, Binv,
+          b](const femib::types::dvec<T, d> &x) -> femib::types::rmat<T, d, e> {
+    return (Binv.transpose() *
+            v.finite_element.base_functions[i].dx(Binv * (x - b)));
   };
   return a;
 }
@@ -67,12 +64,14 @@ build_diagonal_result<T> build_diagonal(
   std::vector<Eigen::Triplet<T>> FF;
   for (int n = 0; n < v.mesh.T.size(); ++n) {
     femib::types::dtrian<T, d> t = v.mesh[n];
+    femib::types::dmat<T, d> Binv = femib::affine::affineBinv(t);
+    femib::types::dvec<T, d> bb = femib::affine::affineb(t);
     for (int i = 0; i < v.finite_element.base_functions.size(); ++i) {
       femib::types::F<T, d, e> a =
-          femib::util::base_function2real_function<T, d, e>(v, n, i);
+          femib::util::base_function2real_function<T, d, e>(v, i, Binv, bb);
       for (int j = 0; j < v.finite_element.base_functions.size(); ++j) {
         femib::types::F<T, d, e> b =
-            femib::util::base_function2real_function<T, d, e>(v, n, j);
+            femib::util::base_function2real_function<T, d, e>(v, j, Binv, bb);
         T m = femib::mesh::integrate<T, d>(rule, fff(a, b), t);
         BB.push_back(Eigen::Triplet<T>(v.nodes.get_index(i, n),
                                        v.nodes.get_index(j, n), m));
@@ -94,12 +93,14 @@ std::vector<Eigen::Triplet<T>> build_non_diagonal(
   std::vector<Eigen::Triplet<T>> BB;
   for (int n = 0; n < v.mesh.T.size(); ++n) {
     femib::types::dtrian<T, d> t = v.mesh[n];
+    femib::types::dmat<T, d> Binv = femib::affine::affineBinv(t);
+    femib::types::dvec<T, d> bb = femib::affine::affineb(t);
     for (int i = 0; i < v.finite_element.base_functions.size(); ++i) {
       femib::types::F<T, d, d> a =
-          femib::util::base_function2real_function<T, d, d>(v, n, i);
+          femib::util::base_function2real_function<T, d, d>(v, i, Binv, bb);
       for (int j = 0; j < q.finite_element.base_functions.size(); ++j) {
         femib::types::F<T, d, 1> b =
-            femib::util::base_function2real_function<T, d, 1>(q, n, j);
+            femib::util::base_function2real_function<T, d, 1>(q, j, Binv, bb);
         T m = femib::mesh::integrate<T, d>(rule, fff(a, b), t);
         BB.push_back(Eigen::Triplet<T>(v.nodes.get_index(i, n),
                                        q.nodes.get_index(j, n), m));
@@ -120,26 +121,32 @@ build_edges(const femib::finite_element_space::finite_element_space<T, d, e> &s,
   return B;
 }
 
+// TODO un-normalized pressure constraint
 template <typename T, int d>
-Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> build_zero_mean_edges(
+Eigen::Matrix<T, 1, Eigen::Dynamic> build_domain_integral_row(
     const femib::finite_element_space::finite_element_space<T, d, 1> &v,
     const femib::gauss::rule<T, d> &rule) {
   std::vector<Eigen::Triplet<T>> B;
   for (int n = 0; n < v.mesh.T.size(); ++n) {
     femib::types::dtrian<T, d> t = v.mesh[n];
+    femib::types::dmat<T, d> Binv = femib::affine::affineBinv(t);
+    femib::types::dvec<T, d> bb = femib::affine::affineb(t);
     for (int i = 0; i < v.finite_element.base_functions.size(); ++i) {
       femib::types::F<T, d, 1> a =
-          femib::util::base_function2real_function<T, d, 1>(v, n, i);
-
+          femib::util::base_function2real_function<T, d, 1>(v, i, Binv, bb);
       auto g = [&](const femib::types::dvec<T, d> &x) { return a.x(x)(0); };
-
       T m = femib::mesh::integrate<T, d>(rule, g, t);
       B.push_back(Eigen::Triplet<T>(0, v.nodes.get_index(i, n), m));
     }
   }
+  return femib::util::triplets2dense<T>(B, 1, v.nodes.P.size());
+}
 
-  Eigen::Matrix<T, 1, Eigen::Dynamic> BB =
-      femib::util::triplets2dense<T>(B, 1, v.nodes.P.size());
+template <typename T, int d>
+Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> build_zero_mean_edges(
+    const femib::finite_element_space::finite_element_space<T, d, 1> &v,
+    const femib::gauss::rule<T, d> &rule) {
+  Eigen::Matrix<T, 1, Eigen::Dynamic> BB = build_domain_integral_row(v, rule);
 
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> BBB =
       Eigen::ArrayXXf::Zero(v.nodes.P.size(), v.nodes.P.size());
@@ -192,6 +199,10 @@ auto print_node_generator_stokes(
     Eigen::Matrix<T, Eigen::Dynamic, 1> xx) {
 
   return [&s, &xx](std::vector<int> t) {
+    if (t.size() < 7) {
+      throw std::invalid_argument(
+          "print_node_generator_stokes: expected at least 7 node indices");
+    }
     int j_0 = t[0];
     int j_1 = t[1];
     int j_2 = t[2];

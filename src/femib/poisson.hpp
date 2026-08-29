@@ -42,7 +42,14 @@ std::function<T(femib::types::dvec<T, d>)> ddot(femib::types::F<T, d, e> a,
 template <typename T, int d, int e>
 std::function<T(femib::types::dvec<T, d>)>
 external_force(femib::types::F<T, d, e> a) {
-  return [a](femib::types::dvec<T, d> x) { return a.x(x)[0] + a.x(x)[1]; };
+  return [a](femib::types::dvec<T, d> x) {
+    femib::types::dvec<T, e> value = a.x(x);
+    T sum = 0;
+    for (int k = 0; k < e; ++k) {
+      sum += value(k);
+    }
+    return sum;
+  };
 }
 
 template <typename T>
@@ -118,9 +125,6 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const poisson<T, d, e> &poisson) {
 
   femib::util::solvable_equations<T> solvable_equations = remove_edges<T>(
       poisson.dM, poisson.dF, poisson.dB, poisson.V.nodes.P.size(), not_edges);
-
-  std::cerr << solvable_equations.A.rows() << " x "
-            << solvable_equations.A.cols() << std::endl;
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> x =
       solvable_equations.A.colPivHouseholderQr().solve(solvable_equations.b);

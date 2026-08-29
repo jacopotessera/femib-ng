@@ -48,7 +48,7 @@ finite_element<T, d, e> create_finite_element_P1_2d2d() {
 
   f.dx = [](const dvec<T, d> &x) {
     if (in_std(x))
-      return dmat<T, d>({{-1, -1}, {0, 0}});
+      return dmat<T, d>({{-1, 0}, {-1, 0}});
     else
       return dmat<T, d>({{0, 0}, {0, 0}});
   };
@@ -80,7 +80,7 @@ finite_element<T, d, e> create_finite_element_P1_2d2d() {
 
   f.dx = [](const dvec<T, d> &x) {
     if (in_std(x))
-      return dmat<T, d>({{0, 1}, {0, 0}});
+      return dmat<T, d>({{0, 0}, {1, 0}});
     else
       return dmat<T, d>({{0, 0}, {0, 0}});
   };
@@ -96,7 +96,7 @@ finite_element<T, d, e> create_finite_element_P1_2d2d() {
 
   f.dx = [](const dvec<T, d> &x) {
     if (in_std(x))
-      return dmat<T, d>({{0, 0}, {-1, -1}});
+      return dmat<T, d>({{0, -1}, {0, -1}});
     else
       return dmat<T, d>({{0, 0}, {0, 0}});
   };
@@ -112,7 +112,7 @@ finite_element<T, d, e> create_finite_element_P1_2d2d() {
 
   f.dx = [](const dvec<T, d> &x) {
     if (in_std(x))
-      return dmat<T, d>({{0, 0}, {1, 0}});
+      return dmat<T, d>({{0, 1}, {0, 0}});
     else
       return dmat<T, d>({{0, 0}, {0, 0}});
   };
