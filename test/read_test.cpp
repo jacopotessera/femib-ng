@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../src/read/read.hpp"
+#include "name_reporter.h"
 #include <cstdio>
 #include <doctest/doctest.h>
 #include <fstream>

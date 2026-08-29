@@ -3,6 +3,7 @@
 #include "../src/gauss/gauss_lagrange_2_2d.hpp"
 #include "../src/mesh/mesh.hpp"
 #include "../src/types/types.hpp"
+#include "name_reporter.h"
 #include <doctest/doctest.h>
 
 const float EPSILON = std::numeric_limits<float>::epsilon();

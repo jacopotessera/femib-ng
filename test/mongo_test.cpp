@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../src/mongo/mongo.hpp"
+#include "name_reporter.h"
 #include <doctest/doctest.h>
 #include <string>
 

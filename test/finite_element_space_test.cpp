@@ -2,6 +2,7 @@
 #include "P1_2d1d.hpp"
 #include "P1_2d2d.hpp"
 #include "finite_element_space.hpp"
+#include "name_reporter.h"
 #include <Eigen/Sparse>
 #include <doctest/doctest.h>
 #include <iostream>

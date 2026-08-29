@@ -5,6 +5,7 @@
 #include "../src/finite_element/P1_2d2d.hpp"
 #include "../src/finite_element/finite_element.hpp"
 #include "../src/types/types.hpp"
+#include "name_reporter.h"
 #include <doctest/doctest.h>
 
 TEST_CASE("testing finite_element P1_2d1d") {

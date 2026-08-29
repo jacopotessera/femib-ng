@@ -2,6 +2,7 @@
 #include "../src/mesh/mesh.hpp"
 #include "../src/types/types.hpp"
 #include "cuda.h"
+#include "name_reporter.h"
 #include "spdlog/spdlog.h"
 #include <doctest/doctest.h>
 #include <iostream>
