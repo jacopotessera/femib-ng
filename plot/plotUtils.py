@@ -1,15 +1,7 @@
 #!/bin/python
 
-#
-#	plotUtils.py
-#
+import sys, numpy
 
-import sys, pymongo, numpy
-from functools import reduce
-
-#class PlotUtils():
-
-#	@staticmethod
 def test():
 	print("test")
 	T = [
@@ -48,7 +40,6 @@ def test():
 		sys.argv = i
 		print(sys.argv,parse_input(sims))
 
-#	@staticmethod
 def parse_id(i):
 	ret = []
 	try:
@@ -58,7 +49,7 @@ def parse_id(i):
 		for j in J:
 			K = j.split(":")
 			if len(K)==1:
-				ret.append(int(j))				
+				ret.append(int(j))
 			elif len(K)==2:
 				k0 = int(K[0])
 				k1 = int(K[1])+1
@@ -71,7 +62,6 @@ def parse_id(i):
 				raise Exception("invalid interval: " + j)
 	except Exception as e:
 		print(e)
-		#return []
 		raise
 	return list(set(ret))
 
@@ -94,73 +84,44 @@ def parse_input(sims):
 		print(e)
 		return {"op": "list"}
 
-def calcPlotData(timesteps,parameters,TMAX,plotConfig):
-	T = []
-	X = []
-	Y = []
-	U = []
-	V = []
-	P = []
-	A = []
-	E = []
-	W = []
+def _timestep_number(group_name):
+	# Groups are named "timestep_<time>"
+	return int(group_name.rsplit("_", 1)[-1])
 
-	for t in timesteps:
-		if t["time"]%(numpy.ceil(TMAX/plotConfig["ffw"])) == 0:
-			T.append(t["time"]*parameters["deltat"])
+def sortedTimesteps(source):
+	if hasattr(source, "keys"):
+		names = [k for k in source.keys() if k.startswith("timestep_")]
+		names.sort(key=_timestep_number)
+		return [source[n] for n in names]
+	return list(source)
 
-			xx = list(map(lambda x : x[1][0],t["x"] ))
-			yy = list(map(lambda x : x[1][1],t["x"] ))
-			X.append(xx)
-			Y.append(yy)
+def calcPlotData(timesteps):
+	groups = sortedTimesteps(timesteps)
 
-			uu = list(map(lambda x : x[1][0],t["u"] ))
-			vv = list(map(lambda x : x[1][1],t["u"] ))
+	T, X, Y, U, V, P = [], [], [], [], [], []
+	for grp in groups:
+		name = grp.name.rsplit("/", 1)[-1]
+		T.append(_timestep_number(name))
 
-			uuu = [0]*len(uu)
-			for i,u in enumerate(uu):
-				ii = i//21
-				qq = i%21
-				uuu[i] = uu[qq*21+ii]
+		if "x" in grp:
+			x = grp["x"][:]
+			X.append(x[:, 0])
+			Y.append(x[:, 1])
+		else:
+			X.append(numpy.array([]))
+			Y.append(numpy.array([]))
 
-			vvv = [0]*len(vv)
-			for i,v in enumerate(vv):
-				ii = i//21
-				qq = i%21
-				vvv[i] = vv[qq*21+ii]
+		if "u" in grp:
+			u = grp["u"][:]
+			U.append(u[:, 0])
+			V.append(u[:, 1])
+		else:
+			U.append(numpy.array([]))
+			V.append(numpy.array([]))
 
-			U.append(uu)
-			V.append(vv)
-			W.append({	"x":list(map(lambda x : x[0][0],t["u"] )),"y":list(map(lambda x : x[0][1],t["u"] )),
-						"u":list(map(lambda x : x[1][0],t["u"] )),"v":list(map(lambda x : x[1][1],t["u"] ))})
+		P.append(grp["q"][:, 0] if "q" in grp else numpy.array([]))
 
-			p0 = list(filter(lambda x : abs(x[0][0])<0.001 and abs(x[0][1])<0.001, t["q"]))
-			print("p(0,0) = ",p0[0][1][0])
+	return {"T": T, "X": X, "Y": Y, "U": U, "V": V, "P": P}
 
-			p1 = list(filter(lambda x : abs(x[0][0]-1)<0.001 and abs(x[0][1]-1)<0.001, t["q"]))
-			print("p(1,1) = ",p1[0][1][0])
-
-			pp = []
-			for ii in range(len(t["q"])):
-				if ii%(plotConfig["steps"]+1)==0:
-					pp.append([])
-				pp[-1].append(t["q"][ii][1][0])
-			P.append(pp)
-			
-			area = abs (reduce( (lambda x,y : x+y ) , map( lambda x : 0.5*(x[0]*x[3]-x[1]*x[2]) ,zip(xx,yy,numpy.roll(xx,-1),numpy.roll(yy,-1)) ) ) )
-			A.append(area/plotConfig["area0"])
-
-			size = len(xx)
-			aa = numpy.sqrt( (xx[0]-xx[int(size/2)])**2+(yy[0]-yy[int(size/2)])**2 )
-			AA = numpy.sqrt( (xx[int(size/4)]-xx[int(3*size/4)])**2+(yy[int(size/4)]-yy[int(3*size/4)])**2 )
-
-			E.append({"a":aa,"A":AA,"e":aa/AA})
-		
-			print(str(t["time"]) + ": area = " + str(area/plotConfig["area0"]) + "%, e = " +str(aa/AA))
-
-	return {"T":T,"X":[X,Y],"U":[U,V],"P":P,"A":[A,E],"W":W}
-	
 if __name__ == '__main__':
-	#PlotUtils.test()
 	test()
-

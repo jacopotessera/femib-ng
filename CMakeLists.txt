@@ -12,6 +12,18 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(rapidcsv)
 
+FetchContent_Declare(
+  HighFive
+  GIT_REPOSITORY https://github.com/BlueBrain/HighFive.git
+  GIT_TAG v2.10.1
+)
+set(HIGHFIVE_USE_BOOST OFF CACHE BOOL "" FORCE)
+set(HIGHFIVE_UNIT_TESTS OFF CACHE STRING "" FORCE)
+set(HIGHFIVE_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(HIGHFIVE_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+FetchContent_MakeAvailable(HighFive)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
@@ -47,4 +59,4 @@ add_subdirectory(bench)
 
 add_subdirectory(${SRC_DIR}/cuda)
 add_subdirectory(${SRC_DIR}/read)
-add_subdirectory(${SRC_DIR}/mongo)
+add_subdirectory(${SRC_DIR}/write)

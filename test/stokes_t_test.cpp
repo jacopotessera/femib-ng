@@ -7,13 +7,14 @@
 #include "../src/gauss/gauss.hpp"
 #include "../src/gauss/gauss_lagrange_2_2d.hpp"
 #include "../src/mesh/mesh.hpp"
-#include "../src/mongo/mongo.hpp"
 #include "../src/read/read.hpp"
+#include "../src/write/write.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <ctime>
 #include <doctest/doctest.h>
 #include <iostream>
@@ -75,7 +76,7 @@ make_stokes_t_fixture(femib::types::mesh<float, 2> &mesh_out) {
 
 } // namespace
 
-TEST_CASE("testing femib stokes_t pipeline with mongo persistence") {
+TEST_CASE("testing femib stokes_t pipeline with HDF5 persistence") {
   femib::types::mesh<float, 2> mesh;
   femib::stokes_t::stokes<float, 2> stokes = make_stokes_t_fixture(mesh);
 
@@ -86,18 +87,27 @@ TEST_CASE("testing femib stokes_t pipeline with mongo persistence") {
 
   std::string id = getTime();
 
-  std::string dbname = "femib_test";
-  femib::mongo::save_sim(dbname, id);
+  std::string path = "/tmp/femib_stokes_t_test_" + id + ".h5";
+  femib::write::save_sim(path, id);
 
   int TMAX = 100;
   for (int t = 0; t < TMAX; t++) {
     femib::stokes_t::advance<float, 2>(stokes);
-    femib::mongo::plot_data p = {id, t, stokes.plot[t], {}, {}};
-    femib::mongo::save_plot_data(dbname, p);
+
+    femib::write::plot_data p;
+    p.time = t;
+    for (const auto &point : stokes.plot[t]) {
+      p.x.push_back(point[0]);
+      p.u.push_back(point[1]);
+    }
+    femib::write::save_plot_data(path, p);
   }
 
   CHECK(stokes.solution.size() == (size_t)TMAX);
   CHECK(stokes.solution.back().allFinite());
+
+  // TODO
+  // std::remove(path.c_str());
 }
 
 TEST_CASE("testing advance") {
