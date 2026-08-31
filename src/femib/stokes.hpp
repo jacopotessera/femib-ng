@@ -116,8 +116,9 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
   Eigen::Matrix<T, 1, Eigen::Dynamic> domain_integral_row =
       femib::util::build_domain_integral_row<T, d>(s.Q, rule);
 
-  s.AA = Eigen::ArrayXXf::Zero(s.V.nodes.P.size() + s.Q.nodes.P.size(),
-                               s.V.nodes.P.size() + s.Q.nodes.P.size());
+  s.AA = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>::Zero(
+      s.V.nodes.P.size() + s.Q.nodes.P.size(),
+      s.V.nodes.P.size() + s.Q.nodes.P.size());
   s.AA.block(0, 0, s.V.nodes.P.size(), s.V.nodes.P.size()) = s.A;
 
   s.AA.block(0, s.V.nodes.P.size(), s.V.nodes.P.size(), s.Q.nodes.P.size()) =
@@ -126,7 +127,8 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
   s.AA.block(s.V.nodes.P.size(), 0, s.Q.nodes.P.size(), s.V.nodes.P.size()) =
       s.B.transpose();
 
-  s.ff = Eigen::ArrayXXf::Zero(s.V.nodes.P.size() + s.Q.nodes.P.size(), 1);
+  s.ff = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(
+      s.V.nodes.P.size() + s.Q.nodes.P.size(), 1);
 
   s.ff.block(0, 0, s.V.nodes.P.size(), 1) =
       femib::util::triplets2dense(result.F, s.V.nodes.P.size(), 1);

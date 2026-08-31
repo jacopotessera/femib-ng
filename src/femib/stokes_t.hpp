@@ -32,7 +32,7 @@ template <typename T, int d> struct stokes {
 
   T deltat = 0.1; // TODO eh
   std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1>> solution;
-  std::vector<std::vector<std::vector<std::vector<float>>>> plot;
+  std::vector<std::vector<std::vector<std::vector<float>>>> plot; // TODO float?
 };
 
 // TODO unify with stokes
@@ -169,8 +169,9 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
   s.domain_integral_row =
       femib::util::build_domain_integral_row<T, d>(s.Q, rule);
 
-  s.AA = Eigen::ArrayXXf::Zero(s.V.nodes.P.size() + s.Q.nodes.P.size(),
-                               s.V.nodes.P.size() + s.Q.nodes.P.size());
+  s.AA = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>::Zero(
+      s.V.nodes.P.size() + s.Q.nodes.P.size(),
+      s.V.nodes.P.size() + s.Q.nodes.P.size());
 
   s.AA.block(0, 0, s.V.nodes.P.size(), s.V.nodes.P.size()) = s.A;
 
@@ -180,7 +181,8 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
   s.AA.block(s.V.nodes.P.size(), 0, s.Q.nodes.P.size(), s.V.nodes.P.size()) =
       s.B.transpose();
 
-  s.ff = Eigen::ArrayXXf::Zero(s.V.nodes.P.size() + s.Q.nodes.P.size(), 1);
+  s.ff = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(
+      s.V.nodes.P.size() + s.Q.nodes.P.size(), 1);
 
   s.ff.block(0, 0, s.V.nodes.P.size(), 1) =
       femib::util::triplets2dense(s.result.F, s.V.nodes.P.size(), 1);
@@ -194,7 +196,8 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 template <typename T, int d> void advance(stokes<T, d> &s) {
   Eigen::Matrix<T, Eigen::Dynamic, 1> u_1;
   if (s.solution.size() == 0)
-    u_1 = Eigen::ArrayXf::Zero(s.V.nodes.P.size(), 1);
+    u_1 = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(s.V.nodes.P.size(),
+                                                    1); // TODO
   else
     // last timestep velocity
     u_1 = s.solution[s.solution.size() - 1].topRows(s.V.nodes.P.size());

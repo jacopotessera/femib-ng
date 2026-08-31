@@ -100,6 +100,7 @@ __host__ bool femib::cuda::accurate(const femib::types::dvec<f, d> &P,
   if (femib::cuda::in_triangle(P, T)) {
     return true;
   }
+  // TODO eh
   if (false) {
     return false;
   } else if (distance_point_segment(P, {T[0], T[1]}) <= EPSILON * EPSILON) {

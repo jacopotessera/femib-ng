@@ -1,4 +1,5 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "../femib/femib.hpp"
 #include "P1_2d1d.hpp"
 #include "P1_2d2d.hpp"
 #include "finite_element_space.hpp"
@@ -11,27 +12,6 @@
 
 int get_index(const femib::types::nodes<float, 2> &nodes, int i, int n) {
   return nodes.T[n][i];
-}
-
-auto printNode_generator(
-    femib::finite_element_space::finite_element_space<float, 2, 1> s,
-    Eigen::Matrix<float, Eigen::Dynamic, 1> xx) {
-
-  return [&s, &xx](std::vector<int> t) {
-    int j_0 = t[0];
-    int j_1 = t[1];
-    int j_2 = t[2];
-    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t"
-              << xx(j_0) << std::endl;
-    std::cout << s.nodes.P[j_1](0) << "\t" << s.nodes.P[j_1](1) << "\t"
-              << xx(j_1) << std::endl;
-    std::cout << s.nodes.P[j_2](0) << "\t" << s.nodes.P[j_2](1) << "\t"
-              << xx(j_2) << std::endl;
-    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t"
-              << xx(j_0) << std::endl;
-    std::cout << std::endl;
-    std::cout << std::endl;
-  };
 }
 
 TEST_CASE("testing finite_element_space") {
@@ -61,19 +41,16 @@ TEST_CASE("testing finite_element_space") {
   for (int n = 0; n < s.mesh.T.size(); ++n) {
     for (int i = 0; i < s.finite_element.base_functions.size(); ++i) {
       for (int j = 0; j < s.finite_element.base_functions.size(); ++j) {
-        femib::types::F<float, 2, 1> a;
-        femib::types::F<float, 2, 1> b;
         femib::types::dtrian<float, 2> t = s.mesh[n];
-        a.dx = [&](const femib::types::dvec<float, 2> &x) {
-          return (femib::affine::affineBinv(t) *
-                  f.base_functions[i].dx(femib::affine::affineBinv(t) *
-                                         (x - femib::affine::affineb(t))));
-        };
-        b.dx = [&](const femib::types::dvec<float, 2> &x) {
-          return (femib::affine::affineBinv(t) *
-                  f.base_functions[j].dx(femib::affine::affineBinv(t) *
-                                         (x - femib::affine::affineb(t))));
-        };
+        femib::types::dmat<float, 2> Binv = femib::affine::affineBinv(t);
+        femib::types::dvec<float, 2> bb = femib::affine::affineb(t);
+        femib::types::F<float, 2, 1> a =
+            femib::util::base_function2real_function<float, 2, 1>(s, i, Binv,
+                                                                  bb);
+        femib::types::F<float, 2, 1> b =
+            femib::util::base_function2real_function<float, 2, 1>(s, j, Binv,
+                                                                  bb);
+
         float m = femib::mesh::integrate<float, 2>(
             rule,
             [&a, &b](femib::types::dvec<float, 2> x) {
@@ -158,8 +135,6 @@ TEST_CASE("testing finite_element_space") {
       xx(i, 0) = dB(i, 0);
     }
   }
-
-  std::for_each(s.nodes.T.begin(), s.nodes.T.end(), printNode_generator(s, xx));
 
   CHECK(xx.size() == s.nodes.P.size());
   for (int e : s.nodes.E) {

@@ -11,7 +11,6 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <doctest/doctest.h>
 #include <iostream>
@@ -74,19 +73,13 @@ TEST_CASE("testing femib poisson") {
 
   femib::poisson::poisson<float, 2, 1> poisson = {s};
 
-  auto start = std::chrono::steady_clock::now();
   femib::poisson::init<float, 2, 1>(poisson, rule);
   auto end = std::chrono::steady_clock::now();
-  std::cout << "poisson::init took "
-            << std::chrono::duration<double, std::milli>(end - start).count()
-            << " ms" << std::endl;
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::poisson::solve<float, 2, 1>(poisson);
 
-  std::for_each(s.nodes.T.begin(), s.nodes.T.end(),
-                femib::util::print_node_generator<float, 2, 1>(
-                    s, xx)); // TODO eh? plot or check
+  CHECK(xx.allFinite());
   // TODO check? it is a known problem with known solutions. there is a test
   //  below. is this test still needed?
 }

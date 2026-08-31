@@ -93,17 +93,40 @@ TEST_CASE("testing femib stokes") {
   stokes.Q = q;
   femib::stokes::init<float, 2>(stokes, rule);
 
-  femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
-  std::cerr << box[0] << std::endl;
-  std::cerr << box[1] << std::endl;
+  {
+    std::vector<int> not_edges =
+        femib::util::build_not_edges<float, 2, 2>(stokes.V);
+    int rowsV_free = static_cast<int>(not_edges.size());
+    int rowsQ = static_cast<int>(stokes.Q.nodes.P.size());
+    int expected_n = rowsV_free + rowsQ + 1;
 
-  femib::types::box<float, 2> boxx =
-      femib::mesh::lin_spaced<float, 2>(box, 0.1);
+    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> &A =
+        stokes.solvable_equations.A;
+    const Eigen::Matrix<float, Eigen::Dynamic, 1> &b =
+        stokes.solvable_equations.b;
+
+    // Expected size: (rowsV_free + rowsQ + 1) -- one Lagrange-multiplier
+    // row/column on top of the velocity-reduced, fully-free-pressure system.
+    REQUIRE(A.rows() == expected_n);
+    REQUIRE(A.cols() == expected_n);
+    REQUIRE(b.rows() == expected_n);
+
+    // Symmetric saddle-point structure.
+    CHECK((A - A.transpose()).norm() < 1e-5f);
+
+    // Bottom-right corner (the multiplier's own diagonal entry) is exactly 0
+    CHECK(A(expected_n - 1, expected_n - 1) == 0.0f);
+
+    // RHS of "integral(p) = 0" is exactly 0.
+    CHECK(b(expected_n - 1) == 0.0f);
+
+    // The augmented row/column (excluding the corner) is non-trivial
+    CHECK(A.block(0, expected_n - 1, expected_n - 1, 1).norm() > 0.0f);
+  }
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::stokes::solve<float, 2, 1>(stokes);
-  std::for_each(v.nodes.T.begin(), v.nodes.T.end(),
-                femib::util::print_node_generator<float, 2, 2>(v, xx));
+  CHECK(xx.allFinite());
 }
 
 TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "

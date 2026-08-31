@@ -3,7 +3,6 @@
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-#include <iostream>
 #include <vector>
 
 #include "../affine/affine.hpp"
@@ -142,23 +141,6 @@ Eigen::Matrix<T, 1, Eigen::Dynamic> build_domain_integral_row(
   return femib::util::triplets2dense<T>(B, 1, v.nodes.P.size());
 }
 
-template <typename T, int d>
-Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> build_zero_mean_edges(
-    const femib::finite_element_space::finite_element_space<T, d, 1> &v,
-    const femib::gauss::rule<T, d> &rule) {
-  Eigen::Matrix<T, 1, Eigen::Dynamic> BB = build_domain_integral_row(v, rule);
-
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> BBB =
-      Eigen::ArrayXXf::Zero(v.nodes.P.size(), v.nodes.P.size());
-
-  T b1 = BB(0);
-  BBB(0, 0) = -1;
-  for (int i = 1; i < BB.cols(); ++i) {
-    BBB(0, i) = BB(i) / b1;
-  }
-  return BBB;
-}
-
 template <typename T, int d, int e>
 std::vector<int>
 build_not_edges(femib::finite_element_space::finite_element_space<T, d, e> s) {
@@ -169,77 +151,6 @@ build_not_edges(femib::finite_element_space::finite_element_space<T, d, e> s) {
     }
   }
   return not_edges;
-}
-
-template <typename T, int d, int e>
-auto print_node_generator(
-    femib::finite_element_space::finite_element_space<T, d, e> s,
-    Eigen::Matrix<T, Eigen::Dynamic, 1> xx) {
-
-  return [&s, &xx](std::vector<int> t) {
-    int j_0 = t[0];
-    int j_1 = t[1];
-    int j_2 = t[2];
-    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t"
-              << xx(j_0) << std::endl;
-    std::cout << s.nodes.P[j_1](0) << "\t" << s.nodes.P[j_1](1) << "\t"
-              << xx(j_1) << std::endl;
-    std::cout << s.nodes.P[j_2](0) << "\t" << s.nodes.P[j_2](1) << "\t"
-              << xx(j_2) << std::endl;
-    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t"
-              << xx(j_0) << std::endl;
-    std::cout << std::endl;
-    std::cout << std::endl;
-  };
-}
-
-template <typename T, int d, int e>
-auto print_node_generator_stokes(
-    femib::finite_element_space::finite_element_space<T, d, e> s,
-    Eigen::Matrix<T, Eigen::Dynamic, 1> xx) {
-
-  return [&s, &xx](std::vector<int> t) {
-    if (t.size() < 7) {
-      throw std::invalid_argument(
-          "print_node_generator_stokes: expected at least 7 node indices");
-    }
-    int j_0 = t[0];
-    int j_1 = t[1];
-    int j_2 = t[2];
-    int j_6 = t[6];
-    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t"
-              << xx(j_0) << std::endl;
-    std::cout << s.nodes.P[j_1](0) << "\t" << s.nodes.P[j_1](1) << "\t"
-              << xx(j_1) << std::endl;
-    std::cout << s.nodes.P[j_6](0) << "\t" << s.nodes.P[j_6](1) << "\t"
-              << xx(j_6) << std::endl;
-    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t"
-              << xx(j_0) << std::endl;
-    std::cout << std::endl;
-    std::cout << std::endl;
-
-    std::cout << s.nodes.P[j_1](0) << "\t" << s.nodes.P[j_1](1) << "\t"
-              << xx(j_1) << std::endl;
-    std::cout << s.nodes.P[j_2](0) << "\t" << s.nodes.P[j_2](1) << "\t"
-              << xx(j_2) << std::endl;
-    std::cout << s.nodes.P[j_6](0) << "\t" << s.nodes.P[j_6](1) << "\t"
-              << xx(j_6) << std::endl;
-    std::cout << s.nodes.P[j_1](0) << "\t" << s.nodes.P[j_1](1) << "\t"
-              << xx(j_1) << std::endl;
-    std::cout << std::endl;
-    std::cout << std::endl;
-
-    std::cout << s.nodes.P[j_2](0) << "\t" << s.nodes.P[j_2](1) << "\t"
-              << xx(j_2) << std::endl;
-    std::cout << s.nodes.P[j_6](0) << "\t" << s.nodes.P[j_6](1) << "\t"
-              << xx(j_6) << std::endl;
-    std::cout << s.nodes.P[j_0](0) << "\t" << s.nodes.P[j_0](1) << "\t"
-              << xx(j_0) << std::endl;
-    std::cout << s.nodes.P[j_2](0) << "\t" << s.nodes.P[j_2](1) << "\t"
-              << xx(j_2) << std::endl;
-    std::cout << std::endl;
-    std::cout << std::endl;
-  };
 }
 
 } // namespace femib::util
