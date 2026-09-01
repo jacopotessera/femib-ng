@@ -51,6 +51,7 @@ template <typename T> struct solvable_equations {
   Eigen::Matrix<T, Eigen::Dynamic, 1> b;
 };
 
+// TODO split in build stiffness matrix + build load vector
 template <typename T, int d, int e>
 build_diagonal_result<T> build_diagonal(
     const femib::finite_element_space::finite_element_space<T, d, e> &v,
@@ -80,6 +81,27 @@ build_diagonal_result<T> build_diagonal(
     }
   }
   return {BB, FF};
+}
+
+template <typename T, int d, int e>
+std::vector<Eigen::Triplet<T>> build_vector( // TODO FF, rename to load_vector
+    const femib::finite_element_space::finite_element_space<T, d, e> &v,
+    const femib::gauss::rule<T, d> &rule,
+    const std::function<std::function<T(femib::types::dvec<T, d>)>(
+        femib::types::F<T, d, e>)> &ggg) {
+  std::vector<Eigen::Triplet<T>> FF;
+  for (int n = 0; n < v.mesh.T.size(); ++n) {
+    femib::types::dtrian<T, d> t = v.mesh[n];
+    femib::types::dmat<T, d> Binv = femib::affine::affineBinv(t);
+    femib::types::dvec<T, d> bb = femib::affine::affineb(t);
+    for (int i = 0; i < v.finite_element.base_functions.size(); ++i) {
+      femib::types::F<T, d, e> a =
+          femib::util::base_function2real_function<T, d, e>(v, i, Binv, bb);
+      T f_ = femib::mesh::integrate<T, d>(rule, ggg(a), t);
+      FF.push_back(Eigen::Triplet<T>(v.nodes.get_index(i, n), 0, f_));
+    }
+  }
+  return FF;
 }
 
 template <typename T, int d>

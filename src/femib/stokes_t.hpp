@@ -12,9 +12,16 @@
 
 namespace femib::stokes_t {
 
+// TODO constructor, V, Q, deltat, gauss-rule, force, etc
 template <typename T, int d> struct stokes {
   femib::finite_element_space::finite_element_space<T, d, d> V;
   femib::finite_element_space::finite_element_space<T, d, 1> Q;
+  femib::gauss::rule<T, d> rule;
+  std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)> force =
+      [](femib::types::dvec<T, d>, T) {
+        return Eigen::Matrix<T, d, 1>::Zero();
+      }; // external force f(x,t)
+  T deltat = 0.1; // TODO eh
 
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> A;
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> B;
@@ -30,9 +37,11 @@ template <typename T, int d> struct stokes {
 
   femib::util::solvable_equations<T> solvable_equations;
 
-  T deltat = 0.1; // TODO eh
   std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1>> solution;
-  std::vector<std::vector<std::vector<std::vector<float>>>> plot; // TODO float?
+  std::vector<std::vector<std::vector<std::vector<float>>>>
+      plot; // TODO we need this?? cant we calculate from solution if needed?
+
+  T time = 0;
 };
 
 // TODO unify with stokes
@@ -50,12 +59,20 @@ stokes_b(femib::types::F<T, d, d> u, femib::types::F<T, d, 1> q) {
   };
 }
 
+// force at time t tested against the base function a
 template <typename T, int d>
-std::function<T(femib::types::dvec<T, d>)>
-external_force(femib::types::F<T, d, d> a) {
-  return [a](const femib::types::dvec<T, d> &x) {
-    return a.x(x)[0] + a.x(x)[1];
-  }; // TODO same fix as poisson?
+std::function<T(femib::types::dvec<T, d>)> external_force(
+    femib::types::F<T, d, d> a,
+    const std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)>
+        &force_at_t) {
+  return [a, force_at_t](const femib::types::dvec<T, d> &x) {
+    femib::types::dvec<T, d> fx = force_at_t(x);
+    T sum = 0;
+    for (int k = 0; k < d; ++k) {
+      sum += fx(k) * a.x(x)(k); // TODO ?
+    }
+    return sum;
+  };
 }
 
 template <typename T>
@@ -147,10 +164,18 @@ femib::util::solvable_equations<T> augment_with_pressure_gauge(
 
 template <typename T, int d>
 void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
+  s.rule = rule;
+
+  std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)> force0 =
+      [force = s.force, time0 = s.time](const femib::types::dvec<T, d> &x) {
+        return force(x, time0);
+      };
+  auto ggg = [force0](femib::types::F<T, d, d> a) {
+    return external_force<T, d>(a, force0);
+  };
 
   femib::util::build_diagonal_result<T> result =
-      femib::util::build_diagonal<T, d, d>(s.V, rule, stokes_a<T, d>,
-                                           external_force<T, d>);
+      femib::util::build_diagonal<T, d, d>(s.V, rule, stokes_a<T, d>, ggg);
 
   s.result = result;
   s.A = femib::util::triplets2dense(result.M, s.V.nodes.P.size(),
@@ -194,6 +219,8 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 }
 
 template <typename T, int d> void advance(stokes<T, d> &s) {
+  s.time += s.deltat;
+
   Eigen::Matrix<T, Eigen::Dynamic, 1> u_1;
   if (s.solution.size() == 0)
     u_1 = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(s.V.nodes.P.size(),
@@ -208,8 +235,18 @@ template <typename T, int d> void advance(stokes<T, d> &s) {
 
   s.AA.block(0, 0, s.V.nodes.P.size(), s.V.nodes.P.size()) = s.A + DD;
 
+  std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)> force_n1 =
+      [force = s.force, time_n1 = s.time](const femib::types::dvec<T, d> &x) {
+        return force(x, time_n1);
+      };
+  auto ggg = [force_n1](femib::types::F<T, d, d> a) {
+    return external_force<T, d>(a, force_n1);
+  };
+  std::vector<Eigen::Triplet<T>> F_triplets =
+      femib::util::build_vector<T, d, d>(s.V, s.rule, ggg);
+
   s.ff.block(0, 0, s.V.nodes.P.size(), 1) =
-      femib::util::triplets2dense(s.result.F, s.V.nodes.P.size(), 1) + dd;
+      femib::util::triplets2dense(F_triplets, s.V.nodes.P.size(), 1) + dd;
 
   std::vector<int> not_edges = build_stokes_t_not_edges<T, d>(s);
 
