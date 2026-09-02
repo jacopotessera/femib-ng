@@ -3,7 +3,7 @@ find_package (doctest REQUIRED)
 find_package (TBB REQUIRED)
 find_package (Eigen3 REQUIRED NO_MODULE)
 
-add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test read_test finite_element_test finite_element_space_test femib_test write_test stokes_test stokes_t_test)
+add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test read_test finite_element_test finite_element_space_test femib_test write_test stokes_test stokes_t_test ib_structure_test)
 
 include_directories (../src/affine)
 add_executable (affine_test affine_test.cpp)
@@ -83,3 +83,9 @@ add_executable (write_test write_test.cpp)
 target_compile_features (write_test PRIVATE cxx_std_17)
 target_link_libraries (write_test write doctest::doctest)
 add_test (NAME write_test COMMAND write_test)
+
+include_directories (../src/ib)
+add_executable (ib_structure_test ib_structure_test.cpp)
+target_compile_features (ib_structure_test PRIVATE cxx_std_17)
+target_link_libraries (ib_structure_test spdlog::spdlog Eigen3::Eigen doctest::doctest)
+add_test (NAME ib_structure_test COMMAND ib_structure_test)
