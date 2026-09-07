@@ -1,6 +1,7 @@
 #ifndef FEMIB_IB_STRUCTURE_HPP_INCLUDED_
 #define FEMIB_IB_STRUCTURE_HPP_INCLUDED_
 
+#include "../finite_element_space/finite_element_space.hpp"
 #include "../types/types.hpp"
 #include <cmath>
 #include <numbers>
@@ -46,6 +47,14 @@ std::vector<femib::types::dvec<T, d>> elastic_force(const ring<T, d> &r) {
     F[i_next] -= spring_force; // equal and opposite on i+1
   }
   return F;
+}
+
+template <typename T, int d>
+Eigen::Matrix<T, Eigen::Dynamic, 1>
+spread_force(ring<T, d> &r,
+             femib::finite_element_space::finite_element_space<T, d, d> &V) {
+  std::vector<types::dvec<T, d>> forces = elastic_force(r);
+  return spread_force<T, d>(V, r.X, forces, r.dS);
 }
 
 template <typename T, int d> T elastic_energy(const ring<T, d> &r) {
