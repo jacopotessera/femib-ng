@@ -166,5 +166,5 @@ TEST_CASE("plot() does not read out of bounds on a non-rectangular mesh") {
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       Eigen::Matrix<float, Eigen::Dynamic, 1>::Zero(s.nodes.P.size(), 1);
 
-  CHECK_NOTHROW(s.plot(xx));
+  CHECK_NOTHROW(s.plot(xx, 0.01));
 }

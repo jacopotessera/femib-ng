@@ -17,6 +17,7 @@ void setHeapSize(size_t heapSize);
 // TODO size are probably not int
 template <typename T> T *copyToDevice(T *x, int size);
 template <typename T> T *copyToHost(T *X, int size);
+template <typename T> void freeDevice(T *X);
 
 template <typename f, int d>
 bool in_box(const femib::types::dvec<f, d> &P,

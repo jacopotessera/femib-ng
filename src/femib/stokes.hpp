@@ -31,14 +31,16 @@ template <typename T, int d> struct stokes {
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
 stokes_a(femib::types::F<T, d, d> u, femib::types::F<T, d, d> v) {
-  return [u, v](const femib::types::dvec<T, d> &x) { return dpi(u, v)(x); };
+  return [u, v](const femib::types::dvec<T, d> &x) {
+    return T(2.0) * dpi(u, v)(x);
+  }; // TODO  coefficient mu?
 }
 
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
 stokes_b(femib::types::F<T, d, d> u, femib::types::F<T, d, 1> q) {
   return [u, q](const femib::types::dvec<T, d> &x) {
-    return div(u)(x) * q.x(x)(0);
+    return T(-1.0) * div(u)(x) * q.x(x)(0);
   };
 }
 

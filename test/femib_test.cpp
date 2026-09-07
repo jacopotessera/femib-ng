@@ -16,44 +16,7 @@
 #include <iostream>
 #include <vector>
 
-namespace {
-
-// triangulation of the unit square [0,1]x[0,1]
-femib::types::mesh<float, 2> make_unit_square_mesh(int n) {
-  femib::types::mesh<float, 2> mesh;
-  int side = n + 1;
-  auto idx = [side](int i, int j) { return i * side + j; };
-
-  for (int i = 0; i < side; ++i) {
-    for (int j = 0; j < side; ++j) {
-      float x = static_cast<float>(i) / n;
-      float y = static_cast<float>(j) / n;
-      mesh.P.emplace_back(x, y);
-    }
-  }
-
-  for (int i = 0; i < n; ++i) {
-    for (int j = 0; j < n; ++j) {
-      int p00 = idx(i, j);
-      int p10 = idx(i + 1, j);
-      int p01 = idx(i, j + 1);
-      int p11 = idx(i + 1, j + 1);
-      mesh.T.emplace_back(p00, p10, p11);
-      mesh.T.emplace_back(p00, p11, p01);
-    }
-  }
-
-  for (int i = 0; i < side; ++i) {
-    for (int j = 0; j < side; ++j) {
-      if (i == 0 || i == n || j == 0 || j == n) {
-        mesh.E.push_back(idx(i, j));
-      }
-    }
-  }
-
-  return mesh;
-}
-} // namespace
+#include "utils.hpp"
 
 TEST_CASE("testing femib poisson") {
 

@@ -1,7 +1,6 @@
 #ifndef FEMIB_STOKES_HPP_INCLUDED_
 #define FEMIB_STOKES_HPP_INCLUDED_
 
-#include "../cuda/cuda.h"
 #include "../femib/femib.hpp"
 #include "../finite_element_space/finite_element_space.hpp"
 #include "../gauss/gauss.hpp"
@@ -18,9 +17,9 @@ template <typename T, int d> struct stokes {
   femib::finite_element_space::finite_element_space<T, d, 1> Q;
   femib::gauss::rule<T, d> rule;
   std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)> force =
-      [](femib::types::dvec<T, d>, T) {
-        return Eigen::Matrix<T, d, 1>::Zero();
-      }; // external force f(x,t)
+      [](femib::types::dvec<T, d>, T) -> Eigen::Matrix<float, 2, 1> {
+    return Eigen::Matrix<T, d, 1>::Zero();
+  }; // external force f(x,t)
   T deltat = 0.1; // TODO eh
 
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> A;
@@ -38,8 +37,10 @@ template <typename T, int d> struct stokes {
   femib::util::solvable_equations<T> solvable_equations;
 
   std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1>> solution;
-  std::vector<std::vector<std::vector<std::vector<float>>>>
-      plot; // TODO we need this?? cant we calculate from solution if needed?
+  std::vector<std::vector<std::pair<types::dvec<T, d>, types::dvec<T, d>>>>
+      plotV; // TODO we need this?? cant we calculate from solution if needed?
+  std::vector<std::vector<std::pair<types::dvec<T, d>, types::dvec<T, 1>>>>
+      plotQ; // TODO we need this?? cant we calculate from solution if needed?
 
   T time = 0;
 };
@@ -48,14 +49,16 @@ template <typename T, int d> struct stokes {
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
 stokes_a(femib::types::F<T, d, d> u, femib::types::F<T, d, d> v) {
-  return [u, v](const femib::types::dvec<T, d> &x) { return dpi(u, v)(x); };
+  return [u, v](const femib::types::dvec<T, d> &x) {
+    return T(2.0) * dpi(u, v)(x);
+  }; // TODO coefficient mu?
 }
 
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
 stokes_b(femib::types::F<T, d, d> u, femib::types::F<T, d, 1> q) {
   return [u, q](const femib::types::dvec<T, d> &x) {
-    return div(u)(x) * q.x(x)(0);
+    return T(-1.0) * div(u)(x) * q.x(x)(0);
   };
 }
 
@@ -223,8 +226,7 @@ template <typename T, int d> void advance(stokes<T, d> &s) {
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> u_1;
   if (s.solution.size() == 0)
-    u_1 = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(s.V.nodes.P.size(),
-                                                    1); // TODO
+    u_1 = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(s.V.nodes.P.size(), 1);
   else
     // last timestep velocity
     u_1 = s.solution[s.solution.size() - 1].topRows(s.V.nodes.P.size());
@@ -255,7 +257,8 @@ template <typename T, int d> void advance(stokes<T, d> &s) {
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx = solve<T, d, 1>(s);
 
-  s.plot.emplace_back(s.V.plot(xx));
+  s.plotV.emplace_back(s.V.plot(xx.head(s.V.nodes.P.size()), 0.01)); // TODO
+  s.plotQ.emplace_back(s.Q.plot(xx.tail(s.Q.nodes.P.size()), 0.01)); // TODO
   s.solution.emplace_back(xx);
 }
 

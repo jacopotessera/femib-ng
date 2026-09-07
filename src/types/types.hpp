@@ -23,8 +23,8 @@ template <typename T, int d, int e> struct xDx {
 template <typename T, int d, int e> struct F {
   std::function<dvec<T, e>(dvec<T, d>)> x;
   std::function<rmat<T, d, e>(dvec<T, d>)> dx;
-  xDx<T, d, e> operator()(const dvec<T, d> &x) {
-    return {this->x(x), this->dx(x)};
+  xDx<T, d, e> operator()(const dvec<T, d> &p) {
+    return {this->x(p), this->dx(p)};
   };
 };
 
@@ -36,6 +36,7 @@ template <typename f, int d> struct nodes {
   int get_index(int i, int n) const { return T[n][i]; }
 };
 
+// TODO what is the difference with nodes?
 template <typename f, int d> struct mesh {
   std::vector<dvec<f, d>> P;
   std::vector<ditrian<d>> T;

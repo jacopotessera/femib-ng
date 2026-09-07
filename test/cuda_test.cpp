@@ -45,6 +45,7 @@ TEST_CASE("testing cuda copy") {
   double *X = femib::cuda::copyToDevice<double>(&x, 1);
   double *y = femib::cuda::copyToHost<double>(X, 1);
   CHECK(x == *y);
+  // TODO missing free
 }
 
 TEST_CASE("testing cuda in_box") {
@@ -146,7 +147,19 @@ TEST_CASE("testing cuda parallel_accurate") {
   CHECK(NNN[2] == 7);
 }
 
-// TODO parallel_accurate is not really accurate...
+TEST_CASE("testing mesh find_points") {
+  mesh.init();
+  femib::types::box<float, 2> boxx =
+      femib::mesh::lin_spaced<float, 2>(box, delta);
+
+  std::vector<int> NNN = femib::mesh::find_points<float, 2>(mesh, boxx);
+
+  CHECK(NNN[0] == 7);
+  CHECK(NNN[1] == 7);
+  CHECK(NNN[2] == 7);
+}
+
+// TODO parallel_accurate is not really accurate... but now it is!
 TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
   mesh.init();
   femib::types::box<float, 2> boxx =
@@ -222,7 +235,7 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
     }
   }
   CHECK(gpu_true_cpu_false == 0);
-  CHECK(cpu_only_true <= 20);
+  CHECK(cpu_only_true == 0);
   CAPTURE(cpu_only_true_gpu_adjacent);
   CHECK(cpu_only_true_gpu_lost == 0);
   CHECK(cpu_only_true_gpu_elsewhere == 0);

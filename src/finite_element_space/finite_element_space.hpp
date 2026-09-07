@@ -5,6 +5,7 @@
 #include "../finite_element/finite_element.hpp"
 #include "../mesh/mesh.hpp"
 #include "../types/types.hpp"
+#include <ranges>
 
 namespace femib::finite_element_space {
 
@@ -13,62 +14,41 @@ template <typename T, int d, int e> struct finite_element_space {
   femib::types::mesh<T, d> mesh;
   femib::types::nodes<T, d> nodes;
 
-  std::vector<std::vector<std::vector<T>>>
+  std::vector<femib::types::dvec<T, e>>
+  interpolate(const Eigen::Matrix<T, Eigen::Dynamic, 1> &u,
+              std::vector<femib::types::dvec<T, d>> &points) {
+    std::vector<int> points_positions =
+        femib::mesh::find_points<T, d>(mesh, points);
 
-  // TODO plot is a mess
-  plot(Eigen::Matrix<T, Eigen::Dynamic, 1> xx) {
-    std::vector<std::vector<std::vector<float>>> uuu;
-
-    femib::types::box<T, d> box = femib::mesh::find_box<T, d>(mesh);
-
-    femib::types::box<T, d> boxx =
-        femib::mesh::lin_spaced<T, d>(box, 0.027); // TODO uh? mesh size
-    bool N[boxx.size() * mesh.N.size()];
-
-    // TODO use parallel_accurate? keep mesh on GPU
-    femib::cuda::serial_accurate<T, d>(boxx.data(), boxx.size(), mesh.N.data(),
-                                       mesh.N.size(), N);
-
-    std::vector<int> NNN;
-
-    for (int i = 0; i < boxx.size(); ++i) {
-      int found = -1;
-      for (int n = 0; n < mesh.N.size(); ++n) {
-        if (N[i * mesh.N.size() + n]) {
-          found = n;
-          break;
-        }
-      }
-      NNN.push_back(found);
-    }
-
-    for (int i = 0; i < boxx.size(); ++i) {
-      if (NNN[i] < 0) {
-        // just skip the point that was not found
+    std::vector<femib::types::dvec<T, e>> result(
+        points.size(), femib::types::dvec<T, e>::Zero());
+    for (size_t k = 0; k < points.size(); ++k) {
+      if (points_positions[k] < 0) {
         continue;
       }
-      femib::types::dvec<T, d> point = boxx[i];
-      femib::types::dvec<T, d> res = {0, 0};
-
-      femib::types::dtrian<T, d> t = mesh.N[NNN[i]];
-
+      femib::types::dtrian<T, d> t = mesh[points_positions[k]];
+      femib::types::dvec<T, d> ref =
+          femib::affine::affine_inv<T, d>(t, points[k]);
       for (int j = 0; j < finite_element.base_functions.size(); ++j) {
-
-        femib::types::F<T, d, d> f = finite_element.base_functions[j];
-
-        std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)> g =
-            [&](const femib::types::dvec<T, d> &x) -> femib::types::dvec<T, d> {
-          return xx(nodes.get_index(j, NNN[i])) *
-                 f.x(femib::affine::affine_inv(t, x));
-        };
-        res += g(point);
+        femib::types::F<T, d, e> phi = finite_element.base_functions[j];
+        result[k] += u(nodes.get_index(j, points_positions[k])) * phi.x(ref);
       }
-
-      std::vector<std::vector<float>> uuuu = {{point(0), point(1)},
-                                              {res(0), res(1)}};
-      uuu.emplace_back(uuuu);
     }
-    return uuu;
+    return result;
+  }
+
+  std::vector<std::pair<types::dvec<T, d>, types::dvec<T, e>>>
+  plot(Eigen::Matrix<T, Eigen::Dynamic, 1> u, T delta) {
+    femib::types::box<T, d> box =
+        femib::mesh::lin_spaced<T, d>(femib::mesh::find_box<T, d>(mesh), delta);
+    std::vector<types::dvec<T, e>> results = interpolate(u, box);
+
+    std::vector<std::pair<types::dvec<T, d>, types::dvec<T, e>>> plot_data;
+    for (auto [p, r] : std::views::zip(box, results)) {
+      plot_data.emplace_back(
+          std::pair<types::dvec<T, d>, types::dvec<T, e>>(p, r));
+    }
+    return plot_data;
   }
 };
 } // namespace femib::finite_element_space

@@ -8,60 +8,14 @@
 #include "../src/gauss/gauss.hpp"
 #include "../src/gauss/gauss_lagrange_2_2d.hpp"
 #include "../src/mesh/mesh.hpp"
-#include "../src/read/read.hpp"
 #include <Eigen/Dense>
-#include <Eigen/Sparse>
 #include <algorithm>
 #include <cmath>
 #include <doctest/doctest.h>
 #include <iostream>
 #include <vector>
 
-namespace {
-
-// TODO duplicated
-// Builds a uniform NxN triangulation of the unit square [0,1]x[0,1]: two
-// triangles per grid cell, (N+1)^2 nodes, boundary nodes are every node on
-// the four edges of the square (mesh.E). Mirrors femib_test.cpp's helper of
-// the same purpose (Task 10), since the manufactured solution below is
-// defined on the unit square, not on the repo's stock p3.mat/t3.mat/e3.mat
-// mesh (which lives on [-1,1]x[-1,1]).
-femib::types::mesh<float, 2> make_unit_square_mesh(int n) {
-  femib::types::mesh<float, 2> mesh;
-  int side = n + 1;
-  auto idx = [side](int i, int j) { return i * side + j; };
-
-  for (int i = 0; i < side; ++i) {
-    for (int j = 0; j < side; ++j) {
-      float x = static_cast<float>(i) / n;
-      float y = static_cast<float>(j) / n;
-      mesh.P.push_back(femib::types::dvec<float, 2>(x, y));
-    }
-  }
-
-  for (int i = 0; i < n; ++i) {
-    for (int j = 0; j < n; ++j) {
-      int p00 = idx(i, j);
-      int p10 = idx(i + 1, j);
-      int p01 = idx(i, j + 1);
-      int p11 = idx(i + 1, j + 1);
-      mesh.T.push_back(femib::types::ditrian<2>(p00, p10, p11));
-      mesh.T.push_back(femib::types::ditrian<2>(p00, p11, p01));
-    }
-  }
-
-  for (int i = 0; i < side; ++i) {
-    for (int j = 0; j < side; ++j) {
-      if (i == 0 || i == n || j == 0 || j == n) {
-        mesh.E.push_back(idx(i, j));
-      }
-    }
-  }
-
-  return mesh;
-}
-
-} // namespace
+#include "utils.hpp"
 
 // TODO is this test still needed? as femib, it doesn't check anything
 TEST_CASE("testing femib stokes") {
@@ -148,14 +102,14 @@ TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
     return std::sin(PI * x) * std::cos(PI * y);
   };
   auto f1 = [PI](float x, float y) {
-    return PI *
+    return 0.5 * PI *
            (32.0f * PI * PI * std::sin(PI * x) * std::sin(PI * x) *
                 std::sin(PI * y) -
             8.0f * PI * PI * std::sin(PI * y) - std::cos(PI * x)) *
            std::cos(PI * y);
   };
   auto f2 = [PI](float x, float y) {
-    return PI *
+    return 0.5 * PI *
            (-32.0f * PI * PI * std::sin(PI * y) * std::sin(PI * y) *
                 std::cos(PI * x) +
             std::sin(PI * y) + 8.0f * PI * PI * std::cos(PI * x)) *

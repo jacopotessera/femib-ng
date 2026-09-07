@@ -3,6 +3,7 @@
 #include "../src/finite_element/P1+B_2d2d.hpp"
 #include "../src/finite_element/P1_2d1d.hpp"
 #include "../src/finite_element/P1_2d2d.hpp"
+#include "../src/finite_element/P2_2d2d.hpp"
 #include "../src/finite_element/finite_element.hpp"
 #include "../src/types/types.hpp"
 #include "name_reporter.h"
@@ -65,6 +66,59 @@ TEST_CASE("testing finite_element P1_2d2d") {
       }
     }
   }
+}
+
+TEST_CASE("testing finite_element P2_2d2d") {
+  femib::finite_element::finite_element<float, 2, 2> f =
+      femib::finite_element::create_finite_element_P2_2d2d<float, 2, 2>();
+  int n_nodes = f.base_nodes.size();
+  CHECK(n_nodes == 6);
+  CHECK(f.base_functions.size() == 12);
+  for (int k = 0; k < f.base_functions.size(); ++k) {
+    int component = k / n_nodes;
+    int node_idx = k % n_nodes;
+    for (int i = 0; i < n_nodes; ++i) {
+      femib::types::dvec<float, 2> value =
+          f.base_functions[k].x(f.base_nodes[i]);
+      for (int c = 0; c < 2; ++c) {
+        float expected = (c == component && i == node_idx) ? 1.0f : 0.0f;
+        CAPTURE(k);
+        CAPTURE(i);
+        CAPTURE(c);
+        CHECK(value(c) == doctest::Approx(expected));
+      }
+    }
+  }
+}
+
+TEST_CASE("testing P2_2d2d build_nodes shares edge midpoints between "
+          "adjacent triangles") {
+  femib::finite_element::finite_element<float, 2, 2> f =
+      femib::finite_element::create_finite_element_P2_2d2d<float, 2, 2>();
+  // a unit square split into 4 triangles from its center
+  femib::types::mesh<float, 2> mesh = {
+      .P = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
+      .T = {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}},
+      .E = {0, 1, 2, 3}};
+  mesh.init();
+  femib::types::nodes<float, 2> nodes = f.build_nodes(mesh);
+
+  int size_P = (int)mesh.P.size();
+  int n_edges = 8;
+  CHECK(nodes.P.size() == 2 * size_P + 2 * n_edges);
+  CHECK(nodes.T.size() == mesh.T.size());
+  for (const auto &row : nodes.T) {
+    CHECK(row.size() == 12);
+  }
+
+  // Triangle 0 = {0,1,4}: its 4th nodes (local index 3) is the midpoint of edge
+  // (1,4). Triangle 1 = {1,2,4}: its 5th nodes (local index 4) is the midpoint
+  // of the same edge.
+  CHECK(nodes.T[0][3] == nodes.T[1][4]);
+
+  // Every boundary vertex/edge-midpoint DOF is doubled (u1, u2): 4 boundary
+  // vertices + 4 boundary edges (the 4 outer square edges), times 2.
+  CHECK(nodes.E.size() == 2 * (4 + 4));
 }
 
 TEST_CASE("testing finite_element P1+B_2d2d") {

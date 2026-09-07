@@ -22,18 +22,18 @@ TEST_CASE("testing save_plot_data") {
   const std::string path = "/tmp/femib_write_test_plot_data.h5";
   femib::write::save_sim(path, "test_sim");
 
-  femib::write::plot_data data0;
+  femib::write::plot_data<float, 2> data0;
   data0.time = 0;
   data0.x = {{0.0f, 0.0f}, {1.0f, 1.0f}};
   data0.u = {{1.0f, 2.0f}, {3.0f, 4.0f}};
   // q empty
   femib::write::save_plot_data(path, data0);
 
-  femib::write::plot_data data1;
+  femib::write::plot_data<float, 2> data1;
   data1.time = 1;
   data1.x = {{0.5f, 0.5f}};
   data1.u = {{5.0f, 6.0f}};
-  data1.q = {{7.0f}};
+  data1.q = {{Eigen::Matrix<float, 1, 1>(7.0f)}};
   femib::write::save_plot_data(path, data1);
 
   HighFive::File file(path, HighFive::File::ReadOnly);

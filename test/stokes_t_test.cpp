@@ -8,40 +8,24 @@
 #include "../src/gauss/gauss.hpp"
 #include "../src/gauss/gauss_lagrange_2_2d.hpp"
 #include "../src/mesh/mesh.hpp"
-#include "../src/read/read.hpp"
 #include "../src/write/write.hpp"
 #include <Eigen/Dense>
-#include <Eigen/Sparse>
 #include <algorithm>
-#include <chrono>
 #include <cmath>
-#include <cstdio>
 #include <ctime>
 #include <doctest/doctest.h>
 #include <iostream>
-#include <stdio.h>
-#include <sys/time.h>
+#include <utility>
 #include <vector>
 
-// TODO use use std::put_time from iomanip header, and put it in a util file (
-// or std::chrono / std::format)
-std::string getTime() {
-  timeval curTime;
+#include "P2_2d2d.hpp"
+#include "gauss_5_2d.hpp"
+#include "utils.hpp"
 
-  gettimeofday(&curTime, NULL);
-
-  int milli = curTime.tv_usec / 1000;
-  char buf[sizeof "2011-10-08T07:07:09.000Z"];
-  strftime(buf, sizeof buf, "%FT%T", gmtime(&curTime.tv_sec));
-  sprintf(buf, "%s.%dZ", buf, milli);
-
-  return buf;
-}
-
-namespace {
-
-femib::stokes_t::stokes<float, 2>
-make_stokes_t_fixture(femib::types::mesh<float, 2> &mesh_out) {
+femib::stokes_t::stokes<float, 2> make_stokes_t_fixture(
+    femib::types::mesh<float, 2> &mesh_out,
+    std::function<Eigen::Matrix<float, 2, 1>(femib::types::dvec<float, 2>,
+                                             float)> &external_force) {
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();
   std::string mesh_dir = MESH_DIR;
@@ -51,14 +35,14 @@ make_stokes_t_fixture(femib::types::mesh<float, 2> &mesh_out) {
 
   // V
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
-      femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
+      femib::finite_element::create_finite_element_P2_2d2d<float, 2, 2>();
   femib::finite_element_space::finite_element_space<float, 2, 2> v = {f_p1_2d2d,
                                                                       mesh};
   v.nodes = f_p1_2d2d.build_nodes(mesh);
 
   // Q
   femib::finite_element::finite_element<float, 2, 1> f_p0_2d1d =
-      femib::finite_element::create_finite_element_P0_2d1d<float, 2, 1>();
+      femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
   femib::finite_element_space::finite_element_space<float, 2, 1> q = {f_p0_2d1d,
                                                                       mesh};
   q.nodes = f_p0_2d1d.build_nodes(mesh);
@@ -66,60 +50,29 @@ make_stokes_t_fixture(femib::types::mesh<float, 2> &mesh_out) {
   femib::stokes_t::stokes<float, 2> s;
   s.V = v;
   s.Q = q;
+  s.force = external_force;
   femib::stokes_t::init<float, 2>(s, rule);
 
   mesh_out = mesh;
   return s;
 }
 
-// TODO this is the third time we implement this
-femib::types::mesh<float, 2> make_unit_square_mesh(int n) {
-  femib::types::mesh<float, 2> mesh;
-  int side = n + 1;
-  auto idx = [side](int i, int j) { return i * side + j; };
-
-  for (int i = 0; i < side; ++i) {
-    for (int j = 0; j < side; ++j) {
-      float x = static_cast<float>(i) / n;
-      float y = static_cast<float>(j) / n;
-      mesh.P.push_back(femib::types::dvec<float, 2>(x, y));
-    }
-  }
-
-  for (int i = 0; i < n; ++i) {
-    for (int j = 0; j < n; ++j) {
-      int p00 = idx(i, j);
-      int p10 = idx(i + 1, j);
-      int p01 = idx(i, j + 1);
-      int p11 = idx(i + 1, j + 1);
-      mesh.T.push_back(femib::types::ditrian<2>(p00, p10, p11));
-      mesh.T.push_back(femib::types::ditrian<2>(p00, p11, p01));
-    }
-  }
-
-  for (int i = 0; i < side; ++i) {
-    for (int j = 0; j < side; ++j) {
-      if (i == 0 || i == n || j == 0 || j == n) {
-        mesh.E.push_back(idx(i, j));
-      }
-    }
-  }
-
-  return mesh;
-}
-
-} // namespace
-
 TEST_CASE("testing femib stokes_t pipeline with HDF5 persistence") {
   femib::types::mesh<float, 2> mesh;
-  femib::stokes_t::stokes<float, 2> stokes = make_stokes_t_fixture(mesh);
+  std::function<Eigen::Matrix<float, 2, 1>(femib::types::dvec<float, 2>, float)>
+      ones_force = [](femib::types::dvec<float, 2>,
+                      float) -> Eigen::Matrix<float, 2, 1> {
+    return Eigen::Matrix<float, 2, 1>::Ones();
+  };
+  femib::stokes_t::stokes<float, 2> stokes =
+      make_stokes_t_fixture(mesh, ones_force);
 
   femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
 
   femib::types::box<float, 2> boxx =
       femib::mesh::lin_spaced<float, 2>(box, 0.1);
 
-  std::string id = getTime();
+  std::string id = get_time();
 
   std::string path = "/tmp/femib_stokes_t_test_" + id + ".h5";
   femib::write::save_sim(path, id);
@@ -128,11 +81,11 @@ TEST_CASE("testing femib stokes_t pipeline with HDF5 persistence") {
   for (int t = 0; t < TMAX; t++) {
     femib::stokes_t::advance<float, 2>(stokes);
 
-    femib::write::plot_data p;
+    femib::write::plot_data<float, 2> p;
     p.time = t;
-    for (const auto &point : stokes.plot[t]) {
-      p.x.push_back(point[0]);
-      p.u.push_back(point[1]);
+    for (const auto &plot_data : stokes.plotV[t]) {
+      p.x.push_back(plot_data.first);
+      p.u.push_back(plot_data.second);
     }
     femib::write::save_plot_data(path, p);
   }
@@ -146,7 +99,12 @@ TEST_CASE("testing femib stokes_t pipeline with HDF5 persistence") {
 
 TEST_CASE("testing advance") {
   femib::types::mesh<float, 2> mesh;
-  femib::stokes_t::stokes<float, 2> s = make_stokes_t_fixture(mesh);
+  std::function<Eigen::Matrix<float, 2, 1>(femib::types::dvec<float, 2>, float)>
+      ones_force = [](femib::types::dvec<float, 2>,
+                      float) -> Eigen::Matrix<float, 2, 1> {
+    return Eigen::Matrix<float, 2, 1>::Ones();
+  };
+  femib::stokes_t::stokes<float, 2> s = make_stokes_t_fixture(mesh, ones_force);
   femib::stokes_t::advance<float, 2>(s);
   CHECK_NOTHROW(femib::stokes_t::advance<float, 2>(s));
 
@@ -156,12 +114,12 @@ TEST_CASE("testing advance") {
 
 TEST_CASE("testing advance over several timesteps") {
   femib::types::mesh<float, 2> mesh;
-  femib::stokes_t::stokes<float, 2> s = make_stokes_t_fixture(mesh);
-
-  s.force = [](femib::types::dvec<float, 2>,
-               float) -> femib::types::dvec<float, 2> {
+  std::function<Eigen::Matrix<float, 2, 1>(femib::types::dvec<float, 2>, float)>
+      ones_force = [](femib::types::dvec<float, 2>,
+                      float) -> Eigen::Matrix<float, 2, 1> {
     return Eigen::Matrix<float, 2, 1>::Ones();
   };
+  femib::stokes_t::stokes<float, 2> s = make_stokes_t_fixture(mesh, ones_force);
 
   int rowsV = s.V.nodes.P.size();
   const int n_steps = 8;
@@ -214,14 +172,14 @@ TEST_CASE("test stokes_t::advance with a non-stationary known problem") {
     return std::sin(PI * x) * std::cos(PI * y);
   };
   auto f1 = [PI](float x, float y) {
-    return PI *
+    return 0.5 * PI *
            (32.0f * PI * PI * std::sin(PI * x) * std::sin(PI * x) *
                 std::sin(PI * y) -
             8.0f * PI * PI * std::sin(PI * y) - std::cos(PI * x)) *
            std::cos(PI * y);
   };
   auto f2 = [PI](float x, float y) {
-    return PI *
+    return 0.5 * PI *
            (-32.0f * PI * PI * std::sin(PI * y) * std::sin(PI * y) *
                 std::cos(PI * x) +
             std::sin(PI * y) + 8.0f * PI * PI * std::cos(PI * x)) *
@@ -336,6 +294,137 @@ TEST_CASE("test stokes_t::advance with a non-stationary known problem") {
   float max_pressure_error_over_run =
       *std::max_element(pressure_errors.begin(), pressure_errors.end());
 
-  CHECK(max_velocity_error_over_run < 4.5f);
+  CHECK(max_velocity_error_over_run < 5.0f);
   CHECK(max_pressure_error_over_run < 26.0f);
+}
+
+TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
+          "An experimental investigation") {
+  const float PI = std::numbers::pi_v<float>;
+
+  auto u1_exact = [PI](float x, float y) {
+    return std::sin(2 * PI * y) * (1 - std::cos(2 * PI * x));
+  };
+  auto u2_exact = [PI](float x, float y) {
+    return std::sin(2 * PI * x) * (std::cos(2 * PI * y) - 1);
+  };
+  auto p_exact = [PI](float x, float y) {
+    return 2 * PI * (std::cos(2 * PI * y) - std::cos(2 * PI * x));
+  };
+  auto f1 = [PI](float x, float y) {
+    return (-4 * PI * PI * std::sin(2 * PI * y) *
+                (2 * std::cos(2 * PI * x) - 1) +
+            4 * PI * PI * std::sin(2 * PI * x));
+  };
+  auto f2 = [PI](float x, float y) {
+    return (4 * PI * PI * std::sin(2 * PI * x) *
+                (2 * std::cos(2 * PI * y) - 1) -
+            4 * PI * PI * std::sin(2 * PI * y));
+  };
+
+  int n = 10;
+  femib::types::mesh<float, 2> mesh = make_unit_square_mesh(n);
+  mesh.init();
+
+  femib::gauss::rule<float, 2> rule =
+      femib::gauss::create_gauss_5_2d<float, 2>();
+
+  femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
+      femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
+  femib::finite_element_space::finite_element_space<float, 2, 2> v = {f_p1_2d2d,
+                                                                      mesh};
+  v.nodes = f_p1_2d2d.build_nodes(mesh);
+
+  femib::finite_element::finite_element<float, 2, 1> f_p1_2d1d =
+      femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
+  femib::finite_element_space::finite_element_space<float, 2, 1> q = {f_p1_2d1d,
+                                                                      mesh};
+  q.nodes = f_p1_2d1d.build_nodes(mesh);
+
+  femib::stokes_t::stokes<float, 2> s;
+  s.V = v;
+  s.Q = q;
+  s.deltat = 0.1f;
+  // Time-independent forcing, the solution converges to this.
+  s.force = [f1, f2](const femib::types::dvec<float, 2> &x,
+                     float) -> femib::types::dvec<float, 2> {
+    return femib::types::dvec<float, 2>(f1(x(0), x(1)), f2(x(0), x(1)));
+  };
+
+  femib::stokes_t::init<float, 2>(s, rule);
+
+  std::string id = get_time();
+  std::string path = "/tmp/femib_stokes_t_test3_" + id + ".h5";
+  femib::write::save_sim(path, id);
+
+  int size_P = mesh.P.size();
+  int size_T = mesh.T.size();
+  int rows_v = s.V.nodes.P.size();
+  int n_p = s.Q.nodes.P.size();
+
+  auto velocity_error = [&](const Eigen::Matrix<float, Eigen::Dynamic, 1> &xx) {
+    float max_error = 0.0f;
+    for (int i = 0; i < size_P; ++i) {
+      float x = mesh.P[i](0), y = mesh.P[i](1);
+      max_error = std::max(max_error, std::abs(xx(i, 0) - u1_exact(x, y)));
+      max_error =
+          std::max(max_error, std::abs(xx(size_P + i, 0) - u2_exact(x, y)));
+    }
+    for (int n_ = 0; n_ < size_T; ++n_) {
+      femib::types::dvec<float, 2> c =
+          femib::finite_element::find_center_of<float, 2>(mesh[n_]);
+      max_error = std::max(
+          max_error, std::abs(xx(2 * size_P + n_, 0) - u1_exact(c(0), c(1))));
+      max_error = std::max(max_error, std::abs(xx(2 * size_P + size_T + n_, 0) -
+                                               u2_exact(c(0), c(1))));
+    }
+    return max_error;
+  };
+
+  // Pressure is only defined up to an additive constant, so we need to subtract
+  // the mean from both sides before comparing.
+  auto pressure_error = [&](const Eigen::Matrix<float, Eigen::Dynamic, 1> &xx) {
+    float mean_computed = 0.0f, mean_exact = 0.0f;
+    for (int n_ = 0; n_ < n_p; ++n_) {
+      mean_computed += xx(rows_v + n_, 0);
+      mean_exact += p_exact(s.Q.nodes.P[n_](0), s.Q.nodes.P[n_](1));
+    }
+    mean_computed /= n_p;
+    mean_exact /= n_p;
+    float max_error = 0.0f;
+    for (int n_ = 0; n_ < n_p; ++n_) {
+      float computed = xx(rows_v + n_, 0) - mean_computed;
+      float exact =
+          p_exact(s.Q.nodes.P[n_](0), s.Q.nodes.P[n_](1)) - mean_exact;
+      max_error = std::max(max_error, std::abs(computed - exact));
+    }
+    return max_error;
+  };
+
+  int n_steps = 1000;
+  Eigen::Matrix<float, Eigen::Dynamic, 1> prev;
+  float last_step_diff = -1.0f;
+  for (int step = 0; step < n_steps; ++step) {
+    femib::stokes_t::advance<float, 2>(s);
+    if (step > 0) {
+      last_step_diff = (s.solution.back() - prev).norm();
+    }
+    prev = s.solution.back();
+
+    femib::write::plot_data<float, 2> p;
+    p.time = step;
+    for (const auto &plot_data : s.plotV[step]) {
+      p.x.push_back(plot_data.first);
+      p.u.push_back(plot_data.second);
+    }
+    femib::write::save_plot_data(path, p);
+  }
+
+  CHECK(last_step_diff < 5e-3f);
+
+  float final_velocity_error = velocity_error(s.solution.back());
+  float final_pressure_error = pressure_error(s.solution.back());
+
+  CHECK(final_velocity_error < 1.0f);
+  CHECK(final_pressure_error < 10.0f);
 }

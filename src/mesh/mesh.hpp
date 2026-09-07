@@ -2,6 +2,7 @@
 #define MESH_HPP_INCLUDED_
 
 #include "../affine/affine.hpp"
+#include "../cuda/cuda.h"
 #include "../gauss/gauss.hpp"
 #include "../read/read.hpp"
 #include "../types/types.hpp"
@@ -12,6 +13,54 @@
 #include <string>
 
 namespace femib::mesh {
+
+template <typename T, int d>
+std::vector<int> find_points(const femib::types::mesh<T, d> &mesh,
+                             std::vector<types::dvec<T, d>> &points) {
+  size_t meshSize = mesh.N.size();
+
+  // TODO we can load this during init, only points changes, the mesh is always
+  //  the same
+  femib::types::dtrian_<T, d> *T_ =
+      femib::types::vector_dtrian2pointer_dtrian_<T, d>(mesh.N);
+  femib::types::dtrian_<T, d> *devT =
+      femib::cuda::copyToDevice<femib::types::dtrian_<T, d>>(T_, meshSize);
+  femib::types::dvec<T, d> *devX =
+      femib::cuda::copyToDevice<femib::types::dvec<T, d>>(points.data(),
+                                                          points.size());
+  std::unique_ptr<bool[]> Nn(
+      new bool[points.size() *
+               meshSize]); // was: bool Nn[points.size() * meshSize];
+
+  bool *devN =
+      femib::cuda::copyToDevice<bool>(Nn.get(), points.size() * meshSize);
+
+  femib::cuda::parallel_accurate<T, d>(devX, points.size(), devT, meshSize,
+                                       devN);
+  bool *NN = femib::cuda::copyToHost<bool>(devN, points.size() * meshSize);
+
+  std::vector<int> NNN;
+  NNN.reserve(points.size() * meshSize);
+
+  for (int i = 0; i < points.size(); ++i) {
+    int found = -1;
+    for (int n = 0; n < meshSize; ++n) {
+      if (NN[i * meshSize + n]) {
+        found = n;
+        break;
+      }
+    }
+    NNN.push_back(found);
+  }
+  cuda::freeDevice<femib::types::dtrian_<T, d>>(devT);
+  cuda::freeDevice<femib::types::dvec<T, d>>(devX);
+  cuda::freeDevice<bool>(devN);
+  delete[] T_;
+  T_ = nullptr;
+  delete[] NN;
+  NN = nullptr;
+  return NNN;
+}
 
 template <typename T, int d>
 T integrate(const femib::gauss::rule<T, d> &rule,
@@ -61,9 +110,11 @@ femib::types::box<T, d> find_box(const femib::types::mesh<T, d> &m) {
   return box;
 }
 
-// TODO this is a rectangular grid? only used for tests? NO used also in plot!
 template <typename T, int d>
-femib::types::box<T, d> lin_spaced(const femib::types::box<T, d> &b, T delta) {
+femib::types::box<T, d> lin_spaced(
+    const femib::types::box<T, d> &b,
+    T delta) { // TODO build_uniform_grid, also a box is exactly 2 points (top,
+               // bottom), a grid is just a bunch of points, so std::vector
   T x_min = b[0](0);
   T x_max = b[1](0);
   T y_min = b[0](1);
