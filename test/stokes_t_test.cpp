@@ -428,3 +428,36 @@ TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
   CHECK(final_velocity_error < 1.0f);
   CHECK(final_pressure_error < 10.0f);
 }
+
+TEST_CASE("testing advance() with an extra_velocity_rhs") {
+  std::function<Eigen::Matrix<float, 2, 1>(femib::types::dvec<float, 2>, float)>
+      ones_force = [](femib::types::dvec<float, 2>,
+                      float) -> Eigen::Matrix<float, 2, 1> {
+    return Eigen::Matrix<float, 2, 1>::Ones();
+  };
+
+  femib::types::mesh<float, 2> mesh;
+  femib::stokes_t::stokes<float, 2> s_plain =
+      make_stokes_t_fixture(mesh, ones_force);
+  femib::stokes_t::stokes<float, 2> s_extra = s_plain;
+
+  int rowsV = s_plain.V.nodes.P.size();
+  Eigen::Matrix<float, Eigen::Dynamic, 1> extra =
+      Eigen::Matrix<float, Eigen::Dynamic, 1>::Zero(rowsV);
+  // index 12 is an interior node
+  extra(12) = 5.0f;
+
+  femib::stokes_t::advance<float, 2>(s_plain);
+  femib::stokes_t::advance<float, 2>(s_extra, extra);
+
+  float diff = (s_plain.solution.back() - s_extra.solution.back()).norm();
+  CHECK(diff > 1e-4f);
+
+  femib::stokes_t::stokes<float, 2> s_null =
+      make_stokes_t_fixture(mesh, ones_force);
+  femib::stokes_t::advance<float, 2>(s_null);
+  femib::stokes_t::stokes<float, 2> s_default =
+      make_stokes_t_fixture(mesh, ones_force);
+  femib::stokes_t::advance<float, 2>(s_default);
+  CHECK((s_null.solution.back() - s_default.solution.back()).norm() < 1e-8f);
+}

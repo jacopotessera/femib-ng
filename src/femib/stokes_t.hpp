@@ -221,7 +221,9 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
       augment_with_pressure_gauge<T, d>(s, s.AA, s.ff, not_edges);
 }
 
-template <typename T, int d> void advance(stokes<T, d> &s) {
+template <typename T, int d>
+void advance(stokes<T, d> &s, std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
+                                  extra_velocity_rhs = std::nullopt) {
   s.time += s.deltat;
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> u_1;
@@ -247,8 +249,14 @@ template <typename T, int d> void advance(stokes<T, d> &s) {
   std::vector<Eigen::Triplet<T>> F_triplets =
       femib::util::build_vector<T, d, d>(s.V, s.rule, ggg);
 
-  s.ff.block(0, 0, s.V.nodes.P.size(), 1) =
+  Eigen::Matrix<T, Eigen::Dynamic, 1> velocity_rhs =
       femib::util::triplets2dense(F_triplets, s.V.nodes.P.size(), 1) + dd;
+
+  if (extra_velocity_rhs.has_value()) {
+    velocity_rhs += extra_velocity_rhs.value();
+  }
+
+  s.ff.block(0, 0, s.V.nodes.P.size(), 1) = velocity_rhs;
 
   std::vector<int> not_edges = build_stokes_t_not_edges<T, d>(s);
 
