@@ -1,6 +1,8 @@
 #ifndef CUDA_H_INCLUDED_
 #define CUDA_H_INCLUDED_
 
+#include "../types/types.hpp"
+
 #pragma diag_suppress = 20011, 20014, 20040
 
 constexpr int FEMIB_CUDA_MAX_BLOCKS = 1024;
