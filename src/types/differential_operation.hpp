@@ -46,4 +46,14 @@ dpi(const femib::types::F<T, d, d> &a, const femib::types::F<T, d, d> &b) {
   });
 }
 
+template <typename T, int d>
+std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)>
+convection(const femib::types::F<T, d, d> &w,
+           const femib::types::F<T, d, d> &u) {
+  return [=](const femib::types::dvec<T, d> &x) -> femib::types::dvec<T, d> {
+    // ((w . grad) u) (x) =  u.dx(x).transpose() * w.x(x)
+    return u.dx(x).transpose() * w.x(x);
+  };
+}
+
 #endif
