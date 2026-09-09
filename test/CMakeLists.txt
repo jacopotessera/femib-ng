@@ -3,7 +3,7 @@ find_package (doctest REQUIRED)
 find_package (TBB REQUIRED)
 find_package (Eigen3 REQUIRED NO_MODULE)
 
-add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test read_test finite_element_test finite_element_space_test femib_test write_test stokes_test stokes_t_test ib_structure_test ib_coupling_test)
+add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test read_test finite_element_test finite_element_space_test femib_test write_test stokes_test stokes_t_test ib_structure_test ib_coupling_test ib_test)
 
 include_directories (../src/affine)
 add_executable (affine_test affine_test.cpp)
@@ -96,3 +96,10 @@ target_compile_definitions(ib_coupling_test PRIVATE MESH_DIR="${CMAKE_CURRENT_SO
 target_compile_features (ib_coupling_test PRIVATE cxx_std_23)
 target_link_libraries (ib_coupling_test cuda read spdlog::spdlog Eigen3::Eigen TBB::tbb doctest::doctest)
 add_test (NAME ib_coupling_test COMMAND ib_coupling_test)
+
+include_directories (../src/ib)
+add_executable (ib_test ib_test.cpp)
+target_compile_definitions(ib_test PRIVATE MESH_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../mesh/")
+target_compile_features (ib_test PRIVATE cxx_std_23)
+target_link_libraries (ib_test read cuda write spdlog::spdlog Eigen3::Eigen TBB::tbb doctest::doctest)
+add_test (NAME ib_test COMMAND ib_test)

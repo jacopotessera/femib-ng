@@ -14,9 +14,9 @@ inline int get_next_point(const int i, const int n_points) {
 }
 
 template <typename T, int d> struct ring {
-  std::vector<femib::types::dvec<T, d>> X;
+  std::vector<femib::types::dvec<T, d>> X; // TODO we need to keep the "story"
   T k;
-  T dS; // fixed material arc-length weight per point (unit circumference / n)
+  T dS; // fixed material arc-length weight per point (circumference / n)
 };
 
 // build a ring with center "c", radius "radius", elastic constant "k", and
@@ -32,7 +32,7 @@ ring<T, d> build_ring(femib::types::dvec<T, d> c, T radius, int n_points, T k) {
     r.X.emplace_back(c(0) + radius * std::cos(theta),
                      c(1) + radius * std::sin(theta));
   }
-  r.dS = (2 * pi) / static_cast<T>(n_points);
+  r.dS = (2 * pi * radius) / static_cast<T>(n_points);
   return r;
 }
 
