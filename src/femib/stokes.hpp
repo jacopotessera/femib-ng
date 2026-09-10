@@ -97,16 +97,7 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> add_edges(
 }
 
 template <typename T, int d>
-void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
-
-  femib::util::build_diagonal_result<T> result =
-      femib::util::build_diagonal<T, d, d>(s.V, rule, stokes_a<T, d>,
-                                           external_force<T, d>);
-  s.A = femib::util::triplets2dense(result.M, s.V.nodes.P.size(),
-                                    s.V.nodes.P.size());
-  s.B = femib::util::triplets2dense(
-      femib::util::build_non_diagonal<T, d>(s.V, s.Q, rule, stokes_b<T, d>),
-      s.V.nodes.P.size(), s.Q.nodes.P.size());
+void rebuild_system(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 
   std::function<T(femib::types::dvec<T, d>)> b =
       [](const femib::types::dvec<T, d> &x) { return 0.0; };
@@ -128,12 +119,6 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 
   s.AA.block(s.V.nodes.P.size(), 0, s.Q.nodes.P.size(), s.V.nodes.P.size()) =
       s.B.transpose();
-
-  s.ff = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(
-      s.V.nodes.P.size() + s.Q.nodes.P.size(), 1);
-
-  s.ff.block(0, 0, s.V.nodes.P.size(), 1) =
-      femib::util::triplets2dense(result.F, s.V.nodes.P.size(), 1);
 
   std::vector<int> not_edges = femib::util::build_not_edges<T, d, d>(s.V);
   for (int i = 0; i < s.Q.nodes.P.size(); ++i) {
@@ -168,12 +153,32 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
   s.solvable_equations = {AAA_aug, bbb_aug};
 }
 
+template <typename T, int d>
+void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
+
+  femib::util::build_diagonal_result<T> result =
+      femib::util::build_diagonal<T, d, d>(s.V, rule, stokes_a<T, d>,
+                                           external_force<T, d>);
+  s.A = femib::util::triplets2dense(result.M, s.V.nodes.P.size(),
+                                    s.V.nodes.P.size());
+  s.B = femib::util::triplets2dense(
+      femib::util::build_non_diagonal<T, d>(s.V, s.Q, rule, stokes_b<T, d>),
+      s.V.nodes.P.size(), s.Q.nodes.P.size());
+
+  s.ff = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(
+      s.V.nodes.P.size() + s.Q.nodes.P.size(), 1);
+  s.ff.block(0, 0, s.V.nodes.P.size(), 1) =
+      femib::util::triplets2dense(result.F, s.V.nodes.P.size(), 1);
+
+  rebuild_system<T, d>(s, rule);
+}
+
 template <typename T, int d, int e>
 Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &stokes) {
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> x =
       stokes.solvable_equations.A.colPivHouseholderQr().solve(
-          stokes.solvable_equations.b);
+          stokes.solvable_equations.b); // TODO preconditioner?
 
   // drop the last row, constraint on pressure
   Eigen::Matrix<T, Eigen::Dynamic, 1> x_no_lambda = x.topRows(x.rows() - 1);

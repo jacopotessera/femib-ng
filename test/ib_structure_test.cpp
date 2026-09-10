@@ -5,8 +5,6 @@
 #include <doctest/doctest.h>
 #include <numbers>
 
-#include "finite_element.hpp"
-
 TEST_CASE("make_ring places n_points evenly on a circle of the given radius") {
   femib::types::dvec<float, 2> center(0.5f, 0.5f);
   float radius = 0.2f;
@@ -31,7 +29,7 @@ TEST_CASE("make_ring places n_points evenly on a circle of the given radius") {
   }
 
   float expected_dS =
-      (2.0f * std::numbers::pi_v<float>) / static_cast<float>(n);
+      (2.0f * radius * std::numbers::pi_v<float>) / static_cast<float>(n);
   CHECK_LT(std::abs(r.dS - expected_dS), 1e-4f);
 }
 
