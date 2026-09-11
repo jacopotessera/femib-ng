@@ -7,8 +7,10 @@
 #include "../gauss/gauss.hpp"
 #include "../types/differential_operation.hpp"
 #include "stokes.hpp"
+#include "stokes_t.hpp"
 #include <Eigen/Dense>
 #include <algorithm>
+#include <optional>
 
 namespace femib::navier_stokes {
 
@@ -83,6 +85,52 @@ solve_steady(femib::stokes::stokes<T, d> &s,
       break;
   }
   return xx;
+}
+
+// backward-Euler timestep of the time-dependent Navier-Stokes system,
+// with an inner Picard loop
+template <typename T, int d>
+void advance(femib::stokes_t::stokes<T, d> &s,
+             const femib::gauss::rule<T, d> &rule, T reynolds,
+             int max_picard_iters, T tol,
+             std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
+                 extra_velocity_rhs = std::nullopt) {
+  s.time += s.deltat;
+
+  Eigen::Matrix<T, Eigen::Dynamic, 1> u_1;
+  if (s.solution.size() == 0)
+    u_1 = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(s.V.nodes.P.size(), 1);
+  else
+    u_1 = s.solution[s.solution.size() - 1].topRows(s.V.nodes.P.size());
+  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> DD =
+      (1 / s.deltat) *
+      Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>::Identity(
+          s.V.nodes.P.size(), s.V.nodes.P.size());
+  Eigen::Matrix<T, Eigen::Dynamic, 1> dd = (1 / s.deltat) * u_1;
+  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> A_base = s.A + DD;
+
+  // Picard loop
+  Eigen::Matrix<T, Eigen::Dynamic, 1> xx = u_1;
+  Eigen::Matrix<T, Eigen::Dynamic, 1> xx_new_full;
+  for (int iter = 0; iter < max_picard_iters; ++iter) {
+    s.AA.block(0, 0, s.V.nodes.P.size(), s.V.nodes.P.size()) =
+        A_base + assemble_convection<T, d>(s.V, rule, xx, reynolds);
+
+    femib::stokes_t::rebuild_system<T, d>(s, dd, extra_velocity_rhs);
+    xx_new_full = femib::stokes_t::solve<T, d, 1>(s);
+
+    Eigen::Matrix<T, Eigen::Dynamic, 1> xx_new_velocity =
+        xx_new_full.topRows(s.V.nodes.P.size());
+    T rel_change = (xx_new_velocity - xx).norm() /
+                   std::max(xx_new_velocity.norm(), static_cast<T>(1e-8));
+    xx = xx_new_velocity;
+    if (iter > 0 && rel_change < tol) {
+      break;
+    }
+  }
+  s.plotV.emplace_back(s.V.plot(xx_new_full.topRows(s.V.nodes.P.size()), 0.01));
+  s.plotQ.emplace_back(s.Q.plot(xx_new_full.tail(s.Q.nodes.P.size()), 0.01));
+  s.solution.emplace_back(xx_new_full);
 }
 
 } // namespace femib::navier_stokes

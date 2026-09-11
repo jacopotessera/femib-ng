@@ -1,5 +1,5 @@
-#ifndef FEMIB_STOKES_HPP_INCLUDED_
-#define FEMIB_STOKES_HPP_INCLUDED_
+#ifndef FEMIB_STOKES_T_HPP_INCLUDED_
+#define FEMIB_STOKES_T_HPP_INCLUDED_
 
 #include "../femib/femib.hpp"
 #include "../finite_element_space/finite_element_space.hpp"
@@ -221,23 +221,20 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
       augment_with_pressure_gauge<T, d>(s, s.AA, s.ff, not_edges);
 }
 
+// TODO we need to give better names to stuff...
+// Rebuilds:
+// * the time-dependent load vector (s.force evaluated at s.time,
+// which the caller must have already advanced to t^{n+1});
+// * dd (the backward-Euler mass term's known part);
+// * extra_velocity_rhs.
+// Then
+// * re-derives the solvable system from the current s.AA/s.ff,
+// extracted so the Picard loop for time-dependent Navier-Stokes
+// can call it too.
 template <typename T, int d>
-void advance(stokes<T, d> &s, std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
-                                  extra_velocity_rhs = std::nullopt) {
-  s.time += s.deltat;
-
-  Eigen::Matrix<T, Eigen::Dynamic, 1> u_1;
-  if (s.solution.size() == 0)
-    u_1 = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(s.V.nodes.P.size(), 1);
-  else
-    // last timestep velocity
-    u_1 = s.solution[s.solution.size() - 1].topRows(s.V.nodes.P.size());
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> DD =
-      (1 / s.deltat) *
-      Eigen::MatrixXf::Identity(s.V.nodes.P.size(), s.V.nodes.P.size());
-  Eigen::Matrix<T, Eigen::Dynamic, 1> dd = (1 / s.deltat) * u_1;
-
-  s.AA.block(0, 0, s.V.nodes.P.size(), s.V.nodes.P.size()) = s.A + DD;
+void rebuild_system(
+    stokes<T, d> &s, const Eigen::Matrix<T, Eigen::Dynamic, 1> &dd,
+    std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>> extra_velocity_rhs) {
 
   std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)> force_n1 =
       [force = s.force, time_n1 = s.time](const femib::types::dvec<T, d> &x) {
@@ -258,10 +255,36 @@ void advance(stokes<T, d> &s, std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
 
   s.ff.block(0, 0, s.V.nodes.P.size(), 1) = velocity_rhs;
 
+  // The velocity-velocity block of AA/ff just changed (the backward-Euler
+  // mass term, and possibly a Picard-updated convection term), so the
+  // solvable system must be rebuilt.
+  // s.domain_integral_row itself does not change, so it is reused.
   std::vector<int> not_edges = build_stokes_t_not_edges<T, d>(s);
 
   s.solvable_equations =
       augment_with_pressure_gauge<T, d>(s, s.AA, s.ff, not_edges);
+}
+
+template <typename T, int d>
+void advance(stokes<T, d> &s, std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
+                                  extra_velocity_rhs = std::nullopt) {
+  s.time += s.deltat;
+
+  Eigen::Matrix<T, Eigen::Dynamic, 1> u_1;
+  if (s.solution.size() == 0)
+    u_1 = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(s.V.nodes.P.size(), 1);
+  else
+    // last timestep velocity
+    u_1 = s.solution[s.solution.size() - 1].topRows(s.V.nodes.P.size());
+  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> DD =
+      (1 / s.deltat) *
+      Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>::Identity(
+          s.V.nodes.P.size(), s.V.nodes.P.size());
+  Eigen::Matrix<T, Eigen::Dynamic, 1> dd = (1 / s.deltat) * u_1;
+
+  s.AA.block(0, 0, s.V.nodes.P.size(), s.V.nodes.P.size()) = s.A + DD;
+
+  rebuild_system<T, d>(s, dd, extra_velocity_rhs);
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx = solve<T, d, 1>(s);
 
