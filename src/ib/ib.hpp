@@ -23,6 +23,7 @@ template <typename T, int d> void advance(ib_problem<T, d> &p) {
       p.structure.X; // pre-advance positions
   std::vector<femib::types::dvec<T, d>> F = elastic_force<T, d>(p.structure);
 
+  // TODO spread_force expects a force DENSITY
   Eigen::Matrix<T, Eigen::Dynamic, 1> extra_rhs =
       spread_force<T, d>(p.fluid.V, X, F, p.structure.dS);
 
@@ -41,6 +42,7 @@ void advance_navier_stokes(ib_problem<T, d> &p,
   std::vector<femib::types::dvec<T, d>> X = p.structure.X;
   std::vector<femib::types::dvec<T, d>> F = elastic_force<T, d>(p.structure);
 
+  // TODO spread_force expects a force DENSITY
   Eigen::Matrix<T, Eigen::Dynamic, 1> extra_rhs =
       spread_force<T, d>(p.fluid.V, X, F, p.structure.dS);
 

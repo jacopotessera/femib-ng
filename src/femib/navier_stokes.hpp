@@ -84,6 +84,8 @@ solve_steady(femib::stokes::stokes<T, d> &s,
     if (rel_change < tol)
       break;
   }
+  // Restore s.A to the pure-Stokes stiffness
+  s.A = A_stokes;
   return xx;
 }
 
