@@ -341,7 +341,8 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   int n = 6;
   femib::types::mesh<float, 2> mesh = make_unit_square_mesh(n);
   mesh.init();
-  femib::gauss::rule<float, 2> rule = femib::gauss::create_gauss_2_2d<float, 2>();
+  femib::gauss::rule<float, 2> rule =
+      femib::gauss::create_gauss_2_2d<float, 2>();
 
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
@@ -367,8 +368,8 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // own scale unless the advecting field itself is large. 5000x the
   // default forcing reliably clears this test's own wiring-check tolerance
   // with comfortable margin.
-  s.force = [](const femib::types::dvec<float, 2> &, float)
-      -> femib::types::dvec<float, 2> {
+  s.force = [](const femib::types::dvec<float, 2> &,
+               float) -> femib::types::dvec<float, 2> {
     return femib::types::dvec<float, 2>(5000.0f, 5000.0f);
   };
   femib::stokes_t::init<float, 2>(s, rule);

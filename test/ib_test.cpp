@@ -151,3 +151,21 @@ TEST_CASE("a perturbed (elliptical) ring's elastic energy decays, not grows, "
   CHECK_LT(E_late, E_early);
   CHECK_LT(E_max, 2.0f * E0);
 }
+
+TEST_CASE("a ring at its rest configuration stays motionless under "
+          "Navier-Stokes too") {
+  femib::ib::ib_problem<float, 2> p = make_ib_fixture(16, 24, 0.2f);
+  femib::gauss::rule<float, 2> rule =
+      femib::gauss::create_gauss_2_2d<float, 2>();
+  std::vector<femib::types::dvec<float, 2>> X0 = p.structure.X;
+
+  for (int step = 0; step < 20; ++step) {
+    femib::ib::advance_navier_stokes<float, 2>(p, rule, 10.0f, 10, 1e-5f);
+  }
+
+  float max_drift = 0.0f;
+  for (size_t k = 0; k < X0.size(); ++k) {
+    max_drift = std::max(max_drift, (p.structure.X[k] - X0[k]).norm());
+  }
+  CHECK_LT(max_drift, 1e-5f);
+}

@@ -19,6 +19,15 @@ template <typename T, int d> struct ring {
   T dS; // fixed material arc-length weight per point (circumference / n)
 };
 
+// TODO eh, this belongs to ring: ring.advance
+template <typename T, int d>
+void advance_ring(ring<T, d> &r, T deltat,
+                  std::vector<femib::types::dvec<T, d>> &U) {
+  for (size_t k = 0; k < r.X.size(); ++k) {
+    r.X[k] += deltat * U[k];
+  }
+}
+
 // build a ring with center "c", radius "radius", elastic constant "k", and
 // "n_points" material points
 template <typename T, int d>
