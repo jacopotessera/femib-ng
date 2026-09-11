@@ -3,7 +3,7 @@ find_package (doctest REQUIRED)
 find_package (TBB REQUIRED)
 find_package (Eigen3 REQUIRED NO_MODULE)
 
-add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test read_test finite_element_test finite_element_space_test femib_test write_test stokes_test stokes_t_test ib_structure_test ib_coupling_test ib_test navier_stokes_test)
+add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test read_test finite_element_test finite_element_space_test femib_test write_test stokes_test stokes_t_test ib_structure_test ib_coupling_test ib_test navier_stokes_test mass_test)
 
 include_directories (../src/affine)
 add_executable (affine_test affine_test.cpp)
@@ -63,6 +63,12 @@ target_compile_definitions(femib_test PRIVATE MESH_DIR="${CMAKE_CURRENT_SOURCE_D
 target_compile_features (femib_test PRIVATE cxx_std_23)
 target_link_libraries (femib_test read spdlog::spdlog Eigen3::Eigen TBB::tbb  doctest::doctest)
 add_test (NAME femib_test COMMAND femib_test)
+
+include_directories (../src/femib)
+add_executable (mass_test mass_test.cpp)
+target_compile_features (mass_test PRIVATE cxx_std_23)
+target_link_libraries (mass_test spdlog::spdlog Eigen3::Eigen doctest::doctest)
+add_test (NAME mass_test COMMAND mass_test)
 
 include_directories (../src/femib)
 add_executable (stokes_test stokes_test.cpp)

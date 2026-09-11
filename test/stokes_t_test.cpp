@@ -143,9 +143,9 @@ TEST_CASE("testing advance over several timesteps") {
       *std::max_element(velocity_norm.begin(), velocity_norm.end());
   float min_norm =
       *std::min_element(velocity_norm.begin(), velocity_norm.end());
-  CHECK(max_norm < 10.0f * min_norm);
+  CHECK(max_norm < 2.0f * min_norm);
 
-  CHECK(step_diff_norm.back() < 1.5f * step_diff_norm.front());
+  CHECK(step_diff_norm.back() < 1.1f * step_diff_norm.front());
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> p =
       s.solution.back().bottomRows(s.Q.nodes.P.size());
@@ -294,8 +294,8 @@ TEST_CASE("test stokes_t::advance with a non-stationary known problem") {
   float max_pressure_error_over_run =
       *std::max_element(pressure_errors.begin(), pressure_errors.end());
 
-  CHECK(max_velocity_error_over_run < 5.0f);
-  CHECK(max_pressure_error_over_run < 26.0f);
+  CHECK(max_velocity_error_over_run < 0.6f);
+  CHECK(max_pressure_error_over_run < 20.0f);
 }
 
 TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "

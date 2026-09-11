@@ -23,6 +23,7 @@ template <typename T, int d> struct stokes {
   T deltat = 0.1; // TODO eh
 
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> A;
+  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> M;
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> B;
   Eigen::Matrix<T, Eigen::Dynamic, 1> f;
   Eigen::Matrix<T, Eigen::Dynamic, 1> bV;
@@ -60,6 +61,16 @@ stokes_b(femib::types::F<T, d, d> u, femib::types::F<T, d, 1> q) {
   return [u, q](const femib::types::dvec<T, d> &x) {
     return T(-1.0) * div(u)(x) * q.x(x)(0);
   };
+}
+
+template <typename T, int d>
+Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>
+mass_matrix(femib::finite_element_space::finite_element_space<T, d, d> &V,
+            const femib::gauss::rule<T, d> &rule) {
+  femib::util::build_diagonal_result<T> result =
+      femib::util::build_diagonal<T, d, d>(V, rule, mass<T, d>, zero<T, d>);
+  return femib::util::triplets2dense(result.M, V.nodes.P.size(),
+                                     V.nodes.P.size());
 }
 
 // force at time t tested against the base function a
@@ -183,6 +194,7 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
   s.result = result;
   s.A = femib::util::triplets2dense(result.M, s.V.nodes.P.size(),
                                     s.V.nodes.P.size());
+  s.M = mass_matrix<T, d>(s.V, rule);
   s.B = femib::util::triplets2dense(
       femib::util::build_non_diagonal<T, d>(s.V, s.Q, rule, stokes_b<T, d>),
       s.V.nodes.P.size(), s.Q.nodes.P.size());
@@ -276,11 +288,9 @@ void advance(stokes<T, d> &s, std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
   else
     // last timestep velocity
     u_1 = s.solution[s.solution.size() - 1].topRows(s.V.nodes.P.size());
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> DD =
-      (1 / s.deltat) *
-      Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>::Identity(
-          s.V.nodes.P.size(), s.V.nodes.P.size());
-  Eigen::Matrix<T, Eigen::Dynamic, 1> dd = (1 / s.deltat) * u_1;
+
+  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> DD = (1 / s.deltat) * s.M;
+  Eigen::Matrix<T, Eigen::Dynamic, 1> dd = (1 / s.deltat) * (s.M * u_1);
 
   s.AA.block(0, 0, s.V.nodes.P.size(), s.V.nodes.P.size()) = s.A + DD;
 
