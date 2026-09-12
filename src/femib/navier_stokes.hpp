@@ -11,6 +11,7 @@
 #include <Eigen/Dense>
 #include <algorithm>
 #include <optional>
+#include <stdexcept>
 
 namespace femib::navier_stokes {
 
@@ -98,6 +99,11 @@ void advance(femib::stokes_t::stokes<T, d> &s,
              std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
                  extra_velocity_rhs = std::nullopt) {
   s.time += s.deltat;
+
+  if (max_picard_iters <= 0) {
+    throw std::invalid_argument(
+        "femib::navier_stokes::advance: max_picard_iters must be >= 1");
+  }
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> u_1;
   if (s.solution.size() == 0)

@@ -277,6 +277,25 @@ void rebuild_system(
       augment_with_pressure_gauge<T, d>(s, s.AA, s.ff, not_edges);
 }
 
+template <typename T, int d, int e>
+Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &s) {
+
+  Eigen::Matrix<T, Eigen::Dynamic, 1> x =
+      s.solvable_equations.A.colPivHouseholderQr().solve(
+          s.solvable_equations.b);
+
+  // drop the last row, constraint on pressure
+  Eigen::Matrix<T, Eigen::Dynamic, 1> x_no_lambda = x.topRows(x.rows() - 1);
+
+  std::vector<int> not_edges = build_stokes_t_not_edges<T, d>(s);
+
+  Eigen::Matrix<T, Eigen::Dynamic, 1> xx =
+      add_edges<T>(x_no_lambda, s.bV, s.V.nodes.P.size(), s.Q.nodes.P.size(),
+                   not_edges, s.V.nodes.E);
+
+  return xx;
+}
+
 template <typename T, int d>
 void advance(stokes<T, d> &s, std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
                                   extra_velocity_rhs = std::nullopt) {
@@ -296,30 +315,11 @@ void advance(stokes<T, d> &s, std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
 
   rebuild_system<T, d>(s, dd, extra_velocity_rhs);
 
-  Eigen::Matrix<T, Eigen::Dynamic, 1> xx = solve<T, d, 1>(s);
+  Eigen::Matrix<T, Eigen::Dynamic, 1> xx = femib::stokes_t::solve<T, d, 1>(s);
 
   s.plotV.emplace_back(s.V.plot(xx.head(s.V.nodes.P.size()), 0.01)); // TODO
   s.plotQ.emplace_back(s.Q.plot(xx.tail(s.Q.nodes.P.size()), 0.01)); // TODO
   s.solution.emplace_back(xx);
-}
-
-template <typename T, int d, int e>
-Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &s) {
-
-  Eigen::Matrix<T, Eigen::Dynamic, 1> x =
-      s.solvable_equations.A.colPivHouseholderQr().solve(
-          s.solvable_equations.b);
-
-  // drop the last row, constraint on pressure
-  Eigen::Matrix<T, Eigen::Dynamic, 1> x_no_lambda = x.topRows(x.rows() - 1);
-
-  std::vector<int> not_edges = build_stokes_t_not_edges<T, d>(s);
-
-  Eigen::Matrix<T, Eigen::Dynamic, 1> xx =
-      add_edges<T>(x_no_lambda, s.bV, s.V.nodes.P.size(), s.Q.nodes.P.size(),
-                   not_edges, s.V.nodes.E);
-
-  return xx;
 }
 
 } // namespace femib::stokes_t

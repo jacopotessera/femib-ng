@@ -424,3 +424,12 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   CHECK_LT((AA_velocity_block - (A_base_expected + conv_expected)).norm(),
            1e-2f);
 }
+
+TEST_CASE("navier_stokes::advance rejects max_picard_iters <= 0") {
+  femib::stokes_t::stokes<float, 2> s;
+  femib::gauss::rule<float, 2> rule =
+      femib::gauss::create_gauss_2_2d<float, 2>();
+  CHECK_THROWS_AS(
+      (femib::navier_stokes::advance<float, 2>(s, rule, 1.0f, 0, 1e-5f)),
+      std::invalid_argument);
+}
