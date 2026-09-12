@@ -398,9 +398,7 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // s.deltat is fixed, so this is exactly the A_base advance() itself
   // computes internally for step 2 below.
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> A_base_expected =
-      s.A + (1.0f / s.deltat) *
-                Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>::Identity(
-                    rowsV, rowsV);
+      s.A + (1.0f / s.deltat) * s.M;
 
   // Step 2 is the call under test. Its Picard loop's single iteration
   // (max_picard_iters=1) must use w_dofs_expected (step 1's output,

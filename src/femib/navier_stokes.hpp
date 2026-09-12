@@ -104,11 +104,8 @@ void advance(femib::stokes_t::stokes<T, d> &s,
     u_1 = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(s.V.nodes.P.size(), 1);
   else
     u_1 = s.solution[s.solution.size() - 1].topRows(s.V.nodes.P.size());
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> DD =
-      (1 / s.deltat) *
-      Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>::Identity(
-          s.V.nodes.P.size(), s.V.nodes.P.size());
-  Eigen::Matrix<T, Eigen::Dynamic, 1> dd = (1 / s.deltat) * u_1;
+  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> DD = (1 / s.deltat) * s.M;
+  Eigen::Matrix<T, Eigen::Dynamic, 1> dd = (1 / s.deltat) * (s.M * u_1);
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> A_base = s.A + DD;
 
   // Picard loop
