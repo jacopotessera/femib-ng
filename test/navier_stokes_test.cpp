@@ -394,9 +394,11 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // whether the wiring is correct, making this test vacuous.
   REQUIRE_GT(w_dofs_expected.norm(), 1e-6f);
 
-  // s.A is never modified by advance() (only s.AA's block is), and
-  // s.deltat is fixed, so this is exactly the A_base advance() itself
-  // computes internally for step 2 below.
+  // s.A is never modified by advance(), and s.AA is rebuilt fresh from
+  // scratch each call via assemble_saddle_point_matrix (not mutated
+  // in-place) and is not touched again once the Picard loop finishes, so
+  // reading s.A here is exactly the A_base advance() itself computes
+  // internally for step 2 below. s.deltat is fixed.
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> A_base_expected =
       s.A + (1.0f / s.deltat) * s.M;
 
@@ -420,7 +422,8 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // its velocity block still holds exactly what the loop's one iteration
   // computed: this is the actual assertion under test.
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> AA_velocity_block =
-      s.AA.block(0, 0, rowsV, rowsV);
+      Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(s.AA).block(
+          0, 0, rowsV, rowsV);
   CHECK_LT((AA_velocity_block - (A_base_expected + conv_expected)).norm(),
            1e-2f);
 }

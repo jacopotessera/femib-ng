@@ -9,6 +9,7 @@
 #include "stokes.hpp"
 #include "stokes_t.hpp"
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 #include <algorithm>
 #include <optional>
 #include <stdexcept>
@@ -17,7 +18,7 @@ namespace femib::navier_stokes {
 
 // convection term, using Picard's iterative method
 template <typename T, int d>
-Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> assemble_convection(
+Eigen::SparseMatrix<T> assemble_convection(
     const femib::finite_element_space::finite_element_space<T, d, d> &V,
     const femib::gauss::rule<T, d> &rule,
     const Eigen::Matrix<T, Eigen::Dynamic, 1>
@@ -60,7 +61,7 @@ Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> assemble_convection(
     }
   }
   return (T(1) / reynolds) *
-         femib::util::triplets2dense(BB, V.nodes.P.size(), V.nodes.P.size());
+         femib::util::triplets2sparse(BB, V.nodes.P.size(), V.nodes.P.size());
 }
 
 // Picard iteration:
@@ -111,16 +112,18 @@ void advance(femib::stokes_t::stokes<T, d> &s,
     u_1 = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(s.V.nodes.P.size(), 1);
   else
     u_1 = s.solution[s.solution.size() - 1].topRows(s.V.nodes.P.size());
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> DD = (1 / s.deltat) * s.M;
+  Eigen::SparseMatrix<T> DD = (1 / s.deltat) * s.M;
   Eigen::Matrix<T, Eigen::Dynamic, 1> dd = (1 / s.deltat) * (s.M * u_1);
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> A_base = s.A + DD;
+  Eigen::SparseMatrix<T> A_base = s.A + DD;
 
   // Picard loop
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx = u_1;
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx_new_full;
   for (int iter = 0; iter < max_picard_iters; ++iter) {
-    s.AA.block(0, 0, s.V.nodes.P.size(), s.V.nodes.P.size()) =
+    Eigen::SparseMatrix<T> top_left =
         A_base + assemble_convection<T, d>(s.V, rule, xx, reynolds);
+    s.AA = femib::stokes_t::assemble_saddle_point_matrix<T>(
+        top_left, s.B, s.V.nodes.P.size(), s.Q.nodes.P.size());
 
     femib::stokes_t::rebuild_system<T, d>(s, dd, extra_velocity_rhs);
     xx_new_full = femib::stokes_t::solve<T, d, 1>(s);

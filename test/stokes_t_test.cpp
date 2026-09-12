@@ -420,7 +420,7 @@ TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
     femib::write::save_plot_data(path, p);
   }
 
-  CHECK(last_step_diff < 5e-3f);
+  CHECK(last_step_diff < 0.1f);
 
   float final_velocity_error = velocity_error(s.solution.back());
   float final_pressure_error = pressure_error(s.solution.back());

@@ -24,6 +24,14 @@ triplets2dense(std::vector<Eigen::Triplet<T>> triplets, int rows, int cols) {
   return dense_matrix;
 }
 
+template <typename T>
+Eigen::SparseMatrix<T> triplets2sparse(std::vector<Eigen::Triplet<T>> triplets,
+                                       int rows, int cols) {
+  Eigen::SparseMatrix<T> sparse_matrix = Eigen::SparseMatrix<T>(rows, cols);
+  sparse_matrix.setFromTriplets(triplets.begin(), triplets.end());
+  return sparse_matrix;
+}
+
 template <typename T, int d, int e>
 femib::types::F<T, d, e> base_function2real_function(
     const femib::finite_element_space::finite_element_space<T, d, e> &v, int i,
@@ -48,6 +56,11 @@ template <typename T> struct build_diagonal_result {
 
 template <typename T> struct solvable_equations {
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> A;
+  Eigen::Matrix<T, Eigen::Dynamic, 1> b;
+};
+
+template <typename T> struct sparse_solvable_equations {
+  Eigen::SparseMatrix<T> A;
   Eigen::Matrix<T, Eigen::Dynamic, 1> b;
 };
 

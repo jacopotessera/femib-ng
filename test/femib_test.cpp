@@ -94,6 +94,38 @@ TEST_CASE("testing triplets2dense") {
   }
 }
 
+TEST_CASE("tesint triplets2sparse") {
+  std::vector<Eigen::Triplet<float>> triplets = {
+      {0, 0, 2.0f}, {1, 2, 3.5f}, {2, 1, -1.0f}};
+
+  Eigen::SparseMatrix<float> sparse =
+      femib::util::triplets2sparse<float>(triplets, 3, 3);
+
+  REQUIRE(sparse.rows() == 3);
+  REQUIRE(sparse.cols() == 3);
+  REQUIRE(sparse.nonZeros() == 3);
+  CHECK(sparse.coeff(0, 0) == doctest::Approx(2.0f));
+  CHECK(sparse.coeff(1, 2) == doctest::Approx(3.5f));
+  CHECK(sparse.coeff(2, 1) == doctest::Approx(-1.0f));
+
+  for (int i = 0; i < sparse.rows(); ++i) {
+    for (int j = 0; j < sparse.cols(); ++j) {
+      bool listed = (i == 0 && j == 0) || (i == 1 && j == 2) ||
+                    (i == 2 && j == 1); // TODO as above, use find or similar
+      if (!listed) {
+        CHECK(sparse.coeff(i, j) == doctest::Approx(0.0f));
+      }
+    }
+  }
+
+  // same result as triplets2dense
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> dense_check =
+      femib::util::triplets2dense<float>(triplets, 3, 3);
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> sparse_densified =
+      Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(sparse);
+  CHECK((dense_check - sparse_densified).norm() == doctest::Approx(0.0f));
+}
+
 TEST_CASE("poisson::solve matches sin(pi x)sin(pi y) manufactured solution") {
   // Manufactured solution on the unit square with homogeneous Dirichlet BC
   // (automatically satisfied: sin(pi*0) = sin(pi*1) = 0 on every edge):
