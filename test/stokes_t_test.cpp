@@ -36,16 +36,16 @@ femib::stokes_t::stokes<float, 2> make_stokes_t_fixture(
   // V
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P2_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space<float, 2, 2> v = {f_p1_2d2d,
-                                                                      mesh};
+  femib::finite_element_space::finite_element_space v = {
+      .finite_element = f_p1_2d2d, .mesh = mesh};
   v.nodes = f_p1_2d2d.build_nodes(mesh);
 
   // Q
-  femib::finite_element::finite_element<float, 2, 1> f_p0_2d1d =
+  femib::finite_element::finite_element<float, 2, 1> f_p1_2d1d =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
-  femib::finite_element_space::finite_element_space<float, 2, 1> q = {f_p0_2d1d,
-                                                                      mesh};
-  q.nodes = f_p0_2d1d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space q = {
+      .finite_element = f_p1_2d1d, .mesh = mesh};
+  q.nodes = f_p1_2d1d.build_nodes(mesh);
 
   femib::stokes_t::stokes<float, 2> s;
   s.V = v;

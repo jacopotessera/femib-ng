@@ -18,7 +18,7 @@ namespace femib::navier_stokes {
 // convection term, using Picard's iterative method
 template <typename T, int d>
 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> assemble_convection(
-    femib::finite_element_space::finite_element_space<T, d, d> &V,
+    const femib::finite_element_space::finite_element_space<T, d, d> &V,
     const femib::gauss::rule<T, d> &rule,
     const Eigen::Matrix<T, Eigen::Dynamic, 1>
         &w_dofs, // TODO uh? u_at_last_step
@@ -49,8 +49,9 @@ Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> assemble_convection(
       for (int j = 0; j < V.finite_element.base_functions.size(); ++j) {
         femib::types::F<T, d, d> b =
             femib::util::base_function2real_function<T, d, d>(V, j, Binv, bb);
+        auto convection_wb = convection<T, d>(w, b);
         auto fff = [&](const femib::types::dvec<T, d> &x) {
-          return a.x(x).dot(convection<T, d>(w, b)(x));
+          return a.x(x).dot(convection_wb(x));
         };
         T m = femib::mesh::integrate<T, d>(rule, fff, t);
         BB.push_back(Eigen::Triplet<T>(V.nodes.get_index(i, n),

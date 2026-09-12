@@ -197,3 +197,14 @@ TEST_CASE("a perturbed (elliptical) ring's elastic energy decays, not grows, "
 
   CHECK_LT(E_max, 2.0f * E0);
 }
+
+TEST_CASE("advance() throws if structure.dS is left at its default") {
+  femib::ib::ib_problem<float, 2> p = make_ib_fixture(16, 24, 0.2f);
+  femib::ib::ring<float, 2> bad_structure;
+  bad_structure.X = p.structure.X;
+  bad_structure.k = p.structure.k;
+  // bad_structure.dS left at its default of 0
+  p.structure = bad_structure;
+
+  CHECK_THROWS_AS((femib::ib::advance<float, 2>(p)), std::invalid_argument);
+}

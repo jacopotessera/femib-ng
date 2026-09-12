@@ -65,7 +65,7 @@ stokes_b(femib::types::F<T, d, d> u, femib::types::F<T, d, 1> q) {
 
 template <typename T, int d>
 Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>
-mass_matrix(femib::finite_element_space::finite_element_space<T, d, d> &V,
+mass_matrix(const femib::finite_element_space::finite_element_space<T, d, d> &V,
             const femib::gauss::rule<T, d> &rule) {
   femib::util::build_diagonal_result<T> result =
       femib::util::build_diagonal<T, d, d>(V, rule, mass<T, d>, zero<T, d>);

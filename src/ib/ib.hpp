@@ -5,6 +5,8 @@
 #include "../femib/stokes_t.hpp"
 #include "coupling.hpp"
 #include "structure.hpp"
+#include <functional>
+#include <stdexcept>
 
 namespace femib::ib {
 
@@ -23,6 +25,11 @@ void advance_common(
     ib_problem<T, d> &p,
     const std::function<void(const Eigen::Matrix<T, Eigen::Dynamic, 1> &)>
         &fluid_step) {
+  if (!(p.structure.dS > 0)) {
+    throw std::invalid_argument(
+        "femib::ib::advance_common: p.structure.dS must be positive");
+  }
+
   std::vector<femib::types::dvec<T, d>> X =
       p.structure.X; // pre-advance positions
   std::vector<femib::types::dvec<T, d>> F = elastic_force<T, d>(p.structure);

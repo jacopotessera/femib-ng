@@ -15,8 +15,8 @@ inline int get_next_point(const int i, const int n_points) {
 
 template <typename T, int d> struct ring {
   std::vector<femib::types::dvec<T, d>> X; // TODO we need to keep the "story"
-  T k;
-  T dS; // fixed material arc-length weight per point (circumference / n)
+  T k = 0;
+  T dS = 0; // fixed material arc-length weight per point (circumference / n)
 };
 
 // TODO eh, this belongs to ring: ring.advance
@@ -45,7 +45,6 @@ ring<T, d> build_ring(femib::types::dvec<T, d> c, T radius, int n_points, T k) {
   return r;
 }
 
-// TODO this must be elastic_force_density: we need to divide by dS
 template <typename T, int d>
 std::vector<femib::types::dvec<T, d>> elastic_force(const ring<T, d> &r) {
   int n = r.X.size();
