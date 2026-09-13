@@ -19,8 +19,8 @@ template <typename T, int d> struct stokes {
   femib::finite_element_space::finite_element_space<T, d, 1> Q;
   femib::gauss::rule<T, d> rule;
   std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)> force =
-      [](femib::types::dvec<T, d>, T) -> Eigen::Matrix<float, 2, 1> {
-    return Eigen::Matrix<T, d, 1>::Zero();
+      [](femib::types::dvec<T, d>, T) -> femib::types::dvec<T, d> {
+    return femib::types::dvec<T, d>::Zero();
   }; // external force f(x,t)
   T deltat = 0.1; // TODO eh
 

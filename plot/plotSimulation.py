@@ -2,6 +2,7 @@
 
 from plotUtils import parse_id, parse_input, calcPlotData, sortedTimesteps
 import sys, os, glob, numpy, h5py, matplotlib, matplotlib.pyplot as pyplot
+import matplotlib.colors
 from matplotlib.animation import FuncAnimation
 
 # TODO use typer
@@ -85,7 +86,9 @@ class PlotSimulation():
 		q = data["P"][0]
 
 		if len(x) and len(u):
-			ax.quiver(x,y,u,v,pivot='tail',units='xy')
+			mag = numpy.sqrt(u**2+v**2)
+			quiv = ax.quiver(x,y,u,v,mag,pivot='tail',units='xy',cmap=pyplot.cm.viridis)
+			fig.colorbar(quiv,ax=ax,label='|u|')
 			ax.set_title("velocity field: "+os.path.basename(id_))
 		elif len(x) and len(q):
 			try:
@@ -115,6 +118,21 @@ class PlotSimulation():
 		fig, ax = pyplot.subplots(1,1)
 		fig.set_tight_layout(True)
 
+		# Fixed color scale across the whole animation (not per-frame) so
+		# color is comparable frame-to-frame -- otherwise a quiet frame and a
+		# vigorous frame would both autoscale to "full brightness", hiding
+		# exactly the amplitude change a non-stationary run is meant to show.
+		mags = [numpy.sqrt(u**2+v**2) for u,v in zip(data["U"],data["V"]) if len(u)]
+		vmin = min((m.min() for m in mags), default=0.0)
+		vmax = max((m.max() for m in mags), default=1.0)
+		if vmax <= vmin:
+			vmax = vmin+1e-9
+		cmap = pyplot.cm.viridis
+		norm = matplotlib.colors.Normalize(vmin=vmin,vmax=vmax)
+		sm = pyplot.cm.ScalarMappable(cmap=cmap,norm=norm)
+		sm.set_array([])
+		fig.colorbar(sm,ax=ax,label='|u|')
+
 		def update(i):
 			ax.cla()
 			x, y = data["X"][i], data["Y"][i]
@@ -125,7 +143,8 @@ class PlotSimulation():
 			label = 'timestep {0}'.format(data["T"][i])
 			ax.set_xlabel(label)
 			if len(u):
-				ax.quiver(x,y,u,v,pivot='tail',units='xy')
+				mag = numpy.sqrt(u**2+v**2)
+				ax.quiver(x,y,u,v,mag,pivot='tail',units='xy',cmap=cmap,norm=norm)
 			ax.axis('equal')
 			return ax
 

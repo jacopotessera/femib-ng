@@ -256,3 +256,32 @@ template __host__ void femib::cuda::parallel_accurate<float, 2>(
     femib::types::dtrian_<float, 2> *T, int size_T, bool *N);
 
 /******************************************************************************/
+
+template femib::types::dvec<double, 2> *
+femib::cuda::copyToDevice<femib::types::dvec<double, 2>>(
+    femib::types::dvec<double, 2> *x, int size);
+template femib::types::dtrian_<double, 2> *
+femib::cuda::copyToDevice<femib::types::dtrian_<double, 2>>(
+    femib::types::dtrian_<double, 2> *x, int size);
+template void femib::cuda::freeDevice<femib::types::dvec<double, 2>>(
+    femib::types::dvec<double, 2> *x);
+template void femib::cuda::freeDevice<femib::types::dtrian_<double, 2>>(
+    femib::types::dtrian_<double, 2> *x);
+
+template __host__ bool
+femib::cuda::in_box<double, 2>(const femib::types::dvec<double, 2> &P,
+                               const femib::types::dtrian<double, 2> &T);
+template __host__ bool
+femib::cuda::in_triangle<double, 2>(const femib::types::dvec<double, 2> &P,
+                                    const femib::types::dtrian<double, 2> &T);
+template __host__ bool
+femib::cuda::accurate<double, 2>(const femib::types::dvec<double, 2> &P,
+                                 const femib::types::dtrian<double, 2> &T);
+template __host__ void femib::cuda::serial_accurate<double, 2>(
+    femib::types::dvec<double, 2> *X, int size_X,
+    femib::types::dtrian<double, 2> *T, int size_T, bool *N);
+template __host__ void femib::cuda::parallel_accurate<double, 2>(
+    femib::types::dvec<double, 2> *X, int size_X,
+    femib::types::dtrian_<double, 2> *T, int size_T, bool *N);
+
+/******************************************************************************/

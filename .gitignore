@@ -1,3 +1,7 @@
 build/
 .scannerwork/
 .idea/
+plot/gifs/
+plot/runs/
+.worktrees/
+*.pyc
