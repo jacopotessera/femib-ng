@@ -77,36 +77,74 @@ class PlotSimulation():
 		else:
 			self.plot_animation(data,id_,save)
 
-	def plot_snapshot(self,data,id_,save=False):
-		fig, ax = pyplot.subplots(1,1)
-		fig.set_tight_layout(True)
+	# Structure color is deliberately distinct from both the velocity
+	# (viridis) and pressure (magma) colormaps so the material curve reads
+	# clearly against either field.
+	STRUCT_COLOR = '#d9750a'
 
+	def _overlay_structure(self,ax,sx,sy):
+		if len(sx) == 0:
+			return
+		xs = numpy.append(sx,sx[0])
+		ys = numpy.append(sy,sy[0])
+		ax.plot(xs,ys,color=self.STRUCT_COLOR,linewidth=2,zorder=5)
+
+	def plot_snapshot(self,data,id_,save=False):
 		x, y = data["X"][0], data["Y"][0]
 		u, v = data["U"][0], data["V"][0]
 		q = data["P"][0]
+		sx, sy = data["SX"][0], data["SY"][0]
+		has_struct = len(sx) > 0
 
+		panels = []
 		if len(x) and len(u):
-			mag = numpy.sqrt(u**2+v**2)
-			quiv = ax.quiver(x,y,u,v,mag,pivot='tail',units='xy',cmap=pyplot.cm.viridis)
-			fig.colorbar(quiv,ax=ax,label='|u|')
-			ax.set_title("velocity field: "+os.path.basename(id_))
-		elif len(x) and len(q):
-			try:
-				cs = ax.tricontourf(x,y,q,levels=14,cmap=pyplot.cm.magma)
-				fig.colorbar(cs,ax=ax)
-			except (ValueError,RuntimeError):
-				sc = ax.scatter(x,y,c=q,cmap=pyplot.cm.magma)
-				fig.colorbar(sc,ax=ax)
-			ax.set_title("scalar field: "+os.path.basename(id_))
-		elif len(x):
-			ax.scatter(x,y)
-			ax.set_title("points: "+os.path.basename(id_))
-		else:
+			panels.append("velocity")
+		if len(x) and len(q):
+			panels.append("pressure")
+		if not panels and len(x):
+			panels.append("points")
+		if not panels and not has_struct:
 			print("Nothing to plot for "+id_)
-			pyplot.close(fig)
 			return
+		if not panels:
+			panels.append("structure only")
 
-		ax.axis('equal')
+		ncols = len(panels)
+		fig, axes = pyplot.subplots(1,ncols,figsize=(5*ncols,4.6),squeeze=False)
+		axes = axes[0]
+		fig.set_tight_layout(True)
+
+		for ax,kind in zip(axes,panels):
+			if kind=="velocity":
+				mag = numpy.sqrt(u**2+v**2)
+				quiv = ax.quiver(x,y,u,v,mag,pivot='tail',units='xy',cmap=pyplot.cm.viridis)
+				fig.colorbar(quiv,ax=ax,label='|u|')
+				ax.set_title("velocity")
+			elif kind=="pressure":
+				try:
+					cs = ax.tricontourf(x,y,q,levels=14,cmap=pyplot.cm.magma)
+					fig.colorbar(cs,ax=ax,label='p')
+				except (ValueError,RuntimeError):
+					sc = ax.scatter(x,y,c=q,cmap=pyplot.cm.magma)
+					fig.colorbar(sc,ax=ax,label='p')
+				ax.set_title("pressure")
+			elif kind=="points":
+				ax.scatter(x,y)
+				ax.set_title("points")
+			else:
+				ax.set_title("structure")
+			if has_struct:
+				self._overlay_structure(ax,sx,sy)
+			# adjustable='box' keeps equal aspect by resizing the drawn box,
+			# not by rescaling the data limits -- axis('equal') does the
+			# latter (adjustable='datalim'), which would silently zoom the
+			# domain based on whatever this frame's data extent happens to be.
+			ax.set_aspect('equal',adjustable='box')
+
+		title = os.path.basename(id_)
+		if has_struct and not numpy.isnan(data["AREA"][0]):
+			title += "  (area={0:.4g}, aspect={1:.3f})".format(data["AREA"][0],data["ASPECT"][0])
+		fig.suptitle(title)
 
 		if save:
 			os.makedirs('gifs',exist_ok=True)
@@ -115,44 +153,140 @@ class PlotSimulation():
 			pyplot.show()
 
 	def plot_animation(self,data,id_,save=False):
-		fig, ax = pyplot.subplots(1,1)
+		# Velocity/pressure are only saved every field_every steps (see
+		# ib_ns_demo.cpp's dump_step); forward-fill each gap with the last
+		# checkpoint's field so the quiver/pressure panels stay populated
+		# every frame instead of flashing blank between checkpoints.
+		last_X = last_Y = last_U = last_V = last_P = numpy.array([])
+		for i in range(len(data["T"])):
+			if len(data["U"][i]):
+				last_X,last_Y,last_U,last_V,last_P = data["X"][i],data["Y"][i],data["U"][i],data["V"][i],data["P"][i]
+			elif len(last_U):
+				data["X"][i],data["Y"][i],data["U"][i],data["V"][i],data["P"][i] = last_X,last_Y,last_U,last_V,last_P
+
+		has_u = any(len(u) for u in data["U"])
+		has_q = any(len(q) for q in data["P"])
+		has_struct = any(len(sx) for sx in data["SX"])
+
+		top_panels = []
+		if has_u: top_panels.append("velocity")
+		if has_q: top_panels.append("pressure")
+		if not top_panels and not has_struct:
+			print("Nothing to plot for "+id_)
+			return
+
+		nrows = 2 if has_struct else 1
+		ncols = max(len(top_panels),2 if has_struct else 1)
+		fig, axes = pyplot.subplots(nrows,ncols,figsize=(5*ncols,4.6*nrows),squeeze=False)
 		fig.set_tight_layout(True)
 
-		# Fixed color scale across the whole animation (not per-frame) so
+		top_axes = axes[0]
+		for ax in top_axes[len(top_panels):]:
+			ax.axis('off')
+
+		# Fixed color scales across the whole animation (not per-frame) so
 		# color is comparable frame-to-frame -- otherwise a quiet frame and a
 		# vigorous frame would both autoscale to "full brightness", hiding
 		# exactly the amplitude change a non-stationary run is meant to show.
 		mags = [numpy.sqrt(u**2+v**2) for u,v in zip(data["U"],data["V"]) if len(u)]
-		vmin = min((m.min() for m in mags), default=0.0)
-		vmax = max((m.max() for m in mags), default=1.0)
-		if vmax <= vmin:
-			vmax = vmin+1e-9
-		cmap = pyplot.cm.viridis
-		norm = matplotlib.colors.Normalize(vmin=vmin,vmax=vmax)
-		sm = pyplot.cm.ScalarMappable(cmap=cmap,norm=norm)
-		sm.set_array([])
-		fig.colorbar(sm,ax=ax,label='|u|')
+		vmin, vmax = min((m.min() for m in mags), default=0.0), max((m.max() for m in mags), default=1.0)
+		if vmax <= vmin: vmax = vmin+1e-9
+		vcmap, vnorm = pyplot.cm.viridis, matplotlib.colors.Normalize(vmin=vmin,vmax=vmax)
+
+		# quiver's own scale=None default autoscales the arrow-to-data-unit
+		# ratio from EACH CALL's own u,v -- which, called once per frame, makes
+		# the same physical speed draw a different-length arrow in a quiet
+		# frame than in a vigorous one. Fix scale globally instead, from the
+		# same vmax used for color, so arrow length is comparable frame to
+		# frame just like color already is: the fastest frame's arrow spans
+		# about 1.5 grid cells (data["X"] values are a full min-to-max grid,
+		# so the smallest positive gap between them is the grid spacing).
+		xs = numpy.unique(numpy.concatenate([x for x in data["X"] if len(x)]))
+		grid_spacing = numpy.min(numpy.diff(numpy.sort(xs))) if len(xs)>1 else 0.04
+		quiver_scale = vmax/(1.5*grid_spacing) if vmax>0 else 1.0
+
+		all_p = [p for p in data["P"] if len(p)]
+		pmin, pmax = min((p.min() for p in all_p), default=0.0), max((p.max() for p in all_p), default=1.0)
+		if pmax <= pmin: pmax = pmin+1e-9
+		pcmap, pnorm = pyplot.cm.magma, matplotlib.colors.Normalize(vmin=pmin,vmax=pmax)
+
+		vel_ax = pres_ax = None
+		idx = 0
+		if has_u:
+			vel_ax = top_axes[idx]; idx += 1
+			sm = pyplot.cm.ScalarMappable(cmap=vcmap,norm=vnorm); sm.set_array([])
+			fig.colorbar(sm,ax=vel_ax,label='|u|')
+		if has_q:
+			pres_ax = top_axes[idx]; idx += 1
+			sm2 = pyplot.cm.ScalarMappable(cmap=pcmap,norm=pnorm); sm2.set_array([])
+			fig.colorbar(sm2,ax=pres_ax,label='p')
+
+		area_ax = aspect_ax = area_marker = aspect_marker = None
+		if has_struct:
+			area_ax, aspect_ax = axes[1][0], axes[1][1]
+			for ax in axes[1][2:]:
+				ax.axis('off')
+			T = numpy.array(data["T"])
+			AREA = numpy.array(data["AREA"],dtype=float)
+			ASPECT = numpy.array(data["ASPECT"],dtype=float)
+			area_ax.plot(T,AREA,color=self.STRUCT_COLOR)
+			area_ax.set_title("structure area")
+			area_ax.set_xlabel("timestep")
+			(area_marker,) = area_ax.plot([],[],'o',color='black')
+			aspect_ax.plot(T,ASPECT,color=self.STRUCT_COLOR)
+			aspect_ax.set_title("structure aspect ratio")
+			aspect_ax.set_xlabel("timestep")
+			(aspect_marker,) = aspect_ax.plot([],[],'o',color='black')
 
 		def update(i):
-			ax.cla()
 			x, y = data["X"][i], data["Y"][i]
 			u, v = data["U"][i], data["V"][i]
-			if len(x):
-				ax.set_xlim([x.min(),x.max()])
-				ax.set_ylim([y.min(),y.max()])
-			label = 'timestep {0}'.format(data["T"][i])
-			ax.set_xlabel(label)
-			if len(u):
-				mag = numpy.sqrt(u**2+v**2)
-				ax.quiver(x,y,u,v,mag,pivot='tail',units='xy',cmap=cmap,norm=norm)
-			ax.axis('equal')
-			return ax
+			q = data["P"][i]
+			sx, sy = data["SX"][i], data["SY"][i]
+			t = data["T"][i]
+
+			if vel_ax is not None:
+				vel_ax.cla()
+				vel_ax.set_title("velocity")
+				if len(u):
+					mag = numpy.sqrt(u**2+v**2)
+					vel_ax.quiver(x,y,u,v,mag,pivot='tail',units='xy',cmap=vcmap,norm=vnorm,
+					              scale=quiver_scale,scale_units='xy')
+				if len(sx):
+					self._overlay_structure(vel_ax,sx,sy)
+				vel_ax.set_xlim(0,1); vel_ax.set_ylim(0,1)
+				# adjustable='box' keeps this exact xlim/ylim -- axis('equal')
+				# (adjustable='datalim') would instead stretch the domain to
+				# fit each frame's quiver-arrow extent, making it drift frame
+				# to frame even though the fluid mesh itself never moves.
+				vel_ax.set_aspect('equal',adjustable='box')
+				vel_ax.set_xlabel('timestep {0}'.format(t))
+
+			if pres_ax is not None:
+				pres_ax.cla()
+				pres_ax.set_title("pressure")
+				if len(q):
+					pres_ax.scatter(x,y,c=q,cmap=pcmap,norm=pnorm,s=8)
+				if len(sx):
+					self._overlay_structure(pres_ax,sx,sy)
+				pres_ax.set_xlim(0,1); pres_ax.set_ylim(0,1)
+				pres_ax.set_aspect('equal',adjustable='box')
+				pres_ax.set_xlabel('timestep {0}'.format(t))
+
+			if area_ax is not None and not numpy.isnan(data["AREA"][i]):
+				area_marker.set_data([t],[data["AREA"][i]])
+				aspect_marker.set_data([t],[data["ASPECT"][i]])
+
+			return []
 
 		anim = FuncAnimation(fig, update, frames=numpy.arange(0,len(data["T"])), interval=1)
 
 		if save:
 			os.makedirs('gifs',exist_ok=True)
-			anim.save('gifs/Simulation_'+os.path.basename(id_)+'.gif', dpi=150, writer='imagemagick')
+			# writer='pillow' explicitly -- 'imagemagick' isn't installed here,
+			# so leaving the default meant every save() first spent time
+			# probing for it before falling back.
+			anim.save('gifs/Simulation_'+os.path.basename(id_)+'.gif', dpi=100, writer='pillow')
 		else:
 			pyplot.show()
 

@@ -95,10 +95,31 @@ def sortedTimesteps(source):
 		return [source[n] for n in names]
 	return list(source)
 
+def polygonArea(sx, sy):
+	# Shoelace formula: signed area of the closed polygon (sx[i],sy[i]).
+	# Structures are stored in a consistent orientation (see e.g.
+	# femib::ib::build_ring's increasing-theta construction), so this is
+	# positive in practice; abs() guards against a sign flip regardless.
+	if len(sx) < 3:
+		return numpy.nan
+	return 0.5*numpy.abs(numpy.sum(sx*numpy.roll(sy,-1) - numpy.roll(sx,-1)*sy))
+
+def structureAspectRatio(sx, sy):
+	# Bounding-box aspect ratio (width/height), matching ib_ns_demo.cpp's own
+	# aspect_of() so the plotted time series matches the numbers logged to
+	# stderr during the run.
+	if len(sx) < 2:
+		return numpy.nan
+	width, height = sx.max()-sx.min(), sy.max()-sy.min()
+	if height <= 0:
+		return numpy.nan
+	return width/height
+
 def calcPlotData(timesteps):
 	groups = sortedTimesteps(timesteps)
 
 	T, X, Y, U, V, P = [], [], [], [], [], []
+	SX, SY, AREA, ASPECT = [], [], [], []
 	for grp in groups:
 		name = grp.name.rsplit("/", 1)[-1]
 		T.append(_timestep_number(name))
@@ -121,7 +142,21 @@ def calcPlotData(timesteps):
 
 		P.append(grp["q"][:, 0] if "q" in grp else numpy.array([]))
 
-	return {"T": T, "X": X, "Y": Y, "U": U, "V": V, "P": P}
+		if "X" in grp:
+			s = grp["X"][:]
+			sx, sy = s[:, 0], s[:, 1]
+			SX.append(sx)
+			SY.append(sy)
+			AREA.append(polygonArea(sx, sy))
+			ASPECT.append(structureAspectRatio(sx, sy))
+		else:
+			SX.append(numpy.array([]))
+			SY.append(numpy.array([]))
+			AREA.append(numpy.nan)
+			ASPECT.append(numpy.nan)
+
+	return {"T": T, "X": X, "Y": Y, "U": U, "V": V, "P": P,
+	        "SX": SX, "SY": SY, "AREA": AREA, "ASPECT": ASPECT}
 
 if __name__ == '__main__':
 	test()

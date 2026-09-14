@@ -1,18 +1,19 @@
 // Standalone demo: an elliptical Lagrangian ring relaxing toward a circle,
 // immersed in a Navier-Stokes fluid, via femib::ib::advance_navier_stokes.
-// Dumps the ring's point positions, the fluid velocity field, and the
-// pressure field at checkpoint intervals, to CSV files for
-// plotting/animation. Not part of the test suite -- a one-off
-// visualization driver.
+// Persists the ring's point positions, the fluid velocity field, and the
+// pressure field at every step (structure) / checkpoint intervals (fields)
+// via this codebase's normal HDF5 persistence (femib::write::save_sim /
+// save_plot_data), the same one test/ib_test.cpp uses. Not part of the test
+// suite -- a one-off visualization driver; see plot/plotSimulation.py to
+// render it.
 
 #include "../femib/stokes_t.hpp"
 #include "../finite_element/P0_2d1d.hpp"
 #include "../finite_element/P1+B_2d2d.hpp"
 #include "../gauss/gauss_lagrange_2_2d.hpp"
 #include "../ib/ib.hpp"
+#include "../write/write.hpp"
 
-#include <cstdio>
-#include <fstream>
 #include <iostream>
 
 namespace {
@@ -69,28 +70,35 @@ double polygon_area(const std::vector<femib::types::dvec<double, 2>> &X) {
 } // namespace
 
 int main(int argc, char **argv) {
-  std::string ring_path = argc > 1 ? argv[1] : "/tmp/ib_ns_demo_ring.csv";
-  std::string field_path = argc > 2 ? argv[2] : "/tmp/ib_ns_demo_field.csv";
-  std::string pressure_path =
-      argc > 3 ? argv[3] : "/tmp/ib_ns_demo_pressure.csv";
-  int n_mesh = 32;           // finer Eulerian mesh -- tractable at full run
-                             // length thanks to the sparse-solver fix (this
-                             // used to take ~20 min/step; now ~1s/step)
-  int n_ring = 96;           // keep Lagrangian point spacing well under half
-                             // the mesh spacing
+  std::string path = argc > 1 ? argv[1] : "/tmp/ib_ns_demo.h5";
+  // n_mesh=32 (2*n_mesh^2 = 2048 triangles): femib::cuda::parallel_accurate
+  // used to launch one CUDA thread per mesh triangle within a SINGLE block
+  // (blockDim.x = size_T), which silently broke for any mesh with more
+  // than ~1024 triangles (every current CUDA architecture's threads-per-
+  // block cap) -- past that, find_points quietly returned "not found" for
+  // every query point, and both the plotted velocity field and
+  // interpolate_velocity (which advects the ring) read back as zero,
+  // freezing the simulation with no error. Fixed in src/cuda/cuda.cu
+  // (parallel_accurate_kernel now chunks the triangle dimension across a
+  // 2D grid instead of requiring it to fit in one block), so this mesh
+  // density is safe again -- finer than the original n_mesh=16, tractable
+  // at full run length thanks to the sparse-solver fix (this used to take
+  // ~20 min/step; now a fraction of a second per step).
+  int n_mesh = 32;
+  int n_ring = 192; // keep Lagrangian point spacing well under half
+                   // the mesh spacing
   double radius = 0.15;
   double k_spring = 16000.0; // pushed higher, for a visible rebound
-  double viscosity = 0.3;    // multiplies s.A (see below) -- this codebase has no
-                             // wired-up viscosity coefficient (mu=2 is baked into
-                             // dpi(symm(u),symm(v)) with no adjustable multiplier,
-                             // a known gap), so this scales the assembled viscous
-                             // stiffness matrix directly, locally, in the demo.
+  double viscosity = 0.3; // multiplies s.A (see below) -- this codebase has no
+                          // wired-up viscosity coefficient (mu=2 is baked into
+                          // dpi(symm(u),symm(v)) with no adjustable multiplier,
+                          // a known gap), so this scales the assembled viscous
+                          // stiffness matrix directly, locally, in the demo.
   double deltat = 0.0002;
   double reynolds = 5.0;
   int max_picard_iters = 5;
   double tol = 1e-4;
-  int n_steps = 360;         // enough to capture the full bounce + settle
-  int field_every = 10;      // checkpoint interval for fluid-field snapshots
+  int n_steps = 360; // enough to capture the full bounce + settle
 
   femib::gauss::rule<double, 2> rule =
       femib::gauss::create_gauss_2_2d<double, 2>();
@@ -113,8 +121,8 @@ int main(int argc, char **argv) {
   p.fluid.V = v;
   p.fluid.Q = q;
   p.fluid.deltat = deltat;
-  p.fluid.force = [](const femib::types::dvec<double, 2> &, double)
-      -> femib::types::dvec<double, 2> {
+  p.fluid.force = [](const femib::types::dvec<double, 2> &,
+                     double) -> femib::types::dvec<double, 2> {
     return femib::types::dvec<double, 2>::Zero();
   };
   p.structure = femib::ib::build_ring<double, 2>(
@@ -174,7 +182,8 @@ int main(int argc, char **argv) {
       return std::sqrt(dx * dx + dy * dy);
     };
     double mid = 0.5 * (theta_dense[i - 1] + theta_dense[i]);
-    cum_arc[i] = cum_arc[i - 1] + speed(mid) * (theta_dense[i] - theta_dense[i - 1]);
+    cum_arc[i] =
+        cum_arc[i - 1] + speed(mid) * (theta_dense[i] - theta_dense[i - 1]);
   }
   double total_arc = cum_arc[n_dense];
   int n_ring_actual = (int)p.structure.X.size();
@@ -199,42 +208,41 @@ int main(int argc, char **argv) {
 
   double area0 = polygon_area(p.structure.X);
 
-  std::ofstream ring_out(ring_path);
-  ring_out << "step,point_index,x,y\n";
-  auto dump_ring = [&](int step) {
-    for (size_t k = 0; k < p.structure.X.size(); ++k) {
-      ring_out << step << "," << k << "," << p.structure.X[k](0) << ","
-                << p.structure.X[k](1) << "\n";
-    }
-  };
-  dump_ring(0);
+  femib::write::save_sim(path, "ib_ns_demo");
 
-  std::ofstream field_out(field_path);
-  field_out << "step,x,y,u,v\n";
-  auto dump_field = [&](int step) {
-    // p.fluid.plotV is populated on every femib::navier_stokes::advance
-    // call (see its own s.V.plot(...) call), so this just reads the most
-    // recent snapshot rather than re-sampling.
-    if (p.fluid.plotV.empty())
-      return;
-    for (const auto &[position, velocity] : p.fluid.plotV.back()) {
-      field_out << step << "," << position(0) << "," << position(1) << ","
-                 << velocity(0) << "," << velocity(1) << "\n";
+  // Persists the structure's position AND the velocity/pressure fields at
+  // EVERY step (so the animation has a full field for every frame, not just
+  // every field_every-th one) -- femib::write::write_if_present (write.cpp)
+  // silently skips any empty vector, so a timestep group with no "x"/"u"/"q"
+  // datasets this step (only true at step 0, before the first solve) is
+  // expected, not an error; see plot/plotUtils.py's calcPlotData, which
+  // already handles that.
+  //
+  // Field interpolation (velocity/pressure onto a plotting grid) used to run
+  // unconditionally inside advance() at delta=0.01 (~10k points) -- the
+  // actual dominant cost of a timestep once the sparse solve was fixed (see
+  // the timing report). Computing it here, on demand, at every step (instead
+  // of gating it behind field_every) needs a much coarser grid to stay cheap
+  // -- delta=0.04 (~26x26 = 676 points) is dense enough to show the flow
+  // pattern while costing ~15x fewer point-location queries than 0.01 did.
+  auto dump_step = [&](int step) {
+    femib::write::plot_data<double, 2> data;
+    data.time = step;
+    if (!p.fluid.solution.empty()) {
+      for (const auto &[position, velocity] : p.fluid.plot_velocity(0.04)) {
+        data.x.push_back(position);
+        data.u.push_back(velocity);
+      }
+      for (const auto &[position, pressure] : p.fluid.plot_pressure(0.04)) {
+        data.q.push_back(pressure);
+      }
     }
-  };
-
-  std::ofstream pressure_out(pressure_path);
-  pressure_out << "step,x,y,pressure\n";
-  auto dump_pressure = [&](int step) {
-    // p.fluid.plotQ is populated on every femib::navier_stokes::advance
-    // call (see its own s.Q.plot(...) call) alongside plotV above.
-    if (p.fluid.plotQ.empty())
-      return;
-    for (const auto &[position, pressure] : p.fluid.plotQ.back()) {
-      pressure_out << step << "," << position(0) << "," << position(1) << ","
-                    << pressure(0) << "\n";
+    for (const auto &val : p.structure.X) {
+      data.X.push_back(val);
     }
+    femib::write::save_plot_data<double, 2>(path, data);
   };
+  dump_step(0);
 
   auto aspect_of = [&]() {
     double xmin = 1e9, xmax = -1e9, ymin = 1e9, ymax = -1e9;
@@ -249,34 +257,17 @@ int main(int argc, char **argv) {
 
   for (int step = 1; step <= n_steps; ++step) {
     femib::ib::advance_navier_stokes<double, 2>(p, rule, reynolds,
-                                               max_picard_iters, tol);
-    dump_ring(step);
-    if (step % field_every == 0 || step == 1) {
-      dump_field(step);
-      dump_pressure(step);
-    }
+                                                max_picard_iters, tol);
+    dump_step(step);
     if (step % 20 == 0 || step == 1) {
       double E = femib::ib::elastic_energy<double, 2>(p.structure);
       double area = polygon_area(p.structure.X);
-      std::cerr << "step " << step << "/" << n_steps << "  elastic_energy="
-                << E << "  aspect=" << aspect_of() << "  area=" << area
+      std::cerr << "step " << step << "/" << n_steps << "  elastic_energy=" << E
+                << "  aspect=" << aspect_of() << "  area=" << area
                 << "  area/area0=" << (area / area0) << std::endl;
-    }
-    if (step % field_every == 0) {
-      // Flush periodically (not every step -- I/O overhead) so a reader
-      // polling the CSVs mid-run (e.g. to regenerate a progress GIF) always
-      // sees complete, up-to-date data rather than whatever is still
-      // sitting in ofstream's internal buffer.
-      ring_out.flush();
-      field_out.flush();
-      pressure_out.flush();
     }
   }
 
-  ring_out.close();
-  field_out.close();
-  pressure_out.close();
-  std::cerr << "Wrote " << ring_path << ", " << field_path << ", and "
-            << pressure_path << std::endl;
+  std::cerr << "Wrote " << path << std::endl;
   return 0;
 }
