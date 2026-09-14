@@ -201,12 +201,16 @@ __host__ void femib::cuda::serial_accurate(femib::types::dvec<f, d> *X,
 
 template <typename f, int d>
 __global__ void parallel_accurate_kernel(femib::types::dtrian_<f, d> *T,
+                                         int size_T,
                                          femib::types::dvec<f, d> *X, bool *N) {
-  int blockId = blockIdx.x;
-  int threadId = blockId * blockDim.x + threadIdx.x;
-  femib::types::dvec<f, d> p = X[blockId];
-  bool n = accurate_<f, d>(p, T[threadIdx.x]);
-  N[threadId] = n;
+  int point_idx = blockIdx.x;
+  int tri_idx = blockIdx.y * blockDim.x + threadIdx.x;
+  if (tri_idx >= size_T) {
+    return;
+  }
+  femib::types::dvec<f, d> p = X[point_idx];
+  bool n = accurate_<f, d>(p, T[tri_idx]);
+  N[point_idx * size_T + tri_idx] = n;
 }
 
 template <typename f, int d>
@@ -214,7 +218,10 @@ __host__ void femib::cuda::parallel_accurate(femib::types::dvec<f, d> *X,
                                              int size_X,
                                              femib::types::dtrian_<f, d> *T,
                                              int size_T, bool *N) {
-  parallel_accurate_kernel<f, d><<<size_X, size_T>>>(T, X, N);
+  const int threads_per_block = 256; //  hardware limit = 1024
+  int blocks_per_point = (size_T + threads_per_block - 1) / threads_per_block;
+  dim3 grid(size_X, blocks_per_point);
+  parallel_accurate_kernel<f, d><<<grid, threads_per_block>>>(T, size_T, X, N);
 }
 
 /******************************************************************************/

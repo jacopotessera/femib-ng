@@ -40,12 +40,17 @@ template <typename T, int d> struct stokes {
   util::sparse_solvable_equations<T> solvable_equations;
 
   std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1>> solution;
-  std::vector<std::vector<std::pair<types::dvec<T, d>, types::dvec<T, d>>>>
-      plotV; // TODO we need this?? cant we calculate from solution if needed?
-  std::vector<std::vector<std::pair<types::dvec<T, d>, types::dvec<T, 1>>>>
-      plotQ; // TODO we need this?? cant we calculate from solution if needed?
 
   T time = 0;
+
+  std::vector<std::pair<types::dvec<T, d>, types::dvec<T, d>>>
+  plot_velocity(T delta) {
+    return V.plot(solution.back().topRows(V.nodes.P.size()), delta);
+  }
+  std::vector<std::pair<types::dvec<T, d>, types::dvec<T, 1>>>
+  plot_pressure(T delta) {
+    return Q.plot(solution.back().tail(Q.nodes.P.size()), delta);
+  }
 };
 
 // TODO unify with stokes
@@ -389,8 +394,6 @@ void advance(stokes<T, d> &s, std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx = femib::stokes_t::solve<T, d, 1>(s);
 
-  s.plotV.emplace_back(s.V.plot(xx.head(s.V.nodes.P.size()), 0.01)); // TODO
-  s.plotQ.emplace_back(s.Q.plot(xx.tail(s.Q.nodes.P.size()), 0.01)); // TODO
   s.solution.emplace_back(xx);
 }
 

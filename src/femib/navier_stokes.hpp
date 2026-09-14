@@ -137,8 +137,6 @@ void advance(femib::stokes_t::stokes<T, d> &s,
       break;
     }
   }
-  s.plotV.emplace_back(s.V.plot(xx_new_full.topRows(s.V.nodes.P.size()), 0.01));
-  s.plotQ.emplace_back(s.Q.plot(xx_new_full.tail(s.Q.nodes.P.size()), 0.01));
   s.solution.emplace_back(xx_new_full);
 }
 

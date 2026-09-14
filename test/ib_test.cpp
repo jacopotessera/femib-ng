@@ -60,11 +60,11 @@ TEST_CASE("a ring at its rest configuration stays motionless") {
 
     femib::write::plot_data<float, 2> plot_data;
     plot_data.time = step;
-    for (const auto &d : p.fluid.plotV[step]) {
+    for (const auto &d : p.fluid.plot_velocity(0.01f)) {
       plot_data.x.push_back(d.first);
       plot_data.u.push_back(d.second);
     }
-    for (const auto &d : p.fluid.plotQ[step]) {
+    for (const auto &d : p.fluid.plot_pressure(0.01f)) {
       plot_data.q.push_back(d.second);
     }
     for (const auto &val : p.structure.X) {
@@ -101,11 +101,12 @@ TEST_CASE(
 
     femib::write::plot_data<float, 2> plot_data;
     plot_data.time = step;
-    for (const auto &[position, velocity] : p.fluid.plotV[step]) {
+    for (const auto &[position, velocity] : p.fluid.plot_velocity(0.01f)) {
       plot_data.x.push_back(position);
       plot_data.u.push_back(velocity);
     }
-    for (const auto &pressure : p.fluid.plotQ[step] | std::views::values) {
+    for (const auto &pressure :
+         p.fluid.plot_pressure(0.01f) | std::views::values) {
       plot_data.q.push_back(pressure);
     }
     for (const auto &val : p.structure.X) {

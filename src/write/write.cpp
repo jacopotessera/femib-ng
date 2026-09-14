@@ -27,6 +27,12 @@ template void write_if_present<float, 1>(
 template void write_if_present<float, 2>(
     HighFive::Group &group, const std::string &name,
     const std::vector<femib::types::dvec<float, 2>> &data);
+template void write_if_present<double, 1>(
+    HighFive::Group &group, const std::string &name,
+    const std::vector<femib::types::dvec<double, 1>> &data);
+template void write_if_present<double, 2>(
+    HighFive::Group &group, const std::string &name,
+    const std::vector<femib::types::dvec<double, 2>> &data);
 } // namespace
 
 void femib::write::save_sim(const std::string &path,
@@ -54,3 +60,5 @@ void femib::write::save_plot_data(const std::string &path,
 
 template void femib::write::save_plot_data<float, 2>(
     const std::string &path, const femib::write::plot_data<float, 2> &data);
+template void femib::write::save_plot_data<double, 2>(
+    const std::string &path, const femib::write::plot_data<double, 2> &data);

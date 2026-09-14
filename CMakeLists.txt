@@ -39,18 +39,20 @@ endif()
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
-SET(GCC_COVERAGE_COMPILE_FLAGS "-fprofile-arcs -ftest-coverage --coverage -g -fno-omit-frame-pointer")
-SET(GCC_COVERAGE_LINK_FLAGS    "-lgcov")
+# Coverage disabled
+# SET(GCC_COVERAGE_COMPILE_FLAGS "-fprofile-arcs -ftest-coverage --coverage -g -fno-omit-frame-pointer")
+# SET(GCC_COVERAGE_LINK_FLAGS    "-lgcov")
+# SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}")
+# SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_COVERAGE_LINK_FLAGS}")
 
 SET(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G -Xcudafe --display_error_number --expt-relaxed-constexpr")
-SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}")
-SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_COVERAGE_LINK_FLAGS}")
 
 add_executable(femib ${SRC_DIR}/main.cpp)
 target_link_libraries(femib)
 
 include(CodeCoverage)
-append_coverage_compiler_flags()
+# Coverage disabled
+# append_coverage_compiler_flags()
 setup_target_for_coverage_gcovr_html(NAME coverage COMMAND check DEPENDENCIES check BASE_DIRECTORY src/)
 
 enable_testing ()

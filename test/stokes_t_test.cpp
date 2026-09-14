@@ -83,7 +83,7 @@ TEST_CASE("testing femib stokes_t pipeline with HDF5 persistence") {
 
     femib::write::plot_data<float, 2> p;
     p.time = t;
-    for (const auto &plot_data : stokes.plotV[t]) {
+    for (const auto &plot_data : stokes.plot_velocity(0.01f)) {
       p.x.push_back(plot_data.first);
       p.u.push_back(plot_data.second);
     }
@@ -413,7 +413,7 @@ TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
 
     femib::write::plot_data<float, 2> p;
     p.time = step;
-    for (const auto &plot_data : s.plotV[step]) {
+    for (const auto &plot_data : s.plot_velocity(0.01f)) {
       p.x.push_back(plot_data.first);
       p.u.push_back(plot_data.second);
     }
