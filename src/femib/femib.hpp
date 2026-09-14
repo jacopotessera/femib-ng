@@ -177,11 +177,16 @@ Eigen::Matrix<T, 1, Eigen::Dynamic> build_domain_integral_row(
 }
 
 template <typename T, int d, int e>
-std::vector<int>
-build_not_edges(femib::finite_element_space::finite_element_space<T, d, e> s) {
+std::vector<int> build_not_edges(
+    const femib::finite_element_space::finite_element_space<T, d, e> &s) {
+  std::vector<bool> is_edge(s.nodes.P.size(), false);
+  for (int i : s.nodes.E) {
+    is_edge[i] = true;
+  }
   std::vector<int> not_edges;
-  for (int i = 0; i < s.nodes.P.size(); i++) {
-    if (std::find(s.nodes.E.begin(), s.nodes.E.end(), i) == s.nodes.E.end()) {
+  not_edges.reserve(s.nodes.P.size());
+  for (int i = 0; i < static_cast<int>(s.nodes.P.size()); i++) {
+    if (!is_edge[i]) {
       not_edges.push_back(i);
     }
   }

@@ -1,7 +1,6 @@
 #ifndef FINITE_ELEMENT_SPACE_HPP_INCLUDED_
 #define FINITE_ELEMENT_SPACE_HPP_INCLUDED_
 #include "../affine/affine.hpp"
-#include "../cuda/cuda.h"
 #include "../finite_element/finite_element.hpp"
 #include "../mesh/mesh.hpp"
 #include "../types/types.hpp"
@@ -30,7 +29,7 @@ template <typename T, int d, int e> struct finite_element_space {
       femib::types::dvec<T, d> ref =
           femib::affine::affine_inv<T, d>(t, points[k]);
       for (int j = 0; j < finite_element.base_functions.size(); ++j) {
-        femib::types::F<T, d, e> phi = finite_element.base_functions[j];
+        const femib::types::F<T, d, e> &phi = finite_element.base_functions[j];
         result[k] += u(nodes.get_index(j, points_positions[k])) * phi.x(ref);
       }
     }
@@ -44,6 +43,7 @@ template <typename T, int d, int e> struct finite_element_space {
     std::vector<types::dvec<T, e>> results = interpolate(u, box);
 
     std::vector<std::pair<types::dvec<T, d>, types::dvec<T, e>>> plot_data;
+    plot_data.reserve(box.size());
     for (auto [p, r] : std::views::zip(box, results)) {
       plot_data.emplace_back(
           std::pair<types::dvec<T, d>, types::dvec<T, e>>(p, r));

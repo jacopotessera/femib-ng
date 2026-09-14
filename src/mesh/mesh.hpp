@@ -19,28 +19,32 @@ std::vector<int> find_points(const femib::types::mesh<T, d> &mesh,
                              std::vector<types::dvec<T, d>> &points) {
   size_t meshSize = mesh.N.size();
 
-  // TODO we can load this during init, only points changes, the mesh is always
-  //  the same
-  femib::types::dtrian_<T, d> *T_ =
-      femib::types::vector_dtrian2pointer_dtrian_<T, d>(mesh.N);
-  femib::types::dtrian_<T, d> *devT =
-      femib::cuda::copyToDevice<femib::types::dtrian_<T, d>>(T_, meshSize);
+  femib::types::dtrian_<T, d> *devT;
+  if (mesh.device_triangles_cache) {
+    devT = static_cast<femib::types::dtrian_<T, d> *>(
+        mesh.device_triangles_cache.get());
+  } else {
+    femib::types::dtrian_<T, d> *T_ =
+        femib::types::vector_dtrian2pointer_dtrian_<T, d>(mesh.N);
+    devT = femib::cuda::copyToDevice<femib::types::dtrian_<T, d>>(T_, meshSize);
+    delete[] T_;
+    mesh.device_triangles_cache = std::shared_ptr<void>(devT, [](void *p) {
+      femib::cuda::freeDeviceQuiet<femib::types::dtrian_<T, d>>(
+          static_cast<femib::types::dtrian_<T, d> *>(p));
+    });
+  }
   femib::types::dvec<T, d> *devX =
       femib::cuda::copyToDevice<femib::types::dvec<T, d>>(points.data(),
                                                           points.size());
-  std::unique_ptr<bool[]> Nn(
-      new bool[points.size() *
-               meshSize]); // was: bool Nn[points.size() * meshSize];
 
-  bool *devN =
-      femib::cuda::copyToDevice<bool>(Nn.get(), points.size() * meshSize);
+  bool *devN = femib::cuda::allocDevice<bool>(points.size() * meshSize);
 
   femib::cuda::parallel_accurate<T, d>(devX, points.size(), devT, meshSize,
                                        devN);
   bool *NN = femib::cuda::copyToHost<bool>(devN, points.size() * meshSize);
 
   std::vector<int> NNN;
-  NNN.reserve(points.size() * meshSize);
+  NNN.reserve(points.size());
 
   for (int i = 0; i < points.size(); ++i) {
     int found = -1;
@@ -52,11 +56,8 @@ std::vector<int> find_points(const femib::types::mesh<T, d> &mesh,
     }
     NNN.push_back(found);
   }
-  cuda::freeDevice<femib::types::dtrian_<T, d>>(devT);
   cuda::freeDevice<femib::types::dvec<T, d>>(devX);
   cuda::freeDevice<bool>(devN);
-  delete[] T_;
-  T_ = nullptr;
   delete[] NN;
   NN = nullptr;
   return NNN;

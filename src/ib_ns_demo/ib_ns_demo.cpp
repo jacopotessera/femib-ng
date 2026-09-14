@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
   // ~20 min/step; now a fraction of a second per step).
   int n_mesh = 32;
   int n_ring = 192; // keep Lagrangian point spacing well under half
-                   // the mesh spacing
+                    // the mesh spacing
   double radius = 0.15;
   double k_spring = 16000.0; // pushed higher, for a visible rebound
   double viscosity = 0.3; // multiplies s.A (see below) -- this codebase has no

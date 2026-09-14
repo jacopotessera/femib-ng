@@ -4,6 +4,7 @@ from plotUtils import parse_id, parse_input, calcPlotData, sortedTimesteps
 import sys, os, glob, numpy, h5py, matplotlib, matplotlib.pyplot as pyplot
 import matplotlib.colors
 from matplotlib.animation import FuncAnimation
+from PIL import Image
 
 # TODO use typer
 # TODO add instructions
@@ -57,6 +58,12 @@ class PlotSimulation():
 
 	# TODO this is "make gif"
 	def save(self,ids):
+		# Force the non-interactive Agg backend for saving -- whatever GUI
+		# backend matplotlib picked by default (Qt/Tk/...) routes every
+		# frame through its toolkit's event loop and widget machinery for no
+		# reason when nothing is ever shown on screen. Safe to switch here
+		# since no figure has been created yet in this process.
+		matplotlib.use('Agg',force=True)
 		for id_ in ids:
 			print("Saving Simulation "+id_+" ...")
 			self.plot(id_,True)
@@ -177,9 +184,20 @@ class PlotSimulation():
 
 		nrows = 2 if has_struct else 1
 		ncols = max(len(top_panels),2 if has_struct else 1)
-		fig, axes = pyplot.subplots(nrows,ncols,figsize=(5*ncols,4.6*nrows),squeeze=False)
-		fig.set_tight_layout(True)
-
+		# dpi=80 (matplotlib's default is ~100): this is read at a glance, not
+		# zoomed into, and nearly every remaining per-frame cost (drawing the
+		# quiver/scatter, GIF quantization, GIF frame-diffing/encoding) scales
+		# with pixel count -- this used to be passed to anim.save() but was
+		# lost when that call was replaced by the manual blit loop below.
+		fig, axes = pyplot.subplots(nrows,ncols,figsize=(5*ncols,4.6*nrows),squeeze=False,dpi=80)
+		# NOT set_tight_layout(True): that installs a layout engine that
+		# recomputes the tight bounding box of EVERY text artist (every tick
+		# label, every axis, on every subplot) on every single draw -- with
+		# the per-frame 'timestep N' xlabel update below changing text each
+		# frame, that turned into ~120s of a ~280s render doing nothing but
+		# bbox math. A single one-shot tight_layout() call once, right
+		# before the animation starts, gets the same spacing without paying
+		# for it 361 more times.
 		top_axes = axes[0]
 		for ax in top_axes[len(top_panels):]:
 			ax.axis('off')
@@ -199,11 +217,18 @@ class PlotSimulation():
 		# frame than in a vigorous one. Fix scale globally instead, from the
 		# same vmax used for color, so arrow length is comparable frame to
 		# frame just like color already is: the fastest frame's arrow spans
-		# about 1.5 grid cells (data["X"] values are a full min-to-max grid,
-		# so the smallest positive gap between them is the grid spacing).
+		# about 3 grid cells (data["X"] values are a full min-to-max grid, so
+		# the smallest positive gap between them is the grid spacing) -- long
+		# enough to actually read as an arrow rather than a speck, at the cost
+		# of some overlap between neighboring arrows on the fastest frames.
+		# quiver_width is the shaft width, also in data ('xy') units since
+		# units='xy' below applies to the whole arrow, not just its length;
+		# quiver's own default width is tuned for the 'width'(axes-relative)
+		# unit system, so left alone here it renders as a near-invisible hairline.
 		xs = numpy.unique(numpy.concatenate([x for x in data["X"] if len(x)]))
 		grid_spacing = numpy.min(numpy.diff(numpy.sort(xs))) if len(xs)>1 else 0.04
-		quiver_scale = vmax/(1.5*grid_spacing) if vmax>0 else 1.0
+		quiver_scale = vmax/(3*grid_spacing) if vmax>0 else 1.0
+		quiver_width = 0.15*grid_spacing
 
 		all_p = [p for p in data["P"] if len(p)]
 		pmin, pmax = min((p.min() for p in all_p), default=0.0), max((p.max() for p in all_p), default=1.0)
@@ -238,40 +263,71 @@ class PlotSimulation():
 			aspect_ax.set_xlabel("timestep")
 			(aspect_marker,) = aspect_ax.plot([],[],'o',color='black')
 
+		# The old update() called ax.cla() then rebuilt the quiver/scatter/
+		# structure-line from scratch every frame -- most of the per-frame
+		# cost isn't the actual pixel rendering, it's Python-level artist
+		# construction (quiver in particular recomputes arrow-head geometry
+		# for every point) and cla() tearing down and rebuilding axis
+		# ticks/spines. The sampling grid (x,y) is the same fixed regular
+		# grid on every field-carrying frame (finite_element_space::plot
+		# always resamples the same box at the same delta), so it only needs
+		# to be read once; each frame then just pushes new U/V/color data
+		# into the SAME artists via set_UVC/set_array/set_data, which is far
+		# cheaper than recreating them.
+		field_idx = next((i for i in range(len(data["T"])) if len(data["X"][i])), None)
+		x0,y0 = (data["X"][field_idx],data["Y"][field_idx]) if field_idx is not None else (numpy.array([]),numpy.array([]))
+		zeros0 = numpy.zeros_like(x0)
+
+		vel_quiv = vel_struct_line = None
+		if vel_ax is not None:
+			vel_ax.set_title("velocity")
+			vel_ax.set_xlim(0,1); vel_ax.set_ylim(0,1)
+			# adjustable='box' keeps this exact xlim/ylim -- axis('equal')
+			# (adjustable='datalim') would instead stretch the domain to fit
+			# each frame's quiver-arrow extent, making it drift frame to
+			# frame even though the fluid mesh itself never moves.
+			vel_ax.set_aspect('equal',adjustable='box')
+			if len(x0):
+				vel_quiv = vel_ax.quiver(x0,y0,zeros0,zeros0,zeros0,pivot='tail',units='xy',
+				                          cmap=vcmap,norm=vnorm,scale=quiver_scale,
+				                          scale_units='xy',width=quiver_width)
+			(vel_struct_line,) = vel_ax.plot([],[],color=self.STRUCT_COLOR,linewidth=2,zorder=5)
+
+		pres_sc = pres_struct_line = None
+		if pres_ax is not None:
+			pres_ax.set_title("pressure")
+			pres_ax.set_xlim(0,1); pres_ax.set_ylim(0,1)
+			pres_ax.set_aspect('equal',adjustable='box')
+			if len(x0):
+				pres_sc = pres_ax.scatter(x0,y0,c=zeros0,cmap=pcmap,norm=pnorm,s=8)
+			(pres_struct_line,) = pres_ax.plot([],[],color=self.STRUCT_COLOR,linewidth=2,zorder=5)
+
 		def update(i):
-			x, y = data["X"][i], data["Y"][i]
 			u, v = data["U"][i], data["V"][i]
 			q = data["P"][i]
 			sx, sy = data["SX"][i], data["SY"][i]
 			t = data["T"][i]
+			xs = numpy.append(sx,sx[0]) if len(sx) else sx
+			ys = numpy.append(sy,sy[0]) if len(sy) else sy
 
+			if vel_quiv is not None and len(u):
+				vel_quiv.set_UVC(u,v,numpy.sqrt(u**2+v**2))
+			if vel_struct_line is not None:
+				vel_struct_line.set_data(xs,ys)
 			if vel_ax is not None:
-				vel_ax.cla()
-				vel_ax.set_title("velocity")
-				if len(u):
-					mag = numpy.sqrt(u**2+v**2)
-					vel_ax.quiver(x,y,u,v,mag,pivot='tail',units='xy',cmap=vcmap,norm=vnorm,
-					              scale=quiver_scale,scale_units='xy')
-				if len(sx):
-					self._overlay_structure(vel_ax,sx,sy)
-				vel_ax.set_xlim(0,1); vel_ax.set_ylim(0,1)
-				# adjustable='box' keeps this exact xlim/ylim -- axis('equal')
-				# (adjustable='datalim') would instead stretch the domain to
-				# fit each frame's quiver-arrow extent, making it drift frame
-				# to frame even though the fluid mesh itself never moves.
-				vel_ax.set_aspect('equal',adjustable='box')
-				vel_ax.set_xlabel('timestep {0}'.format(t))
+				# .xaxis.label.set_text(), not set_xlabel(): set_xlabel also
+				# recomputes the label's on-axes position every call (to stay
+				# clear of the tick labels below it) -- pure overhead here
+				# since that position never actually needs to change frame
+				# to frame, only the text content does.
+				vel_ax.xaxis.label.set_text('timestep {0}'.format(t))
 
+			if pres_sc is not None and len(q):
+				pres_sc.set_array(q)
+			if pres_struct_line is not None:
+				pres_struct_line.set_data(xs,ys)
 			if pres_ax is not None:
-				pres_ax.cla()
-				pres_ax.set_title("pressure")
-				if len(q):
-					pres_ax.scatter(x,y,c=q,cmap=pcmap,norm=pnorm,s=8)
-				if len(sx):
-					self._overlay_structure(pres_ax,sx,sy)
-				pres_ax.set_xlim(0,1); pres_ax.set_ylim(0,1)
-				pres_ax.set_aspect('equal',adjustable='box')
-				pres_ax.set_xlabel('timestep {0}'.format(t))
+				pres_ax.xaxis.label.set_text('timestep {0}'.format(t))
 
 			if area_ax is not None and not numpy.isnan(data["AREA"][i]):
 				area_marker.set_data([t],[data["AREA"][i]])
@@ -279,16 +335,98 @@ class PlotSimulation():
 
 			return []
 
-		anim = FuncAnimation(fig, update, frames=numpy.arange(0,len(data["T"])), interval=1)
+		# Set the widest label text ("timestep <last>") before the one-shot
+		# tight_layout() below, so spacing is computed for the actual worst
+		# case up front rather than shifting slightly as the number of
+		# digits in the timestep grows over the animation.
+		last_t = data["T"][-1]
+		if vel_ax is not None: vel_ax.set_xlabel('timestep {0}'.format(last_t))
+		if pres_ax is not None: pres_ax.set_xlabel('timestep {0}'.format(last_t))
+		fig.tight_layout()
 
-		if save:
-			os.makedirs('gifs',exist_ok=True)
-			# writer='pillow' explicitly -- 'imagemagick' isn't installed here,
-			# so leaving the default meant every save() first spent time
-			# probing for it before falling back.
-			anim.save('gifs/Simulation_'+os.path.basename(id_)+'.gif', dpi=100, writer='pillow')
-		else:
+		if not save:
+			anim = FuncAnimation(fig, update, frames=numpy.arange(0,len(data["T"])), interval=1)
 			pyplot.show()
+			return
+
+		# Manual blitting instead of anim.save(): matplotlib's Animation.save()
+		# always does a FULL canvas redraw per output frame -- recomputing
+		# every tick label's text layout, every axis, both colorbars, on
+		# every single frame -- regardless of any blit setting on
+		# FuncAnimation (blit only ever applies to the on-screen/interactive
+		# path, never to file output). Measured via cProfile at ~120-150s of
+		# a ~170s render for this exact animation, almost all of it in
+		# matplotlib's text/bbox layout code, not actual pixel drawing. None
+		# of that static decoration (axes, ticks, colorbars, the area/aspect
+		# line plots) changes frame to frame, so it's rendered once here,
+		# cached as a bitmap, and each frame only draws the handful of
+		# artists that actually change (quiver, pressure scatter, structure
+		# line, the two markers, the two xlabels) on top of that cached
+		# background -- the standard matplotlib blitting pattern, just
+		# driven by hand since Animation.save() doesn't use it.
+		os.makedirs('gifs',exist_ok=True)
+		# (artist, axes) pairs, not bare artists: a Text label's own .axes
+		# attribute isn't reliably set the way a plotted Line2D/PathCollection's
+		# is, so draw_artist needs to be called via the axes we already know
+		# each one belongs to.
+		dynamic_artists = [(a,ax) for a,ax in (
+			(vel_quiv,vel_ax), (vel_struct_line,vel_ax),
+			(pres_sc,pres_ax), (pres_struct_line,pres_ax),
+			(area_marker,area_ax), (aspect_marker,aspect_ax),
+			(vel_ax.xaxis.label if vel_ax is not None else None,vel_ax),
+			(pres_ax.xaxis.label if pres_ax is not None else None,pres_ax),
+		) if a is not None]
+		# set_animated(True) alone does NOT make a plain canvas.draw() skip
+		# these artists -- that skip only happens inside matplotlib's own
+		# blit machinery, which this hand-rolled loop isn't using. Hide them
+		# outright for the background capture instead (their pre-set state,
+		# e.g. the "timestep <last>" label, would otherwise get baked into
+		# the cached background and show through under every frame's actual
+		# label), then make them visible again for the per-frame draws below.
+		for a,_ in dynamic_artists:
+			a.set_animated(True)
+			a.set_visible(False)
+
+		canvas = fig.canvas
+		canvas.draw()
+		background = canvas.copy_from_bbox(fig.bbox)
+
+		for a,_ in dynamic_artists:
+			a.set_visible(True)
+
+		frames = []
+		for i in range(len(data["T"])):
+			update(i)
+			canvas.restore_region(background)
+			for a,ax in dynamic_artists:
+				ax.draw_artist(a)
+			canvas.blit(fig.bbox)
+			buf = numpy.asarray(canvas.buffer_rgba())
+			# buf[:,:,:3], not .convert('RGB'): both drop the alpha channel,
+			# but the numpy slice is a cheap view while .convert('RGB') is a
+			# full pixel-by-pixel PIL color-mode conversion -- measured via
+			# cProfile as a real cost at 361 calls, one per frame.
+			frames.append(Image.fromarray(buf[:,:,:3]))
+
+		# Image.save(..., save_all=True) quantizes (24-bit RGB -> 8-bit
+		# palette) each frame independently by default -- a full median-cut
+		# color search per frame, measured via cProfile at ~15s of a ~28s
+		# save, the single largest cost in the whole script by far. Every
+		# frame here draws from the same handful of color sources (two fixed
+		# colormaps, a white background, one overlay color), so a palette
+		# built from one representative frame already covers the rest well;
+		# reusing it turns every other frame's quantization into a cheap
+		# nearest-color lookup instead of a fresh search.
+		palette_frame = frames[len(frames)//2].quantize(colors=256)
+		gif_frames = [f.quantize(palette=palette_frame) for f in frames]
+
+		# 15fps: no explicit fps was ever set on the old anim.save() call
+		# (PIL reports the resulting GIF's frame duration as unset, meaning
+		# viewers fell back to their own default, commonly ~10fps) -- this
+		# picks an explicit, reasonable pace instead of leaving it implicit.
+		gif_frames[0].save('gifs/Simulation_'+os.path.basename(id_)+'.gif',
+		                save_all=True, append_images=gif_frames[1:],
+		                duration=1000//15, loop=0)
 
 if __name__ == '__main__':
 	directory = '.'

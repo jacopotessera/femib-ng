@@ -3,6 +3,7 @@
 
 #include "spdlog/spdlog.h"
 #include <Eigen/Core>
+#include <memory>
 #include <vector>
 
 namespace femib::types {
@@ -45,6 +46,8 @@ template <typename f, int d> struct mesh {
   std::vector<dtrian<f, d>> N;
   bool initialized = false;
 
+  mutable std::shared_ptr<void> device_triangles_cache;
+
   // TODO why not using a constructor?
   void init() {
     if (!initialized) {
@@ -60,7 +63,7 @@ template <typename f, int d> struct mesh {
     initialized = true;
   }
 
-  inline dtrian<f, d> operator[](int i) const { return N[i]; }
+  inline const dtrian<f, d> &operator[](int i) const { return N[i]; }
 };
 
 template <typename f, int d> using box = std::vector<dvec<f, d>>;

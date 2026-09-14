@@ -11,6 +11,8 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <algorithm>
+#include <execution>
+#include <numeric>
 #include <optional>
 #include <stdexcept>
 
@@ -25,43 +27,64 @@ Eigen::SparseMatrix<T> assemble_convection(
         &w_dofs, // TODO uh? u_at_last_step
     T reynolds   // TODO reynolds? nu!
 ) {
-  std::vector<Eigen::Triplet<T>> BB;
-  for (int n = 0; n < V.mesh.T.size(); ++n) {
-    femib::types::dtrian<T, d> t = V.mesh[n];
-    femib::types::dmat<T, d> Binv = femib::affine::affineBinv(t);
-    femib::types::dvec<T, d> bb = femib::affine::affineb(t);
-    femib::types::F<T, d, d> w;
-    w.x = [&V, n, Binv, bb, &w_dofs](
-              const femib::types::dvec<T, d> &x) -> femib::types::dvec<T, d> {
-      femib::types::dvec<T, d> res = femib::types::dvec<T, d>::Zero();
-      femib::types::dvec<T, d> x_ref = Binv * (x - bb);
-      for (int k = 0; k < V.finite_element.base_functions.size(); ++k) {
-        int global_k = V.nodes.get_index(k, n);
-        res += w_dofs(global_k) * V.finite_element.base_functions[k].x(x_ref);
-      }
-      return res;
-    };
-    w.dx = [](const femib::types::dvec<T, d> &) -> femib::types::rmat<T, d, d> {
-      return femib::types::rmat<T, d, d>::Zero();
-    };
-    for (int i = 0; i < V.finite_element.base_functions.size(); ++i) {
-      femib::types::F<T, d, d> a =
-          femib::util::base_function2real_function<T, d, d>(V, i, Binv, bb);
-      for (int j = 0; j < V.finite_element.base_functions.size(); ++j) {
-        femib::types::F<T, d, d> b =
-            femib::util::base_function2real_function<T, d, d>(V, j, Binv, bb);
-        auto convection_wb = convection<T, d>(w, b);
-        auto fff = [&](const femib::types::dvec<T, d> &x) {
-          return a.x(x).dot(convection_wb(x));
-        };
-        T m = femib::mesh::integrate<T, d>(rule, fff, t);
-        BB.push_back(Eigen::Triplet<T>(V.nodes.get_index(i, n),
-                                       V.nodes.get_index(j, n), m));
-      }
-    }
-  }
-  return (T(1) / reynolds) *
-         femib::util::triplets2sparse(BB, V.nodes.P.size(), V.nodes.P.size());
+  const int basis_count =
+      static_cast<int>(V.finite_element.base_functions.size());
+  const int n_q = static_cast<int>(rule.nodes.size());
+  const int n_tri = static_cast<int>(V.mesh.T.size());
+
+  std::vector<Eigen::Triplet<T>> BB(static_cast<size_t>(n_tri) * basis_count *
+                                    basis_count);
+
+  std::vector<int> tri_indices(n_tri);
+  std::iota(tri_indices.begin(), tri_indices.end(), 0);
+
+  std::for_each(
+      std::execution::par, tri_indices.begin(), tri_indices.end(), [&](int n) {
+        const femib::types::dtrian<T, d> &t = V.mesh[n];
+        femib::types::dmat<T, d> Binv = femib::affine::affineBinv(t);
+        femib::types::dvec<T, d> bb = femib::affine::affineb(t);
+        T detB = femib::affine::affineBdet(t);
+
+        std::vector<femib::types::dvec<T, d>> phi(
+            static_cast<size_t>(basis_count) * n_q);
+        std::vector<femib::types::rmat<T, d, d>> dphi(
+            static_cast<size_t>(basis_count) * n_q);
+        std::vector<femib::types::dvec<T, d>> w_at_q(
+            n_q, femib::types::dvec<T, d>::Zero());
+
+        for (int q = 0; q < n_q; ++q) {
+          const femib::types::dvec<T, d> &x_ref = rule.nodes[q].node;
+          for (int k = 0; k < basis_count; ++k) {
+            size_t idx = static_cast<size_t>(k) * n_q + q;
+            phi[idx] = V.finite_element.base_functions[k].x(x_ref);
+            dphi[idx] =
+                Binv.transpose() * V.finite_element.base_functions[k].dx(x_ref);
+            int global_k = V.nodes.get_index(k, n);
+            w_at_q[q] += w_dofs(global_k) * phi[idx];
+          }
+        }
+
+        for (int i = 0; i < basis_count; ++i) {
+          for (int j = 0; j < basis_count; ++j) {
+            T m = T(0);
+            for (int q = 0; q < n_q; ++q) {
+              femib::types::dvec<T, d> conv_j =
+                  dphi[static_cast<size_t>(j) * n_q + q].transpose() *
+                  w_at_q[q];
+              m += rule.nodes[q].weight * detB *
+                   phi[static_cast<size_t>(i) * n_q + q].dot(conv_j);
+            }
+            size_t idx =
+                (static_cast<size_t>(n) * basis_count + i) * basis_count + j;
+            BB[idx] = Eigen::Triplet<T>(V.nodes.get_index(i, n),
+                                        V.nodes.get_index(j, n), m);
+          }
+        }
+      });
+
+  return (T(1) / reynolds) * femib::util::triplets2sparse(std::move(BB),
+                                                          V.nodes.P.size(),
+                                                          V.nodes.P.size());
 }
 
 // Picard iteration:

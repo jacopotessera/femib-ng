@@ -7,8 +7,8 @@
 #include "../mesh/mesh.hpp"
 #include "../types/differential_operation.hpp"
 #include <Eigen/Dense>
+#include <Eigen/IterativeLinearSolvers>
 #include <Eigen/Sparse>
-#include <Eigen/SparseLU>
 #include <spdlog/spdlog.h>
 
 namespace femib::stokes_t {
@@ -42,6 +42,8 @@ template <typename T, int d> struct stokes {
   std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1>> solution;
 
   T time = 0;
+
+  std::vector<int> not_edges;
 
   std::vector<std::pair<types::dvec<T, d>, types::dvec<T, d>>>
   plot_velocity(T delta) {
@@ -295,10 +297,10 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 
   s.ff.block(0, 0, nV, 1) = femib::util::triplets2dense(s.result.F, nV, 1);
 
-  std::vector<int> not_edges = build_stokes_t_not_edges<T, d>(s);
+  s.not_edges = build_stokes_t_not_edges<T, d>(s);
 
   s.solvable_equations =
-      augment_with_pressure_gauge<T, d>(s, s.AA, s.ff, not_edges);
+      augment_with_pressure_gauge<T, d>(s, s.AA, s.ff, s.not_edges);
 }
 
 // TODO we need to give better names to stuff...
@@ -338,34 +340,34 @@ void rebuild_system(
   // The velocity-velocity block of AA/ff just changed (the backward-Euler
   // mass term, and possibly a Picard-updated convection term), so the
   // solvable system must be rebuilt.
-  // s.domain_integral_row itself does not change, so it is reused.
-  std::vector<int> not_edges = build_stokes_t_not_edges<T, d>(s);
-
+  // s.domain_integral_row and s.not_edges do not change, so they're reused.
   s.solvable_equations =
-      augment_with_pressure_gauge<T, d>(s, s.AA, s.ff, not_edges);
+      augment_with_pressure_gauge<T, d>(s, s.AA, s.ff, s.not_edges);
 }
 
 template <typename T, int d, int e>
 Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &s) {
 
-  Eigen::SparseLU<Eigen::SparseMatrix<T>> solver;
+  Eigen::BiCGSTAB<Eigen::SparseMatrix<T>, Eigen::IncompleteLUT<T>> solver;
+  solver.setTolerance(1e-10);
+  solver.setMaxIterations(500);
   solver.compute(s.solvable_equations.A);
-  if (solver.info() != Eigen::Success) {
-    SPDLOG_ERROR("femib::stokes_t::solve: SparseLU factorization failed "
-                 "(Eigen::ComputationInfo = {})",
-                 static_cast<int>(solver.info()));
-  }
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> x = solver.solve(s.solvable_equations.b);
+  if (solver.info() != Eigen::Success) {
+    SPDLOG_ERROR("femib::stokes_t::solve: BiCGSTAB+ILUT failed to converge "
+                 "(Eigen::ComputationInfo = {}, iterations = {}, "
+                 "estimated error = {})",
+                 static_cast<int>(solver.info()), solver.iterations(),
+                 solver.error());
+  }
 
   // drop the last row, constraint on pressure
   Eigen::Matrix<T, Eigen::Dynamic, 1> x_no_lambda = x.topRows(x.rows() - 1);
 
-  std::vector<int> not_edges = build_stokes_t_not_edges<T, d>(s);
-
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx =
       add_edges<T>(x_no_lambda, s.bV, s.V.nodes.P.size(), s.Q.nodes.P.size(),
-                   not_edges, s.V.nodes.E);
+                   s.not_edges, s.V.nodes.E);
 
   return xx;
 }

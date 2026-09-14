@@ -53,6 +53,19 @@ template <typename T> void femib::cuda::freeDevice(T *X) {
   HANDLE_ERROR(cudaFree(X));
 }
 
+template <typename T> T *femib::cuda::allocDevice(int size) {
+  T *X;
+  HANDLE_ERROR(cudaMalloc((void **)&X, sizeof(T) * size));
+  return X;
+}
+
+template <typename T> void femib::cuda::freeDeviceQuiet(T *X) {
+  cudaError_t err = cudaFree(X);
+  if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
+    HandleError(err, __FILE__, __LINE__);
+  }
+}
+
 /******************************************************************************/
 
 template <typename f, int d>
@@ -237,12 +250,15 @@ femib::cuda::copyToDevice<femib::types::dtrian_<float, 2>>(
     femib::types::dtrian_<float, 2> *x, int size);
 template bool *femib::cuda::copyToDevice<bool>(bool *x, int size);
 template bool *femib::cuda::copyToHost<bool>(bool *x, int size);
+template bool *femib::cuda::allocDevice<bool>(int size);
 
 template void femib::cuda::freeDevice<femib::types::dvec<float, 2>>(
     femib::types::dvec<float, 2> *x);
 template void femib::cuda::freeDevice<femib::types::dtrian_<float, 2>>(
     femib::types::dtrian_<float, 2> *x);
 template void femib::cuda::freeDevice<bool>(bool *x);
+template void femib::cuda::freeDeviceQuiet<femib::types::dtrian_<float, 2>>(
+    femib::types::dtrian_<float, 2> *x);
 
 /******************************************************************************/
 
@@ -273,6 +289,8 @@ femib::cuda::copyToDevice<femib::types::dtrian_<double, 2>>(
 template void femib::cuda::freeDevice<femib::types::dvec<double, 2>>(
     femib::types::dvec<double, 2> *x);
 template void femib::cuda::freeDevice<femib::types::dtrian_<double, 2>>(
+    femib::types::dtrian_<double, 2> *x);
+template void femib::cuda::freeDeviceQuiet<femib::types::dtrian_<double, 2>>(
     femib::types::dtrian_<double, 2> *x);
 
 template __host__ bool

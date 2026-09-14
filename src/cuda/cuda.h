@@ -20,6 +20,8 @@ void setHeapSize(size_t heapSize);
 template <typename T> T *copyToDevice(T *x, int size);
 template <typename T> T *copyToHost(T *X, int size);
 template <typename T> void freeDevice(T *X);
+template <typename T> T *allocDevice(int size);
+template <typename T> void freeDeviceQuiet(T *X);
 
 template <typename f, int d>
 bool in_box(const femib::types::dvec<f, d> &P,
