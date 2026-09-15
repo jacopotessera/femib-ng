@@ -53,7 +53,7 @@ TEST_CASE("a ring at its rest configuration stays motionless") {
 
   std::string id = get_time();
   std::string path = "/tmp/femib_ib_test_" + id + ".h5";
-  femib::write::save_sim(path, id);
+  femib::write::save_sim(path, id, "ring", femib::write::mode::overwrite);
 
   for (int step = 0; step < 20; ++step) {
     femib::ib::advance<float, 2>(p);
@@ -94,7 +94,7 @@ TEST_CASE(
 
   std::string id = get_time();
   std::string path = "/tmp/femib_ib_test_" + id + ".h5";
-  femib::write::save_sim(path, id);
+  femib::write::save_sim(path, id, "ring", femib::write::mode::overwrite);
 
   for (int step = 0; step < 200; ++step) {
     femib::ib::advance<float, 2>(p);

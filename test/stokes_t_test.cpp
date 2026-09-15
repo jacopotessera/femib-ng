@@ -75,7 +75,7 @@ TEST_CASE("testing femib stokes_t pipeline with HDF5 persistence") {
   std::string id = get_time();
 
   std::string path = "/tmp/femib_stokes_t_test_" + id + ".h5";
-  femib::write::save_sim(path, id);
+  femib::write::save_sim(path, id, "fluid", femib::write::mode::overwrite);
 
   int TMAX = 100;
   for (int t = 0; t < TMAX; t++) {
@@ -355,7 +355,7 @@ TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
 
   std::string id = get_time();
   std::string path = "/tmp/femib_stokes_t_test3_" + id + ".h5";
-  femib::write::save_sim(path, id);
+  femib::write::save_sim(path, id, "fluid", femib::write::mode::overwrite);
 
   int size_P = mesh.P.size();
   int size_T = mesh.T.size();

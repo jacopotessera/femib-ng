@@ -208,7 +208,8 @@ int main(int argc, char **argv) {
 
   double area0 = polygon_area(p.structure.X);
 
-  femib::write::save_sim(path, "ib_ns_demo", "ring");
+  femib::write::save_sim(path, "ib_ns_demo", "ring",
+                         femib::write::mode::overwrite);
 
   // Persists the structure's position AND the velocity/pressure fields at
   // EVERY step (so the animation has a full field for every frame, not just

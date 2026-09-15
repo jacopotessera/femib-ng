@@ -7,7 +7,7 @@
 
 TEST_CASE("testing save_sim") {
   const std::string path = "/tmp/femib_write_test_sim.h5";
-
+  std::remove(path.c_str());
   femib::write::save_sim(path, "test_sim");
 
   HighFive::File file(path, HighFive::File::ReadOnly);
@@ -24,7 +24,8 @@ TEST_CASE("testing save_sim") {
 TEST_CASE("testing save_sim with an explicit sim_type") {
   const std::string path = "/tmp/femib_write_test_sim_sim_type.h5";
 
-  femib::write::save_sim(path, "test_sim", "ring");
+  femib::write::save_sim(path, "test_sim", "ring",
+                         femib::write::mode::overwrite);
 
   HighFive::File file(path, HighFive::File::ReadOnly);
   std::string sim_type;
@@ -34,9 +35,60 @@ TEST_CASE("testing save_sim with an explicit sim_type") {
   std::remove(path.c_str());
 }
 
+TEST_CASE("save_sim mode::create fails if the file already exists") {
+  const std::string path = "/tmp/femib_write_test_create_guard.h5";
+  std::remove(path.c_str());
+
+  femib::write::save_sim(path, "test_sim");
+
+  CHECK_THROWS(femib::write::save_sim(path, "test_sim"));
+
+  std::remove(path.c_str());
+}
+
+TEST_CASE("save_sim mode::overwrite succeeds even if the file already exists") {
+  const std::string path = "/tmp/femib_write_test_overwrite.h5";
+  femib::write::save_sim(path, "first", "", femib::write::mode::overwrite);
+  CHECK_NOTHROW(femib::write::save_sim(path, "second", "",
+                                       femib::write::mode::overwrite));
+
+  HighFive::File file(path, HighFive::File::ReadOnly);
+  std::string sim_name;
+  file.getAttribute("sim_name").read(sim_name);
+  CHECK(sim_name == "second"); // proves the file was actually replaced
+
+  std::remove(path.c_str());
+}
+
+TEST_CASE("save_sim mode::resume opens without truncating existing data") {
+  const std::string path = "/tmp/femib_write_test_resume.h5";
+  femib::write::save_sim(path, "test_sim", "", femib::write::mode::overwrite);
+
+  femib::write::plot_data<float, 2> data0;
+  data0.time = 0;
+  data0.X = {{0.1f, 0.2f}};
+  femib::write::save_plot_data(path, data0);
+
+  // Resuming must NOT wipe out timestep_0, unlike mode::overwrite would.
+  CHECK_NOTHROW(
+      femib::write::save_sim(path, "test_sim", "", femib::write::mode::resume));
+
+  HighFive::File file(path, HighFive::File::ReadOnly);
+  CHECK(file.exist("timestep_0"));
+
+  std::remove(path.c_str());
+}
+
+TEST_CASE("save_sim mode::resume fails if the file does not exist") {
+  const std::string path = "/tmp/femib_write_test_resume_missing.h5";
+  std::remove(path.c_str());
+  CHECK_THROWS(
+      femib::write::save_sim(path, "test_sim", "", femib::write::mode::resume));
+}
+
 TEST_CASE("testing save_plot_data") {
   const std::string path = "/tmp/femib_write_test_plot_data.h5";
-  femib::write::save_sim(path, "test_sim");
+  femib::write::save_sim(path, "test_sim", "", femib::write::mode::overwrite);
 
   femib::write::plot_data<float, 2> data0;
   data0.time = 0;
@@ -83,6 +135,63 @@ TEST_CASE("testing save_plot_data") {
   std::string sim_name;
   file.getAttribute("sim_name").read(sim_name);
   CHECK(sim_name == "test_sim");
+
+  std::remove(path.c_str());
+}
+
+TEST_CASE("testing save_metadata") {
+  const std::string path = "/tmp/femib_write_test_metadata.h5";
+  femib::write::save_sim(path, "test_sim", "", femib::write::mode::overwrite);
+
+  femib::write::save_metadata<double>(path, "deltat", 0.0002);
+  femib::write::save_metadata<std::string>(path, "finite_element", "P1_B_2d2d");
+  // overwrites if called again with the same key
+  femib::write::save_metadata<double>(path, "deltat", 0.0005);
+
+  HighFive::File file(path, HighFive::File::ReadOnly);
+  HighFive::Group metadata = file.getGroup("metadata");
+
+  double deltat_read;
+  metadata.getAttribute("deltat").read(deltat_read);
+  CHECK(deltat_read == doctest::Approx(0.0005));
+
+  std::string fe_read;
+  metadata.getAttribute("finite_element").read(fe_read);
+  CHECK(fe_read == "P1_B_2d2d");
+
+  std::remove(path.c_str());
+}
+
+TEST_CASE("testing save_mesh") {
+  const std::string path = "/tmp/femib_write_test_mesh.h5";
+
+  femib::types::mesh<double, 2> mesh;
+  mesh.P = {{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}, {1.0, 1.0}};
+  mesh.T = {femib::types::ditrian<2>(0, 1, 2),
+            femib::types::ditrian<2>(1, 3, 2)};
+  mesh.E = {0, 1, 2, 3};
+
+  femib::write::save_sim(path, "test_sim", "", femib::write::mode::overwrite);
+  femib::write::save_mesh<double, 2>(path, mesh);
+
+  HighFive::File file(path, HighFive::File::ReadOnly);
+
+  std::vector<std::vector<double>> points_read;
+  file.getDataSet("mesh/points").read(points_read);
+  CHECK(points_read.size() == 4);
+  CHECK(points_read[3][0] == doctest::Approx(1.0));
+  CHECK(points_read[3][1] == doctest::Approx(1.0));
+
+  std::vector<std::vector<int>> triangles_read;
+  file.getDataSet("mesh/triangles").read(triangles_read);
+  CHECK(triangles_read.size() == 2);
+  CHECK(triangles_read[1][0] == 1);
+  CHECK(triangles_read[1][1] == 3);
+  CHECK(triangles_read[1][2] == 2);
+
+  std::vector<int> edges_read;
+  file.getDataSet("mesh/edges").read(edges_read);
+  CHECK(edges_read.size() == 4);
 
   std::remove(path.c_str());
 }
