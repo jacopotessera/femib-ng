@@ -16,7 +16,8 @@ template <typename T, int d> struct plot_data {
   std::vector<femib::types::dvec<T, d>> X; // structure
 };
 
-void save_sim(const std::string &path, const std::string &sim_name);
+void save_sim(const std::string &path, const std::string &sim_name,
+              const std::string &sim_type = "");
 template <typename T, int d>
 void save_plot_data(const std::string &path, const plot_data<T, d> &data);
 

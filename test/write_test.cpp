@@ -14,6 +14,22 @@ TEST_CASE("testing save_sim") {
   std::string sim_name;
   file.getAttribute("sim_name").read(sim_name);
   CHECK(sim_name == "test_sim");
+  std::string sim_type;
+  file.getAttribute("sim_type").read(sim_type);
+  CHECK(sim_type == "");
+
+  std::remove(path.c_str());
+}
+
+TEST_CASE("testing save_sim with an explicit sim_type") {
+  const std::string path = "/tmp/femib_write_test_sim_sim_type.h5";
+
+  femib::write::save_sim(path, "test_sim", "ring");
+
+  HighFive::File file(path, HighFive::File::ReadOnly);
+  std::string sim_type;
+  file.getAttribute("sim_type").read(sim_type);
+  CHECK(sim_type == "ring");
 
   std::remove(path.c_str());
 }

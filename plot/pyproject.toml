@@ -1,0 +1,18 @@
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+# E/F: pycodestyle + pyflakes (the flake8 core). I: import sorting (isort).
+# N: pep8-naming (this is what flags calcPlotData-style camelCase). UP:
+# modernize syntax (pyupgrade). B: flake8-bugbear, common real-bug patterns.
+select = ["E", "F", "I", "N", "UP", "B"]
+ignore = [
+    # typer's own documented usage pattern is a function call (Argument()/
+    # Option()) as a parameter default, so main() can carry --help text and
+    # CLI flag names right on the signature -- not the mutable-default-
+    # argument bug this rule is meant to catch.
+    "B008",
+]

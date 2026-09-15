@@ -36,13 +36,15 @@ template void write_if_present<double, 2>(
 } // namespace
 
 void femib::write::save_sim(const std::string &path,
-                            const std::string &sim_name) {
+                            const std::string &sim_name,
+                            const std::string &sim_type) {
   HighFive::File file(
       path, HighFive::File::Truncate); // TODO truncate? i want to continue an
                                        //  existing simulation
   file.createAttribute<std::string>(
       "sim_name", sim_name); // TODO other attributes? types? finite element?
                              //  mesh? delta t? etc?
+  file.createAttribute<std::string>("sim_type", sim_type);
 }
 
 template <typename T, int d>

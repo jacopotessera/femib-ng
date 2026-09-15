@@ -4,7 +4,7 @@
 // pressure field at every step (structure) / checkpoint intervals (fields)
 // via this codebase's normal HDF5 persistence (femib::write::save_sim /
 // save_plot_data), the same one test/ib_test.cpp uses. Not part of the test
-// suite -- a one-off visualization driver; see plot/plotSimulation.py to
+// suite -- a one-off visualization driver; see plot/plot_simulation.py to
 // render it.
 
 #include "../femib/stokes_t.hpp"
@@ -208,14 +208,14 @@ int main(int argc, char **argv) {
 
   double area0 = polygon_area(p.structure.X);
 
-  femib::write::save_sim(path, "ib_ns_demo");
+  femib::write::save_sim(path, "ib_ns_demo", "ring");
 
   // Persists the structure's position AND the velocity/pressure fields at
   // EVERY step (so the animation has a full field for every frame, not just
   // every field_every-th one) -- femib::write::write_if_present (write.cpp)
   // silently skips any empty vector, so a timestep group with no "x"/"u"/"q"
   // datasets this step (only true at step 0, before the first solve) is
-  // expected, not an error; see plot/plotUtils.py's calcPlotData, which
+  // expected, not an error; see plot/plot_utils.py's calc_plot_data, which
   // already handles that.
   //
   // Field interpolation (velocity/pressure onto a plotting grid) used to run
