@@ -54,8 +54,7 @@ TEST_CASE("testing femib stokes") {
     int rowsQ = static_cast<int>(stokes.Q.nodes.P.size());
     int expected_n = rowsV_free + rowsQ + 1;
 
-    const Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> &A =
-        stokes.solvable_equations.A;
+    const Eigen::SparseMatrix<float> &A = stokes.solvable_equations.A;
     const Eigen::Matrix<float, Eigen::Dynamic, 1> &b =
         stokes.solvable_equations.b;
 
@@ -66,16 +65,18 @@ TEST_CASE("testing femib stokes") {
     REQUIRE(b.rows() == expected_n);
 
     // Symmetric saddle-point structure.
-    CHECK((A - A.transpose()).norm() < 1e-5f);
+    CHECK((A - Eigen::SparseMatrix<float>(A.transpose())).norm() < 1e-5f);
 
-    // Bottom-right corner (the multiplier's own diagonal entry) is exactly 0
-    CHECK(A(expected_n - 1, expected_n - 1) == 0.0f);
+    // Bottom-right corner is the Tikhonov regularization term, not exactly 0
+    CHECK(std::abs(A.coeff(expected_n - 1, expected_n - 1)) < 1e-5f);
 
     // RHS of "integral(p) = 0" is exactly 0.
     CHECK(b(expected_n - 1) == 0.0f);
 
     // The augmented row/column (excluding the corner) is non-trivial
-    CHECK(A.block(0, expected_n - 1, expected_n - 1, 1).norm() > 0.0f);
+    CHECK(Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(A)
+              .block(0, expected_n - 1, expected_n - 1, 1)
+              .norm() > 0.0f);
   }
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
@@ -164,72 +165,19 @@ TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
   femib::util::build_diagonal_result<float> result =
       femib::util::build_diagonal<float, 2, 2>(
           stokes.V, rule, femib::stokes::stokes_a<float, 2>, ggg);
-  stokes.A = femib::util::triplets2dense(result.M, stokes.V.nodes.P.size(),
-                                         stokes.V.nodes.P.size());
-  stokes.B = femib::util::triplets2dense(
+  stokes.A = femib::util::triplets2sparse(result.M, stokes.V.nodes.P.size(),
+                                          stokes.V.nodes.P.size());
+  stokes.B = femib::util::triplets2sparse(
       femib::util::build_non_diagonal<float, 2>(
           stokes.V, stokes.Q, rule, femib::stokes::stokes_b<float, 2>),
       stokes.V.nodes.P.size(), stokes.Q.nodes.P.size());
 
-  std::function<float(femib::types::dvec<float, 2>)> zero_boundary =
-      [](const femib::types::dvec<float, 2> &) { return 0.0f; };
-
-  stokes.bV = femib::util::triplets2dense(
-      femib::util::build_edges<float, 2, 2>(stokes.V, zero_boundary),
-      stokes.V.nodes.P.size() + stokes.Q.nodes.P.size(), 1);
-
-  Eigen::Matrix<float, 1, Eigen::Dynamic> domain_integral_row =
-      femib::util::build_domain_integral_row<float, 2>(stokes.Q, rule);
-
-  stokes.AA =
-      Eigen::ArrayXXf::Zero(stokes.V.nodes.P.size() + stokes.Q.nodes.P.size(),
-                            stokes.V.nodes.P.size() + stokes.Q.nodes.P.size());
-  stokes.AA.block(0, 0, stokes.V.nodes.P.size(), stokes.V.nodes.P.size()) =
-      stokes.A;
-  stokes.AA.block(0, stokes.V.nodes.P.size(), stokes.V.nodes.P.size(),
-                  stokes.Q.nodes.P.size()) = stokes.B;
-  stokes.AA.block(stokes.V.nodes.P.size(), 0, stokes.Q.nodes.P.size(),
-                  stokes.V.nodes.P.size()) = stokes.B.transpose();
-
-  stokes.ff = Eigen::ArrayXXf::Zero(
-      stokes.V.nodes.P.size() + stokes.Q.nodes.P.size(), 1);
+  stokes.ff = Eigen::Matrix<float, Eigen::Dynamic, 1>::Zero(
+      stokes.V.nodes.P.size() + stokes.Q.nodes.P.size());
   stokes.ff.block(0, 0, stokes.V.nodes.P.size(), 1) =
       femib::util::triplets2dense(result.F, stokes.V.nodes.P.size(), 1);
 
-  std::vector<int> not_edges =
-      femib::util::build_not_edges<float, 2, 2>(stokes.V);
-  for (int i = 0; i < stokes.Q.nodes.P.size(); ++i) {
-    not_edges.push_back(stokes.V.nodes.P.size() + i);
-  }
-
-  femib::util::solvable_equations<float> base =
-      femib::stokes::remove_edges<float>(stokes.AA, stokes.ff, stokes.bV,
-                                         not_edges);
-
-  int n_reduced = not_edges.size();
-  Eigen::Matrix<float, Eigen::Dynamic, 1> constraint_row_reduced =
-      Eigen::Matrix<float, Eigen::Dynamic, 1>::Zero(n_reduced);
-  for (int k = 0; k < n_reduced; ++k) {
-    int global_i = not_edges[k];
-    if (global_i >= stokes.V.nodes.P.size()) {
-      int pressure_i = global_i - stokes.V.nodes.P.size();
-      constraint_row_reduced(k) = domain_integral_row(pressure_i);
-    }
-  }
-
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> AAA_aug =
-      Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>::Zero(n_reduced + 1,
-                                                                 n_reduced + 1);
-  AAA_aug.block(0, 0, n_reduced, n_reduced) = base.A;
-  AAA_aug.block(0, n_reduced, n_reduced, 1) = constraint_row_reduced;
-  AAA_aug.block(n_reduced, 0, 1, n_reduced) =
-      constraint_row_reduced.transpose();
-
-  Eigen::Matrix<float, Eigen::Dynamic, 1> bbb_aug =
-      Eigen::Matrix<float, Eigen::Dynamic, 1>::Zero(n_reduced + 1);
-  bbb_aug.topRows(n_reduced) = base.b;
-
-  stokes.solvable_equations = {AAA_aug, bbb_aug};
+  femib::stokes::rebuild_system<float, 2>(stokes, rule);
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::stokes::solve<float, 2, 1>(stokes);

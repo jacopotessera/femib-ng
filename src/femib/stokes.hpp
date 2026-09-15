@@ -7,7 +7,9 @@
 #include "../mesh/mesh.hpp"
 #include "../types/differential_operation.hpp"
 #include <Eigen/Dense>
+#include <Eigen/IterativeLinearSolvers>
 #include <Eigen/Sparse>
+#include <spdlog/spdlog.h>
 
 namespace femib::stokes {
 
@@ -15,17 +17,17 @@ template <typename T, int d> struct stokes {
   femib::finite_element_space::finite_element_space<T, d, d> V;
   femib::finite_element_space::finite_element_space<T, d, 1> Q;
 
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> A;
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> B;
+  Eigen::SparseMatrix<T> A;
+  Eigen::SparseMatrix<T> B;
   Eigen::Matrix<T, Eigen::Dynamic, 1> f;
   Eigen::Matrix<T, Eigen::Dynamic, 1> bV;
 
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> bQ;
 
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> AA;
+  Eigen::SparseMatrix<T> AA;
   Eigen::Matrix<T, Eigen::Dynamic, 1> ff;
 
-  femib::util::solvable_equations<T> solvable_equations;
+  femib::util::sparse_solvable_equations<T> solvable_equations;
 };
 
 template <typename T, int d>
@@ -47,26 +49,41 @@ stokes_b(femib::types::F<T, d, d> u, femib::types::F<T, d, 1> q) {
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
 external_force(femib::types::F<T, d, d> a) {
-  return [a](const femib::types::dvec<T, d> &x) {
-    return a.x(x)[0] + a.x(x)[1];
-  }; // TODO same fix as poisson?
+  return
+      [a](const femib::types::dvec<T, d> &x) { return a.x(x)[0] + a.x(x)[1]; };
+}
+
+// TODO duplicated
+template <typename T>
+Eigen::SparseMatrix<T> selection_matrix(const std::vector<int> &rows, int n) {
+  Eigen::SparseMatrix<T> P(rows.size(), n);
+  std::vector<Eigen::Triplet<T>> triplets;
+  triplets.reserve(rows.size());
+  for (size_t i = 0; i < rows.size(); ++i) {
+    triplets.push_back(Eigen::Triplet<T>((int)i, rows[i], T(1)));
+  }
+  P.setFromTriplets(triplets.begin(), triplets.end());
+  return P;
 }
 
 template <typename T>
-femib::util::solvable_equations<T>
-remove_edges(Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> dM,
-             Eigen::Matrix<T, Eigen::Dynamic, 1> dF,
-             Eigen::Matrix<T, Eigen::Dynamic, 1> bV,
+femib::util::sparse_solvable_equations<T>
+remove_edges(const Eigen::SparseMatrix<T> &dM,
+             const Eigen::Matrix<T, Eigen::Dynamic, 1> &dF,
+             const Eigen::Matrix<T, Eigen::Dynamic, 1> &bV,
+             const std::vector<int> &not_edges) {
 
-             std::vector<int> not_edges) {
+  Eigen::Matrix<T, Eigen::Dynamic, 1> ss = dM * bV;
 
-  Eigen::Matrix<T, Eigen::Dynamic, 1> ss =
-      dM(Eigen::placeholders::all, Eigen::placeholders::all) *
-      bV(Eigen::placeholders::all, Eigen::placeholders::all);
+  int n = static_cast<int>(not_edges.size());
+  Eigen::Matrix<T, Eigen::Dynamic, 1> bbb(n);
+  for (int i = 0; i < n; ++i) {
+    bbb(i) = dF(not_edges[i]) - ss(not_edges[i]);
+  }
 
-  Eigen::Matrix<T, Eigen::Dynamic, 1> bbb = (dF - ss)(not_edges, 0);
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> AAA =
-      dM(not_edges, not_edges);
+  Eigen::SparseMatrix<T> P =
+      selection_matrix<T>(not_edges, static_cast<int>(dM.rows()));
+  Eigen::SparseMatrix<T> AAA = P * dM * P.transpose();
 
   return {AAA, bbb};
 }
@@ -96,6 +113,90 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> add_edges(
   return xx;
 }
 
+template <typename T>
+Eigen::SparseMatrix<T>
+assemble_saddle_point_matrix(const Eigen::SparseMatrix<T> &top_left,
+                             const Eigen::SparseMatrix<T> &B, int nV, int nQ) {
+  std::vector<Eigen::Triplet<T>> triplets;
+  triplets.reserve((size_t)top_left.nonZeros() + 2 * (size_t)B.nonZeros());
+  for (int k = 0; k < top_left.outerSize(); ++k) {
+    for (typename Eigen::SparseMatrix<T>::InnerIterator it(top_left, k); it;
+         ++it) {
+      triplets.push_back(
+          Eigen::Triplet<T>((int)it.row(), (int)it.col(), it.value()));
+    }
+  }
+  for (int k = 0; k < B.outerSize(); ++k) {
+    for (typename Eigen::SparseMatrix<T>::InnerIterator it(B, k); it; ++it) {
+      triplets.push_back(
+          Eigen::Triplet<T>((int)it.row(), nV + (int)it.col(), it.value()));
+      triplets.push_back(
+          Eigen::Triplet<T>(nV + (int)it.col(), (int)it.row(), it.value()));
+    }
+  }
+  Eigen::SparseMatrix<T> AA(nV + nQ, nV + nQ);
+  AA.setFromTriplets(triplets.begin(), triplets.end());
+  return AA;
+}
+
+template <typename T, int d>
+femib::util::sparse_solvable_equations<T> augment_with_pressure_gauge(
+    const stokes<T, d> &s, const Eigen::SparseMatrix<T> &AA,
+    const Eigen::Matrix<T, Eigen::Dynamic, 1> &ff,
+    const Eigen::Matrix<T, 1, Eigen::Dynamic> &domain_integral_row,
+    const std::vector<int> &not_edges) {
+
+  femib::util::sparse_solvable_equations<T> base =
+      remove_edges<T>(AA, ff, s.bV, not_edges);
+
+  int n = static_cast<int>(not_edges.size());
+  Eigen::Matrix<T, Eigen::Dynamic, 1> constraint_row_reduced =
+      Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(n);
+  for (int k = 0; k < n; ++k) {
+    int global_i = not_edges[k];
+    if (global_i >= s.V.nodes.P.size()) {
+      int pressure_i = global_i - s.V.nodes.P.size();
+      constraint_row_reduced(k) = domain_integral_row(pressure_i);
+    }
+  }
+
+  std::vector<Eigen::Triplet<T>> triplets;
+  triplets.reserve(base.A.nonZeros() + 2 * n + (n + 1));
+  for (int k = 0; k < base.A.outerSize(); ++k) {
+    for (typename Eigen::SparseMatrix<T>::InnerIterator it(base.A, k); it;
+         ++it) {
+      triplets.push_back(Eigen::Triplet<T>(it.row(), it.col(), it.value()));
+    }
+  }
+  for (int k = 0; k < n; ++k) {
+    if (constraint_row_reduced(k) != T(0)) {
+      triplets.push_back(Eigen::Triplet<T>(k, n, constraint_row_reduced(k)));
+      triplets.push_back(Eigen::Triplet<T>(n, k, constraint_row_reduced(k)));
+    }
+  }
+
+  T reg = T(1e-8) * s.A.diagonal().cwiseAbs().maxCoeff();
+  if (reg == T(0)) {
+    SPDLOG_WARN("femib::stokes::augment_with_pressure_gauge: s.A's diagonal "
+                "is all-zero: system may be left singular");
+  }
+  int nV_total = (int)s.V.nodes.P.size();
+  for (int k = 0; k < n; ++k) {
+    bool is_velocity = not_edges[k] < nV_total;
+    triplets.push_back(Eigen::Triplet<T>(k, k, is_velocity ? reg : -reg));
+  }
+  triplets.push_back(Eigen::Triplet<T>(n, n, -reg));
+
+  Eigen::SparseMatrix<T> AAA_aug(n + 1, n + 1);
+  AAA_aug.setFromTriplets(triplets.begin(), triplets.end());
+
+  Eigen::Matrix<T, Eigen::Dynamic, 1> bbb_aug =
+      Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(n + 1);
+  bbb_aug.topRows(n) = base.b;
+
+  return {AAA_aug, bbb_aug};
+}
+
 template <typename T, int d>
 void rebuild_system(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 
@@ -109,48 +210,17 @@ void rebuild_system(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
   Eigen::Matrix<T, 1, Eigen::Dynamic> domain_integral_row =
       femib::util::build_domain_integral_row<T, d>(s.Q, rule);
 
-  s.AA = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>::Zero(
-      s.V.nodes.P.size() + s.Q.nodes.P.size(),
-      s.V.nodes.P.size() + s.Q.nodes.P.size());
-  s.AA.block(0, 0, s.V.nodes.P.size(), s.V.nodes.P.size()) = s.A;
-
-  s.AA.block(0, s.V.nodes.P.size(), s.V.nodes.P.size(), s.Q.nodes.P.size()) =
-      s.B;
-
-  s.AA.block(s.V.nodes.P.size(), 0, s.Q.nodes.P.size(), s.V.nodes.P.size()) =
-      s.B.transpose();
+  int nV = s.V.nodes.P.size();
+  int nQ = s.Q.nodes.P.size();
+  s.AA = assemble_saddle_point_matrix<T>(s.A, s.B, nV, nQ);
 
   std::vector<int> not_edges = femib::util::build_not_edges<T, d, d>(s.V);
   for (int i = 0; i < s.Q.nodes.P.size(); ++i) {
     not_edges.push_back(s.V.nodes.P.size() + i);
   }
 
-  femib::util::solvable_equations<T> base =
-      remove_edges<T>(s.AA, s.ff, s.bV, not_edges);
-
-  // Augment with pressure gauge
-  int n = not_edges.size();
-  Eigen::Matrix<T, Eigen::Dynamic, 1> constraint_row_reduced =
-      Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(n);
-  for (int k = 0; k < n; ++k) {
-    int global_i = not_edges[k];
-    if (global_i >= s.V.nodes.P.size()) {
-      int pressure_i = global_i - s.V.nodes.P.size();
-      constraint_row_reduced(k) = domain_integral_row(pressure_i);
-    }
-  }
-
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> AAA_aug =
-      Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>::Zero(n + 1, n + 1);
-  AAA_aug.block(0, 0, n, n) = base.A;
-  AAA_aug.block(0, n, n, 1) = constraint_row_reduced;
-  AAA_aug.block(n, 0, 1, n) = constraint_row_reduced.transpose();
-
-  Eigen::Matrix<T, Eigen::Dynamic, 1> bbb_aug =
-      Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(n + 1);
-  bbb_aug.topRows(n) = base.b;
-
-  s.solvable_equations = {AAA_aug, bbb_aug};
+  s.solvable_equations = augment_with_pressure_gauge<T, d>(
+      s, s.AA, s.ff, domain_integral_row, not_edges);
 }
 
 template <typename T, int d>
@@ -159,9 +229,9 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
   femib::util::build_diagonal_result<T> result =
       femib::util::build_diagonal<T, d, d>(s.V, rule, stokes_a<T, d>,
                                            external_force<T, d>);
-  s.A = femib::util::triplets2dense(result.M, s.V.nodes.P.size(),
-                                    s.V.nodes.P.size());
-  s.B = femib::util::triplets2dense(
+  s.A = femib::util::triplets2sparse(result.M, s.V.nodes.P.size(),
+                                     s.V.nodes.P.size());
+  s.B = femib::util::triplets2sparse(
       femib::util::build_non_diagonal<T, d>(s.V, s.Q, rule, stokes_b<T, d>),
       s.V.nodes.P.size(), s.Q.nodes.P.size());
 
@@ -176,11 +246,21 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 template <typename T, int d, int e>
 Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &stokes) {
 
-  Eigen::Matrix<T, Eigen::Dynamic, 1> x =
-      stokes.solvable_equations.A.colPivHouseholderQr().solve(
-          stokes.solvable_equations.b); // TODO preconditioner?
+  Eigen::BiCGSTAB<Eigen::SparseMatrix<T>, Eigen::IncompleteLUT<T>> solver;
+  solver.setTolerance(1e-10);
+  solver.setMaxIterations(500);
+  solver.compute(stokes.solvable_equations.A);
 
-  // drop the last row, constraint on pressure
+  Eigen::Matrix<T, Eigen::Dynamic, 1> x =
+      solver.solve(stokes.solvable_equations.b);
+  if (solver.info() != Eigen::Success) {
+    SPDLOG_ERROR("femib::stokes::solve: BiCGSTAB+ILUT failed to converge "
+                 "(Eigen::ComputationInfo = {}, iterations = {}, "
+                 "estimated error = {})",
+                 static_cast<int>(solver.info()), solver.iterations(),
+                 solver.error());
+  }
+
   Eigen::Matrix<T, Eigen::Dynamic, 1> x_no_lambda = x.topRows(x.rows() - 1);
 
   std::vector<int> not_edges = femib::util::build_not_edges<T, d, d>(stokes.V);

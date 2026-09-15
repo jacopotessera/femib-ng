@@ -96,7 +96,7 @@ Eigen::Matrix<T, Eigen::Dynamic, 1>
 solve_steady(femib::stokes::stokes<T, d> &s,
              const femib::gauss::rule<T, d> &rule, T reynolds,
              int max_picard_iters, T tol) {
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> A_stokes = s.A;
+  Eigen::SparseMatrix<T> A_stokes = s.A;
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx = femib::stokes::solve<T, d, 1>(s);
   for (int iter = 0; iter < max_picard_iters; ++iter) {
     Eigen::Matrix<T, Eigen::Dynamic, 1> w_dofs = xx.topRows(s.V.nodes.P.size());

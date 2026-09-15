@@ -111,9 +111,9 @@ TEST_CASE("solve steady Navier-Stokes") {
   femib::util::build_diagonal_result<float> result =
       femib::util::build_diagonal<float, 2, 2>(
           s.V, rule, femib::stokes::stokes_a<float, 2>, ggg);
-  s.A = femib::util::triplets2dense(result.M, s.V.nodes.P.size(),
-                                    s.V.nodes.P.size());
-  s.B = femib::util::triplets2dense(
+  s.A = femib::util::triplets2sparse(result.M, s.V.nodes.P.size(),
+                                     s.V.nodes.P.size());
+  s.B = femib::util::triplets2sparse(
       femib::util::build_non_diagonal<float, 2>(
           s.V, s.Q, rule, femib::stokes::stokes_b<float, 2>),
       s.V.nodes.P.size(), s.Q.nodes.P.size());
