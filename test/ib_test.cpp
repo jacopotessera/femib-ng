@@ -162,7 +162,7 @@ TEST_CASE("a ring at its rest configuration stays motionless under "
   std::vector<femib::types::dvec<float, 2>> X0 = p.structure.X;
 
   for (int step = 0; step < 20; ++step) {
-    femib::ib::advance_navier_stokes<float, 2>(p, rule, 10.0f, 10, 1e-5f);
+    femib::ib::advance_navier_stokes<float, 2>(p, rule, 10, 1e-5f);
   }
 
   float max_drift = 0.0f;
@@ -192,7 +192,7 @@ TEST_CASE("a perturbed (elliptical) ring's elastic energy decays, not grows, "
   float E_max = E0;
   int n_steps = 20;
   for (int step = 0; step < n_steps; ++step) {
-    femib::ib::advance_navier_stokes<float, 2>(p, rule, 10.0f, 10, 1e-5f);
+    femib::ib::advance_navier_stokes<float, 2>(p, rule, 10, 1e-5f);
     E_max = std::max(E_max, femib::ib::elastic_energy<float, 2>(p.structure));
   }
 

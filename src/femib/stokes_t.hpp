@@ -18,6 +18,8 @@ template <typename T, int d> struct stokes {
   femib::finite_element_space::finite_element_space<T, d, d> V;
   femib::finite_element_space::finite_element_space<T, d, 1> Q;
   femib::gauss::rule<T, d> rule;
+  T rho = 1.0;
+  T mu = 1.0;
   std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)> force =
       [](femib::types::dvec<T, d>, T) -> femib::types::dvec<T, d> {
     return femib::types::dvec<T, d>::Zero();
@@ -58,10 +60,10 @@ template <typename T, int d> struct stokes {
 // TODO unify with stokes
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
-stokes_a(femib::types::F<T, d, d> u, femib::types::F<T, d, d> v) {
-  return [u, v](const femib::types::dvec<T, d> &x) {
-    return T(2.0) * dpi(u, v)(x);
-  }; // TODO coefficient mu?
+stokes_a(femib::types::F<T, d, d> u, femib::types::F<T, d, d> v, T mu) {
+  return [u, v, mu](const femib::types::dvec<T, d> &x) {
+    return T(2.0) * mu * dpi(u, v)(x);
+  };
 }
 
 template <typename T, int d>
@@ -267,14 +269,20 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
     return external_force<T, d>(a, force0);
   };
 
+  T mu = s.mu;
   femib::util::build_diagonal_result<T> result =
-      femib::util::build_diagonal<T, d, d>(s.V, rule, stokes_a<T, d>, ggg);
+      femib::util::build_diagonal<T, d, d>(
+          s.V, rule,
+          [mu](femib::types::F<T, d, d> u, femib::types::F<T, d, d> v) {
+            return stokes_a<T, d>(u, v, mu);
+          },
+          ggg);
 
   s.result = result;
   s.A = femib::util::triplets2sparse(result.M, s.V.nodes.P.size(),
                                      s.V.nodes.P.size());
   // TODO build sparse mass_matrix
-  s.M = mass_matrix<T, d>(s.V, rule).sparseView();
+  s.M = (s.rho * mass_matrix<T, d>(s.V, rule)).sparseView();
   s.B = femib::util::triplets2sparse(
       femib::util::build_non_diagonal<T, d>(s.V, s.Q, rule, stokes_b<T, d>),
       s.V.nodes.P.size(), s.Q.nodes.P.size());

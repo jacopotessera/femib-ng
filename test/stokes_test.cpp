@@ -164,7 +164,12 @@ TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
 
   femib::util::build_diagonal_result<float> result =
       femib::util::build_diagonal<float, 2, 2>(
-          stokes.V, rule, femib::stokes::stokes_a<float, 2>, ggg);
+          stokes.V, rule,
+          [mu = stokes.mu](femib::types::F<float, 2, 2> u,
+                           femib::types::F<float, 2, 2> v) {
+            return femib::stokes::stokes_a<float, 2>(u, v, mu);
+          },
+          ggg);
   stokes.A = femib::util::triplets2sparse(result.M, stokes.V.nodes.P.size(),
                                           stokes.V.nodes.P.size());
   stokes.B = femib::util::triplets2sparse(

@@ -85,20 +85,16 @@ int main(int argc, char **argv) {
   // at full run length thanks to the sparse-solver fix (this used to take
   // ~20 min/step; now a fraction of a second per step).
   int n_mesh = 32;
-  int n_ring = 192; // keep Lagrangian point spacing well under half
-                    // the mesh spacing
+  int n_ring = 2048; // keep Lagrangian point spacing well under half
+                     // the mesh spacing
   double radius = 0.15;
-  double k_spring = 16000.0; // pushed higher, for a visible rebound
-  double viscosity = 0.3; // multiplies s.A (see below) -- this codebase has no
-                          // wired-up viscosity coefficient (mu=2 is baked into
-                          // dpi(symm(u),symm(v)) with no adjustable multiplier,
-                          // a known gap), so this scales the assembled viscous
-                          // stiffness matrix directly, locally, in the demo.
+  double k_spring = 128000.0; // pushed higher, for a visible rebound
+  double rho = 1.0;
+  double mu = 0.3;
   double deltat = 0.0002;
-  double reynolds = 5.0;
   int max_picard_iters = 5;
   double tol = 1e-4;
-  int n_steps = 360; // enough to capture the full bounce + settle
+  int n_steps = 480; // enough to capture the full bounce + settle
 
   femib::gauss::rule<double, 2> rule =
       femib::gauss::create_gauss_2_2d<double, 2>();
@@ -121,6 +117,8 @@ int main(int argc, char **argv) {
   p.fluid.V = v;
   p.fluid.Q = q;
   p.fluid.deltat = deltat;
+  p.fluid.rho = rho;
+  p.fluid.mu = mu;
   p.fluid.force = [](const femib::types::dvec<double, 2> &,
                      double) -> femib::types::dvec<double, 2> {
     return femib::types::dvec<double, 2>::Zero();
@@ -143,16 +141,6 @@ int main(int argc, char **argv) {
   // numerical trick.
 
   femib::ib::init<double, 2>(p, rule);
-
-  // Scale the assembled viscous stiffness matrix directly -- init() has
-  // already built s.A (the dpi(symm(u),symm(v)) viscous bilinear form) and
-  // s.M (the mass matrix), but every advance() call re-derives s.AA's
-  // velocity block from s.A fresh each timestep, so scaling s.A here, once,
-  // before the timestepping loop starts, is sufficient -- every subsequent
-  // call picks up the scaled value. s.B (the divergence/incompressibility
-  // coupling) is untouched, so the fluid stays exactly incompressible;
-  // only the viscous dissipation is weakened.
-  p.fluid.A *= viscosity;
 
   // Perturb the circle into a dramatic ellipse (stretch x by 1.8, compress y
   // by 1/1.8, preserving enclosed area to first order), placing points at
@@ -210,6 +198,10 @@ int main(int argc, char **argv) {
 
   femib::write::save_sim(path, "ib_ns_demo", "ring",
                          femib::write::mode::overwrite);
+  femib::write::save_metadata<double>(path, "rho", rho);
+  femib::write::save_metadata<double>(path, "mu", mu);
+  femib::write::save_metadata<double>(path, "deltat", deltat);
+  femib::write::save_metadata<double>(path, "k_spring", k_spring);
 
   // Persists the structure's position AND the velocity/pressure fields at
   // EVERY step (so the animation has a full field for every frame, not just
@@ -257,8 +249,7 @@ int main(int argc, char **argv) {
   };
 
   for (int step = 1; step <= n_steps; ++step) {
-    femib::ib::advance_navier_stokes<double, 2>(p, rule, reynolds,
-                                                max_picard_iters, tol);
+    femib::ib::advance_navier_stokes<double, 2>(p, rule, max_picard_iters, tol);
     dump_step(step);
     if (step % 20 == 0 || step == 1) {
       double E = femib::ib::elastic_energy<double, 2>(p.structure);

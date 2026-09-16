@@ -16,6 +16,8 @@ namespace femib::stokes {
 template <typename T, int d> struct stokes {
   femib::finite_element_space::finite_element_space<T, d, d> V;
   femib::finite_element_space::finite_element_space<T, d, 1> Q;
+  T rho = 1.0;
+  T mu = 1.0;
 
   Eigen::SparseMatrix<T> A;
   Eigen::SparseMatrix<T> B;
@@ -32,10 +34,10 @@ template <typename T, int d> struct stokes {
 
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
-stokes_a(femib::types::F<T, d, d> u, femib::types::F<T, d, d> v) {
-  return [u, v](const femib::types::dvec<T, d> &x) {
-    return T(2.0) * dpi(u, v)(x);
-  }; // TODO  coefficient mu?
+stokes_a(femib::types::F<T, d, d> u, femib::types::F<T, d, d> v, T mu) {
+  return [u, v, mu](const femib::types::dvec<T, d> &x) {
+    return T(2.0) * mu * dpi(u, v)(x);
+  };
 }
 
 template <typename T, int d>
@@ -226,9 +228,14 @@ void rebuild_system(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 template <typename T, int d>
 void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 
+  T mu = s.mu;
   femib::util::build_diagonal_result<T> result =
-      femib::util::build_diagonal<T, d, d>(s.V, rule, stokes_a<T, d>,
-                                           external_force<T, d>);
+      femib::util::build_diagonal<T, d, d>(
+          s.V, rule,
+          [mu](femib::types::F<T, d, d> u, femib::types::F<T, d, d> v) {
+            return stokes_a<T, d>(u, v, mu);
+          },
+          external_force<T, d>);
   s.A = femib::util::triplets2sparse(result.M, s.V.nodes.P.size(),
                                      s.V.nodes.P.size());
   s.B = femib::util::triplets2sparse(

@@ -25,8 +25,7 @@ Eigen::SparseMatrix<T> assemble_convection(
     const femib::gauss::rule<T, d> &rule,
     const Eigen::Matrix<T, Eigen::Dynamic, 1>
         &w_dofs, // TODO uh? u_at_last_step
-    T reynolds   // TODO reynolds? nu!
-) {
+    T rho) {
   const int basis_count =
       static_cast<int>(V.finite_element.base_functions.size());
   const int n_q = static_cast<int>(rule.nodes.size());
@@ -82,9 +81,8 @@ Eigen::SparseMatrix<T> assemble_convection(
         }
       });
 
-  return (T(1) / reynolds) * femib::util::triplets2sparse(std::move(BB),
-                                                          V.nodes.P.size(),
-                                                          V.nodes.P.size());
+  return rho * femib::util::triplets2sparse(std::move(BB), V.nodes.P.size(),
+                                            V.nodes.P.size());
 }
 
 // Picard iteration:
@@ -94,13 +92,13 @@ Eigen::SparseMatrix<T> assemble_convection(
 template <typename T, int d>
 Eigen::Matrix<T, Eigen::Dynamic, 1>
 solve_steady(femib::stokes::stokes<T, d> &s,
-             const femib::gauss::rule<T, d> &rule, T reynolds,
-             int max_picard_iters, T tol) {
+             const femib::gauss::rule<T, d> &rule, int max_picard_iters,
+             T tol) {
   Eigen::SparseMatrix<T> A_stokes = s.A;
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx = femib::stokes::solve<T, d, 1>(s);
   for (int iter = 0; iter < max_picard_iters; ++iter) {
     Eigen::Matrix<T, Eigen::Dynamic, 1> w_dofs = xx.topRows(s.V.nodes.P.size());
-    s.A = A_stokes + assemble_convection<T, d>(s.V, rule, w_dofs, reynolds);
+    s.A = A_stokes + assemble_convection<T, d>(s.V, rule, w_dofs, s.rho);
     femib::stokes::rebuild_system<T, d>(s, rule);
     Eigen::Matrix<T, Eigen::Dynamic, 1> xx_new =
         femib::stokes::solve<T, d, 1>(s);
@@ -119,8 +117,7 @@ solve_steady(femib::stokes::stokes<T, d> &s,
 // with an inner Picard loop
 template <typename T, int d>
 void advance(femib::stokes_t::stokes<T, d> &s,
-             const femib::gauss::rule<T, d> &rule, T reynolds,
-             int max_picard_iters, T tol,
+             const femib::gauss::rule<T, d> &rule, int max_picard_iters, T tol,
              std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
                  extra_velocity_rhs = std::nullopt) {
   s.time += s.deltat;
@@ -144,7 +141,7 @@ void advance(femib::stokes_t::stokes<T, d> &s,
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx_new_full;
   for (int iter = 0; iter < max_picard_iters; ++iter) {
     Eigen::SparseMatrix<T> top_left =
-        A_base + assemble_convection<T, d>(s.V, rule, xx, reynolds);
+        A_base + assemble_convection<T, d>(s.V, rule, xx, s.rho);
     s.AA = femib::stokes_t::assemble_saddle_point_matrix<T>(
         top_left, s.B, s.V.nodes.P.size(), s.Q.nodes.P.size());
 

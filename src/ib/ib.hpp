@@ -58,13 +58,13 @@ template <typename T, int d> void advance(ib_problem<T, d> &p) {
 
 template <typename T, int d>
 void advance_navier_stokes(ib_problem<T, d> &p,
-                           const femib::gauss::rule<T, d> &rule, T reynolds,
+                           const femib::gauss::rule<T, d> &rule,
                            int max_picard_iters, T tol) {
   advance_common<T, d>(
-      p, [&p, &rule, reynolds, max_picard_iters,
+      p, [&p, &rule, max_picard_iters,
           tol](const Eigen::Matrix<T, Eigen::Dynamic, 1> &extra_rhs) {
-        femib::navier_stokes::advance<T, d>(p.fluid, rule, reynolds,
-                                            max_picard_iters, tol, extra_rhs);
+        femib::navier_stokes::advance<T, d>(p.fluid, rule, max_picard_iters,
+                                            tol, extra_rhs);
       });
 }
 

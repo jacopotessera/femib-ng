@@ -110,7 +110,12 @@ TEST_CASE("solve steady Navier-Stokes") {
 
   femib::util::build_diagonal_result<float> result =
       femib::util::build_diagonal<float, 2, 2>(
-          s.V, rule, femib::stokes::stokes_a<float, 2>, ggg);
+          s.V, rule,
+          [mu = s.mu](femib::types::F<float, 2, 2> u,
+                      femib::types::F<float, 2, 2> v) {
+            return femib::stokes::stokes_a<float, 2>(u, v, mu);
+          },
+          ggg);
   s.A = femib::util::triplets2sparse(result.M, s.V.nodes.P.size(),
                                      s.V.nodes.P.size());
   s.B = femib::util::triplets2sparse(
@@ -126,7 +131,7 @@ TEST_CASE("solve steady Navier-Stokes") {
   femib::stokes::rebuild_system<float, 2>(s, rule);
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
-      femib::navier_stokes::solve_steady<float, 2>(s, rule, /*reynolds=*/1.0f,
+      femib::navier_stokes::solve_steady<float, 2>(s, rule,
                                                    /*max_picard_iters=*/30,
                                                    /*tol=*/1e-5f);
 
@@ -178,7 +183,7 @@ TEST_CASE("assemble_convection matches by-hand-derived closed-form integrals "
 
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> M =
       femib::navier_stokes::assemble_convection<float, 2>(v, rule, w_dofs,
-                                                          /*reynolds=*/1.0f);
+                                                          /*rho=*/1.0f);
 
   REQUIRE_EQ(M.rows(), 6);
   REQUIRE_EQ(M.cols(), 6);
@@ -218,11 +223,11 @@ TEST_CASE("assemble_convection matches by-hand-derived closed-form integrals "
       CHECK_LT(std::abs(M(j, i)), tol);
     }
   }
-  // 1/reynolds scaling.
-  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> M_half_reynolds =
+  // rho scaling.
+  Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> M_double_rho =
       femib::navier_stokes::assemble_convection<float, 2>(v, rule, w_dofs,
-                                                          /*reynolds=*/2.0f);
-  CHECK_LT((M_half_reynolds - 0.5f * M).norm(), tol);
+                                                          /*rho=*/2.0f);
+  CHECK_LT((M_double_rho - 2.0f * M).norm(), tol);
 }
 
 // TODO fix this when the solver is fast, using sparse solver
@@ -310,7 +315,7 @@ TEST_CASE("testing time-dependent Navier-Stokes" * doctest::skip(true)) {
   float max_velocity_error_first = -1.0f;
   float max_velocity_error_last = -1.0f;
   for (int step = 0; step < n_steps; ++step) {
-    femib::navier_stokes::advance<float, 2>(s, rule, 1.0f, 3, 1e-5f);
+    femib::navier_stokes::advance<float, 2>(s, rule, 3, 1e-5f);
     float e = velocity_error(s.solution.back());
     if (step == 0)
       max_velocity_error_first = e;
@@ -375,7 +380,6 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   femib::stokes_t::init<float, 2>(s, rule);
 
   size_t rowsV = s.V.nodes.P.size();
-  float reynolds = 1.0f;
 
   // Step 1: establishes a nonzero previous-timestep velocity, starting from
   // rest -- its own convection input (u_1=0) never matters here, only its
@@ -383,7 +387,7 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // keeps this deterministic: the Picard loop's single iteration always
   // uses xx=u_1, so the field advance() actually convected against is
   // exactly known to this test, not merely assumed.
-  femib::navier_stokes::advance<float, 2>(s, rule, reynolds,
+  femib::navier_stokes::advance<float, 2>(s, rule,
                                           /*max_picard_iters=*/1,
                                           /*tol=*/1e-5f);
   REQUIRE_EQ(s.solution.size(), 1);
@@ -405,13 +409,13 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // Step 2 is the call under test. Its Picard loop's single iteration
   // (max_picard_iters=1) must use w_dofs_expected (step 1's output,
   // captured above) as the advecting field.
-  femib::navier_stokes::advance<float, 2>(s, rule, reynolds,
+  femib::navier_stokes::advance<float, 2>(s, rule,
                                           /*max_picard_iters=*/1,
                                           /*tol=*/1e-5f);
 
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> conv_expected =
       femib::navier_stokes::assemble_convection<float, 2>(
-          s.V, rule, w_dofs_expected, reynolds);
+          s.V, rule, w_dofs_expected, s.rho);
   // Sanity: the expected convection contribution must clear this test's
   // own wiring-check tolerance (below) with comfortable margin -- otherwise
   // this check could not tell correct wiring apart from broken/missing
@@ -432,7 +436,6 @@ TEST_CASE("navier_stokes::advance rejects max_picard_iters <= 0") {
   femib::stokes_t::stokes<float, 2> s;
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();
-  CHECK_THROWS_AS(
-      (femib::navier_stokes::advance<float, 2>(s, rule, 1.0f, 0, 1e-5f)),
-      std::invalid_argument);
+  CHECK_THROWS_AS((femib::navier_stokes::advance<float, 2>(s, rule, 0, 1e-5f)),
+                  std::invalid_argument);
 }
