@@ -40,7 +40,7 @@ femib::ib::ib_problem<float, 2> make_ib_fixture(int n_mesh, int n_ring,
     return femib::types::dvec<float, 2>::Zero(); // no separate body force
   };
   p.structure = femib::ib::build_ring<float, 2>(
-      femib::types::dvec<float, 2>(0.5f, 0.5f), radius, n_ring, 50.0f);
+      femib::types::dvec<float, 2>(0.5f, 0.5f), radius, n_ring, 2.618f);
 
   femib::ib::init<float, 2>(p, rule);
   return p;

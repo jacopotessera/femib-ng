@@ -33,7 +33,6 @@ void advance_ring(ring<T, d> &r, T deltat,
 template <typename T, int d>
 ring<T, d> build_ring(femib::types::dvec<T, d> c, T radius, int n_points, T k) {
   ring<T, d> r;
-  r.k = k;
   r.X.reserve(n_points);
   const T pi = std::numbers::pi_v<T>;
   for (int i = 0; i < n_points; ++i) {
@@ -42,6 +41,8 @@ ring<T, d> build_ring(femib::types::dvec<T, d> c, T radius, int n_points, T k) {
                      c(1) + radius * std::sin(theta));
   }
   r.dS = (2 * pi * radius) / static_cast<T>(n_points);
+  // refining n_points doesn't change the physics
+  r.k = k / r.dS;
   return r;
 }
 

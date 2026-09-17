@@ -75,7 +75,7 @@ def _snapshot(data, path):
     pyplot.close(fig)
 
 
-def _animation(data, path):
+def _animation(data, path, fps):
     # Velocity/pressure aren't necessarily saved every step (e.g. only at
     # checkpoints); forward-fill each gap with the last checkpoint's field
     # so the quiver/pressure panels stay populated every frame instead of
@@ -205,9 +205,11 @@ def _animation(data, path):
             ax.axis("off")
         timesteps = numpy.array(data["T"])
         areas = numpy.array(data["AREA"], dtype=float)
+        area0 = areas[numpy.isfinite(areas)][0]
+        areas = areas / area0
         aspect_ratios = numpy.array(data["ASPECT"], dtype=float)
         area_ax.plot(timesteps, areas, color=STRUCT_COLOR)
-        area_ax.set_title("structure area")
+        area_ax.set_title("structure area / area0")
         area_ax.set_xlabel("timestep")
         (area_marker,) = area_ax.plot([], [], "o", color="black")
         aspect_ax.plot(timesteps, aspect_ratios, color=STRUCT_COLOR)
@@ -297,7 +299,7 @@ def _animation(data, path):
             pres_ax.xaxis.label.set_text(f"timestep {t}")
 
         if area_ax is not None and not numpy.isnan(data["AREA"][i]):
-            area_marker.set_data([t], [data["AREA"][i]])
+            area_marker.set_data([t], [areas[i]])
             aspect_marker.set_data([t], [data["ASPECT"][i]])
 
     # Set the widest label text ("timestep <last>") before the one-shot
@@ -330,12 +332,12 @@ def _animation(data, path):
         if a is not None
     ]
 
-    render_animation_gif(fig, dynamic_artists, update, len(data["T"]), path)
+    render_animation_gif(fig, dynamic_artists, update, len(data["T"]), path, fps)
     pyplot.close(fig)
 
 
-def render(data, path):
+def render(data, path, fps=15):
     if len(data["T"]) == 1:
         _snapshot(data, path)
     else:
-        _animation(data, path)
+        _animation(data, path, fps)

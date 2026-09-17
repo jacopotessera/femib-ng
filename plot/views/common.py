@@ -1,3 +1,8 @@
+import os
+import shutil
+import subprocess
+import tempfile
+
 import numpy
 from PIL import Image
 
@@ -28,6 +33,16 @@ def render_animation_gif(fig, dynamic_artists, update_fn, n_frames, path, fps=15
     # handful of artists that actually change on top of that background --
     # the standard matplotlib blitting pattern, driven by hand since
     # Animation.save() doesn't use it.
+    if shutil.which("ffmpeg") is None:
+        raise RuntimeError(
+            "render_animation_gif requires ffmpeg on PATH: frames are "
+            "encoded by piping a PNG sequence through it instead of "
+            "buffering every frame in Python -- Pillow's own GIF writer "
+            "(and imageio's, which just wraps it) builds a second full "
+            "in-memory copy of every frame before writing any of them, "
+            "which OOMs on long animations."
+        )
+
     for a, _ in dynamic_artists:
         a.set_animated(True)
         # set_animated(True) alone does NOT make a plain canvas.draw() skip
@@ -46,28 +61,51 @@ def render_animation_gif(fig, dynamic_artists, update_fn, n_frames, path, fps=15
     for a, _ in dynamic_artists:
         a.set_visible(True)
 
-    frames = []
-    for i in range(n_frames):
-        update_fn(i)
-        canvas.restore_region(background)
-        for a, ax in dynamic_artists:
-            ax.draw_artist(a)
-        canvas.blit(fig.bbox)
-        buf = numpy.asarray(canvas.buffer_rgba())
-        # buf[:,:,:3], not .convert('RGB'): both drop the alpha channel, but
-        # the numpy slice is a cheap view while .convert('RGB') is a full
-        # pixel-by-pixel PIL color-mode conversion.
-        frames.append(Image.fromarray(buf[:, :, :3]))
+    # One frame written to disk and discarded at a time -- ffmpeg's
+    # palettegen/paletteuse filters then read the PNG sequence directly
+    # from disk (twice: once to build a shared palette, once to encode),
+    # so peak memory is a single frame, not the whole animation.
+    digits = len(str(n_frames - 1))
+    with tempfile.TemporaryDirectory(prefix="femib_plot_frames_") as tmp_dir:
+        pattern = os.path.join(tmp_dir, f"frame_%0{digits}d.png")
+        for i in range(n_frames):
+            update_fn(i)
+            canvas.restore_region(background)
+            for a, ax in dynamic_artists:
+                ax.draw_artist(a)
+            canvas.blit(fig.bbox)
+            buf = numpy.asarray(canvas.buffer_rgba())
+            # buf[:,:,:3], not .convert('RGB'): both drop the alpha channel,
+            # but the numpy slice is a cheap view while .convert('RGB') is a
+            # full pixel-by-pixel PIL color-mode conversion.
+            Image.fromarray(buf[:, :, :3]).save(pattern % i)
 
-    # Image.save(..., save_all=True) quantizes (24-bit RGB -> 8-bit palette)
-    # each frame independently by default -- a full median-cut color search
-    # per frame. Every frame here draws from the same handful of color
-    # sources, so a palette built from one representative frame already
-    # covers the rest well; reusing it turns every other frame's
-    # quantization into a cheap nearest-color lookup instead of a fresh
-    # search.
-    palette_frame = frames[len(frames) // 2].quantize(colors=256)
-    gif_frames = [f.quantize(palette=palette_frame) for f in frames]
-    gif_frames[0].save(
-        path, save_all=True, append_images=gif_frames[1:], duration=1000 // fps, loop=0
+        palette_path = os.path.join(tmp_dir, "palette.png")
+        _run_ffmpeg(
+            ["-framerate", str(fps), "-i", pattern, "-vf", "palettegen", palette_path]
+        )
+        _run_ffmpeg(
+            [
+                "-framerate",
+                str(fps),
+                "-i",
+                pattern,
+                "-i",
+                palette_path,
+                "-lavfi",
+                "paletteuse",
+                "-loop",
+                "0",
+                str(path),
+            ]
+        )
+
+
+def _run_ffmpeg(args):
+    result = subprocess.run(
+        ["ffmpeg", "-y", "-loglevel", "error", *args],
+        capture_output=True,
+        text=True,
     )
+    if result.returncode != 0:
+        raise RuntimeError(f"ffmpeg failed: {result.stderr}")

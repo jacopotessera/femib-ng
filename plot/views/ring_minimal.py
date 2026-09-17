@@ -33,7 +33,7 @@ def _snapshot(data, path):
     pyplot.close(fig)
 
 
-def _animation(data, path):
+def _animation(data, path, fps):
     has_struct = any(len(sx) for sx in data["SX"])
     if not has_struct:
         typer.echo(f"warning: nothing to plot for {path}")
@@ -58,12 +58,12 @@ def _animation(data, path):
     fig.tight_layout()
 
     dynamic_artists = [(struct_line, ax), (ax.xaxis.label, ax)]
-    render_animation_gif(fig, dynamic_artists, update, len(data["T"]), path)
+    render_animation_gif(fig, dynamic_artists, update, len(data["T"]), path, fps)
     pyplot.close(fig)
 
 
-def render(data, path):
+def render(data, path, fps=15):
     if len(data["T"]) == 1:
         _snapshot(data, path)
     else:
-        _animation(data, path)
+        _animation(data, path, fps)

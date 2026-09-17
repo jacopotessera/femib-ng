@@ -33,7 +33,8 @@ TEST_CASE("make_ring places n_points evenly on a circle of the given radius") {
   CHECK_LT(std::abs(r.dS - expected_dS), 1e-4f);
 }
 
-TEST_CASE("elastic_force goes to zero as radius goes to zero") {
+TEST_CASE("elastic_force at a rest circle is independent of radius, given "
+          "fixed n_points and k") {
   femib::types::dvec<float, 2> center(0.5f, 0.5f);
   int n_points = 16;
   float k = 3.0f;
@@ -62,8 +63,8 @@ TEST_CASE("elastic_force goes to zero as radius goes to zero") {
     CHECK_LT((F3[i].normalized() + (r3.X[i] - center).normalized()).norm(),
              1e-5f);
 
-    CHECK_GT(F1[i].norm(), F2[i].norm());
-    CHECK_GT(F2[i].norm(), F3[i].norm());
+    CHECK_LT(std::abs(F1[i].norm() - F2[i].norm()), 1e-4f);
+    CHECK_LT(std::abs(F2[i].norm() - F3[i].norm()), 1e-4f);
   }
 }
 

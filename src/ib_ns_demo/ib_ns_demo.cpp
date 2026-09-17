@@ -14,6 +14,7 @@
 #include "../ib/ib.hpp"
 #include "../write/write.hpp"
 
+#include <chrono>
 #include <iostream>
 
 namespace {
@@ -88,13 +89,13 @@ int main(int argc, char **argv) {
   int n_ring = 2048; // keep Lagrangian point spacing well under half
                      // the mesh spacing
   double radius = 0.15;
-  double k_spring = 128000.0; // pushed higher, for a visible rebound
+  double k_spring = 60.0;
   double rho = 1.0;
   double mu = 0.3;
   double deltat = 0.0002;
   int max_picard_iters = 5;
   double tol = 1e-4;
-  int n_steps = 480; // enough to capture the full bounce + settle
+  int n_steps = 480;
 
   femib::gauss::rule<double, 2> rule =
       femib::gauss::create_gauss_2_2d<double, 2>();
@@ -248,15 +249,20 @@ int main(int argc, char **argv) {
     return (xmax - xmin) / (ymax - ymin);
   };
 
+  auto t_start = std::chrono::steady_clock::now();
   for (int step = 1; step <= n_steps; ++step) {
     femib::ib::advance_navier_stokes<double, 2>(p, rule, max_picard_iters, tol);
     dump_step(step);
     if (step % 20 == 0 || step == 1) {
       double E = femib::ib::elastic_energy<double, 2>(p.structure);
       double area = polygon_area(p.structure.X);
+      double elapsed_s = std::chrono::duration<double>(
+                             std::chrono::steady_clock::now() - t_start)
+                             .count();
       std::cerr << "step " << step << "/" << n_steps << "  elastic_energy=" << E
                 << "  aspect=" << aspect_of() << "  area=" << area
-                << "  area/area0=" << (area / area0) << std::endl;
+                << "  area/area0=" << (area / area0)
+                << "  elapsed=" << elapsed_s << "s" << std::endl;
     }
   }
 
