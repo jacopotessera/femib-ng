@@ -73,7 +73,6 @@ TEST_CASE("testing cuda accurate") {
 }
 
 TEST_CASE("testing cuda serial_accurate") {
-  mesh.init();
   femib::types::box<float, 2> boxx =
       femib::mesh::lin_spaced<float, 2>(box, delta);
 
@@ -103,7 +102,6 @@ TEST_CASE("testing cuda serial_accurate") {
 }
 
 TEST_CASE("testing cuda parallel_accurate") {
-  mesh.init();
   femib::types::box<float, 2> boxx =
       femib::mesh::lin_spaced<float, 2>(box, delta);
 
@@ -148,7 +146,6 @@ TEST_CASE("testing cuda parallel_accurate") {
 }
 
 TEST_CASE("testing mesh find_points") {
-  mesh.init();
   femib::types::box<float, 2> boxx =
       femib::mesh::lin_spaced<float, 2>(box, delta);
 
@@ -161,7 +158,6 @@ TEST_CASE("testing mesh find_points") {
 
 // TODO parallel_accurate is not really accurate... but now it is!
 TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
-  mesh.init();
   femib::types::box<float, 2> boxx =
       femib::mesh::lin_spaced<float, 2>(box, delta);
   int size_T = mesh.N.size();

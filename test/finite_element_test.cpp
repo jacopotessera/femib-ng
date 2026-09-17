@@ -25,11 +25,9 @@ TEST_CASE("testing finite_element P1_2d1d") {
 TEST_CASE("testing P1_2d1d build_nodes") {
   femib::finite_element::finite_element<float, 2, 1> f =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
-  femib::types::mesh<float, 2> mesh = {
-      .P = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
-      .T = {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}},
-      .E = {0, 1, 2, 3}};
-  mesh.init();
+  femib::types::mesh<float, 2> mesh(
+      {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
+      {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}}, {0, 1, 2, 3});
   femib::types::nodes<float, 2> nodes = f.build_nodes(mesh);
   CHECK(nodes.P.size() == mesh.P.size());
   CHECK(nodes.T.size() == mesh.T.size());
@@ -96,11 +94,9 @@ TEST_CASE("testing P2_2d2d build_nodes shares edge midpoints between "
   femib::finite_element::finite_element<float, 2, 2> f =
       femib::finite_element::create_finite_element_P2_2d2d<float, 2, 2>();
   // a unit square split into 4 triangles from its center
-  femib::types::mesh<float, 2> mesh = {
-      .P = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
-      .T = {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}},
-      .E = {0, 1, 2, 3}};
-  mesh.init();
+  femib::types::mesh<float, 2> mesh(
+      {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
+      {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}}, {0, 1, 2, 3});
   femib::types::nodes<float, 2> nodes = f.build_nodes(mesh);
 
   int size_P = (int)mesh.P.size();

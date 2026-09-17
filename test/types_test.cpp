@@ -16,17 +16,9 @@ TEST_CASE("testing types") {
   CHECK(f.x(p)(0) == doctest::Approx(5.0));
 }
 
-TEST_CASE("testing mesh init") {
-  femib::types::mesh<float, 2> mesh;
-  mesh.P = {{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}};
-  mesh.T = {{0, 1, 2}};
-  mesh.E = {};
+TEST_CASE("testing mesh constructor populates N") {
+  femib::types::mesh<float, 2> mesh({{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}},
+                                    {{0, 1, 2}}, {});
 
-  mesh.init();
-  size_t n_after_first = mesh.N.size();
-  mesh.init();
-  size_t n_after_second = mesh.N.size();
-
-  CHECK(n_after_first > 0);
-  CHECK(n_after_second == n_after_first);
+  CHECK(mesh.N.size() == mesh.T.size());
 }

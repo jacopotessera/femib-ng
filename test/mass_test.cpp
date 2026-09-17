@@ -10,13 +10,11 @@
 #include "stokes_t.hpp"
 
 TEST_CASE("testing mass_matrix") {
-  femib::types::mesh<float, 2> mesh;
-  mesh.P = {femib::types::dvec<float, 2>(0.0f, 0.0f),
-            femib::types::dvec<float, 2>(1.0f, 0.0f),
-            femib::types::dvec<float, 2>(0.0f, 1.0f)};
-  mesh.T = {femib::types::ditrian<2>(0, 1, 2)};
-  mesh.E = {0, 1, 2};
-  mesh.init();
+  femib::types::mesh<float, 2> mesh({femib::types::dvec<float, 2>(0.0f, 0.0f),
+                                     femib::types::dvec<float, 2>(1.0f, 0.0f),
+                                     femib::types::dvec<float, 2>(0.0f, 1.0f)},
+                                    {femib::types::ditrian<2>(0, 1, 2)},
+                                    {0, 1, 2});
 
   femib::finite_element::finite_element<float, 2, 2> fe =
       femib::finite_element::create_finite_element_P1_2d2d<float, 2, 2>();

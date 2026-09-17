@@ -34,33 +34,33 @@ template <typename f, int d> struct nodes {
   std::vector<std::vector<int>> T;
   std::vector<int> E;
 
-  int get_index(int i, int n) const { return T[n][i]; }
+  [[nodiscard]] int get_index(const int i, const int n) const {
+    return T[n][i];
+  }
 };
 
-// TODO what is the difference with nodes?
 template <typename f, int d> struct mesh {
   std::vector<dvec<f, d>> P;
   std::vector<ditrian<d>> T;
   std::vector<int> E;
 
   std::vector<dtrian<f, d>> N;
-  bool initialized = false;
 
   mutable std::shared_ptr<void> device_triangles_cache;
 
-  // TODO why not using a constructor?
-  void init() {
-    if (!initialized) {
-      for (ditrian<d> t : T) {
-        dtrian<f, d> n;
-        n.reserve(d + 1);
-        for (int i : t) {
-          n.emplace_back(P[i]);
-        }
-        N.emplace_back(n);
+  mesh() = default;
+  mesh(std::vector<dvec<f, d>> p, std::vector<ditrian<d>> t,
+       std::vector<int> e = {})
+      : P(std::move(p)), T(std::move(t)), E(std::move(e)) {
+    N.reserve(T.size());
+    for (const ditrian<d> &t_ : T) {
+      dtrian<f, d> n;
+      n.reserve(d + 1);
+      for (int i : t_) {
+        n.emplace_back(P[i]);
       }
+      N.emplace_back(std::move(n));
     }
-    initialized = true;
   }
 
   inline const dtrian<f, d> &operator[](int i) const { return N[i]; }

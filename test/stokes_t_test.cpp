@@ -31,7 +31,6 @@ femib::stokes_t::stokes<float, 2> make_stokes_t_fixture(
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
       mesh_dir + "p3.mat", mesh_dir + "t3.mat", mesh_dir + "e3.mat");
-  mesh.init();
 
   // V
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
@@ -188,7 +187,6 @@ TEST_CASE("test stokes_t::advance with a non-stationary known problem") {
 
   int n = 10;
   femib::types::mesh<float, 2> mesh = make_unit_square_mesh(n);
-  mesh.init();
 
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();
@@ -324,7 +322,6 @@ TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
 
   int n = 10;
   femib::types::mesh<float, 2> mesh = make_unit_square_mesh(n);
-  mesh.init();
 
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_5_2d<float, 2>();

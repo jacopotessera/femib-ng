@@ -22,14 +22,9 @@ TEST_CASE("testing finite_element_space") {
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();
 
-  femib::types::mesh<float, 2> mesh = {
-      .P = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
-      .T = {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}},
-      .E = {0, 1, 2, 3}};
   std::string mesh_dir = MESH_DIR;
-  mesh = femib::mesh::read<float, 2>(mesh_dir + "p5.mat", mesh_dir + "t5.mat",
-                                     mesh_dir + "e5.mat");
-  mesh.init();
+  femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
+      mesh_dir + "p5.mat", mesh_dir + "t5.mat", mesh_dir + "e5.mat");
 
   femib::finite_element::finite_element<float, 2, 1> f =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
@@ -152,11 +147,9 @@ TEST_CASE("plot() does not read out of bounds on a non-rectangular mesh") {
   // interior arithmetic hard-codes F<T,d,d> and a d-dimensional result
   // vector. P1_2d1d (e=1) does not type-check through plot(), so this
   // fixture uses the matching vector element P1_2d2d (e=d=2) instead.
-  femib::types::mesh<float, 2> mesh;
-  mesh.P = {{0, 0}, {2, 0}, {2, 1}, {1, 1}, {1, 2}, {0, 2}};
-  mesh.T = {{0, 1, 2}, {0, 2, 3}, {0, 3, 4}, {0, 4, 5}};
-  mesh.E = {0, 1, 2, 3, 4, 5};
-  mesh.init();
+  femib::types::mesh<float, 2> mesh(
+      {{0, 0}, {2, 0}, {2, 1}, {1, 1}, {1, 2}, {0, 2}},
+      {{0, 1, 2}, {0, 2, 3}, {0, 3, 4}, {0, 4, 5}}, {0, 1, 2, 3, 4, 5});
 
   femib::finite_element::finite_element<float, 2, 2> f =
       femib::finite_element::create_finite_element_P1_2d2d<float, 2, 2>();

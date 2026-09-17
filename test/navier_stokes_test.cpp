@@ -79,7 +79,6 @@ TEST_CASE("solve steady Navier-Stokes") {
 
   int n = 20;
   femib::types::mesh<float, 2> mesh = make_unit_square_mesh(n);
-  mesh.init();
 
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();
@@ -161,13 +160,11 @@ TEST_CASE("solve steady Navier-Stokes") {
 // TODO uh?
 TEST_CASE("assemble_convection matches by-hand-derived closed-form integrals "
           "on a single reference triangle") {
-  femib::types::mesh<float, 2> mesh;
-  mesh.P = {femib::types::dvec<float, 2>(0.0f, 0.0f),
-            femib::types::dvec<float, 2>(1.0f, 0.0f),
-            femib::types::dvec<float, 2>(0.0f, 1.0f)};
-  mesh.T = {femib::types::ditrian<2>(0, 1, 2)};
-  mesh.E = {0, 1, 2};
-  mesh.init();
+  femib::types::mesh<float, 2> mesh({femib::types::dvec<float, 2>(0.0f, 0.0f),
+                                     femib::types::dvec<float, 2>(1.0f, 0.0f),
+                                     femib::types::dvec<float, 2>(0.0f, 1.0f)},
+                                    {femib::types::ditrian<2>(0, 1, 2)},
+                                    {0, 1, 2});
 
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();
@@ -264,7 +261,6 @@ TEST_CASE("testing time-dependent Navier-Stokes" * doctest::skip(true)) {
 
   int n = 20;
   femib::types::mesh<float, 2> mesh = make_unit_square_mesh(n);
-  mesh.init();
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();
 
@@ -345,7 +341,6 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // numerical accuracy.
   int n = 6;
   femib::types::mesh<float, 2> mesh = make_unit_square_mesh(n);
-  mesh.init();
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();
 

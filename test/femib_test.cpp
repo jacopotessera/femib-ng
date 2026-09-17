@@ -25,7 +25,6 @@ TEST_CASE("testing femib poisson") {
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
       mesh_dir + "p5.mat", mesh_dir + "t5.mat", mesh_dir + "e5.mat");
-  mesh.init();
 
   femib::finite_element::finite_element<float, 2, 1> f =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
@@ -50,11 +49,9 @@ TEST_CASE("testing femib poisson") {
 TEST_CASE("testing build_not_edges") {
   // 4-triangle square mesh: 4 boundary corner nodes (0,1,2,3) plus one
   // interior center node (4).
-  femib::types::mesh<float, 2> mesh = {
-      .P = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
-      .T = {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}},
-      .E = {0, 1, 2, 3}};
-  mesh.init();
+  femib::types::mesh<float, 2> mesh(
+      {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
+      {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}}, {0, 1, 2, 3});
 
   femib::finite_element::finite_element<float, 2, 1> f =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
@@ -144,7 +141,6 @@ TEST_CASE("poisson::solve matches sin(pi x)sin(pi y) manufactured solution") {
 
   int n = 16;
   femib::types::mesh<float, 2> mesh = make_unit_square_mesh(n);
-  mesh.init();
 
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();

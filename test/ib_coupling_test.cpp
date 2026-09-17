@@ -11,7 +11,6 @@
 TEST_CASE("interpolate_velocity exactly reproduces a linear velocity field") {
   // MINI element reproduce any affine field exactly
   femib::types::mesh<float, 2> mesh = make_unit_square_mesh(6);
-  mesh.init();
 
   femib::finite_element::finite_element<float, 2, 2> fe =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
@@ -55,7 +54,6 @@ TEST_CASE("interpolate_velocity exactly reproduces a linear velocity field") {
 
 TEST_CASE("spread_force conserves total force") {
   femib::types::mesh<float, 2> mesh = make_unit_square_mesh(6);
-  mesh.init();
 
   femib::finite_element::finite_element<float, 2, 2> fe =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
@@ -99,7 +97,6 @@ TEST_CASE("spread_force conserves total force") {
 TEST_CASE("testing force spreading of a given elastic ring") {
 
   femib::types::mesh<float, 2> mesh = make_unit_square_mesh(16);
-  mesh.init();
 
   femib::finite_element::finite_element<float, 2, 2> fe =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();

@@ -40,18 +40,16 @@ template <typename T, typename W> std::vector<T> read(std::string filename) {
 
 template <typename T, int d>
 femib::types::mesh<T, d> read_mesh_file(std::string p, std::string t) {
-  femib::types::mesh<T, d> m;
-  m.P = read<femib::types::dvec<T, d>, T>(p);
-  m.T = read<femib::types::ditrian<d>, int>(t);
-  return m;
+  return femib::types::mesh<T, d>(read<femib::types::dvec<T, d>, T>(p),
+                                  read<femib::types::ditrian<d>, int>(t));
 }
 
 template <typename T, int d>
 femib::types::mesh<T, d> read_mesh_file(std::string p, std::string t,
                                         std::string e) {
-  femib::types::mesh<T, d> m = read_mesh_file<T, d>(p, t);
-  m.E = read<int, int>(e);
-  return m;
+  return femib::types::mesh<T, d>(read<femib::types::dvec<T, d>, T>(p),
+                                  read<femib::types::ditrian<d>, int>(t),
+                                  read<int, int>(e));
 }
 
 template femib::types::mesh<float, 2> read_mesh_file<float, 2>(std::string p,

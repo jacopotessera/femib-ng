@@ -13,11 +13,9 @@ TEST_CASE("testing mesh") {
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();
 
-  femib::types::mesh<float, 2> mesh = {
-      .P = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
-      .T = {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}},
-      .E = {0, 1, 2, 3}};
-  mesh.init();
+  femib::types::mesh<float, 2> mesh(
+      {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
+      {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}}, {0, 1, 2, 3});
 
   {
     std::function<float(femib::types::dvec<float, 2>)> f =
@@ -41,7 +39,6 @@ TEST_CASE("testing mesh") {
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh_from_file = femib::mesh::read<float, 2>(
       mesh_dir + "p0.mat", mesh_dir + "t0.mat", mesh_dir + "e0.mat");
-  mesh_from_file.init();
   CHECK(std::fabs(mesh_from_file.P[0][0] - (-1.0)) <= EPSILON);
   CHECK(mesh_from_file.T[0][0] == 0);
   CHECK(mesh_from_file.P.size() == 5);

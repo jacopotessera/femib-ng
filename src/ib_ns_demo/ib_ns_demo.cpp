@@ -19,14 +19,16 @@
 
 namespace {
 femib::types::mesh<double, 2> make_unit_square_mesh(int n) {
-  femib::types::mesh<double, 2> mesh;
+  std::vector<femib::types::dvec<double, 2>> p;
+  std::vector<femib::types::ditrian<2>> t;
+  std::vector<int> e;
   int side = n + 1;
   auto idx = [side](int i, int j) { return i * side + j; };
   for (int i = 0; i < side; ++i)
     for (int j = 0; j < side; ++j) {
       double x = static_cast<double>(i) / n;
       double y = static_cast<double>(j) / n;
-      mesh.P.push_back(femib::types::dvec<double, 2>(x, y));
+      p.push_back(femib::types::dvec<double, 2>(x, y));
     }
   // Checkerboard diagonal pattern (alternate by (i+j) parity), NOT the
   // fixed-diagonal-everywhere pattern this helper's own test/ib_test.cpp
@@ -41,18 +43,18 @@ femib::types::mesh<double, 2> make_unit_square_mesh(int n) {
       int p00 = idx(i, j), p10 = idx(i + 1, j), p01 = idx(i, j + 1),
           p11 = idx(i + 1, j + 1);
       if ((i + j) % 2 == 0) {
-        mesh.T.push_back(femib::types::ditrian<2>(p00, p10, p11));
-        mesh.T.push_back(femib::types::ditrian<2>(p00, p11, p01));
+        t.push_back(femib::types::ditrian<2>(p00, p10, p11));
+        t.push_back(femib::types::ditrian<2>(p00, p11, p01));
       } else {
-        mesh.T.push_back(femib::types::ditrian<2>(p00, p10, p01));
-        mesh.T.push_back(femib::types::ditrian<2>(p10, p11, p01));
+        t.push_back(femib::types::ditrian<2>(p00, p10, p01));
+        t.push_back(femib::types::ditrian<2>(p10, p11, p01));
       }
     }
   for (int i = 0; i < side; ++i)
     for (int j = 0; j < side; ++j)
       if (i == 0 || i == n || j == 0 || j == n)
-        mesh.E.push_back(idx(i, j));
-  return mesh;
+        e.push_back(idx(i, j));
+  return femib::types::mesh<double, 2>(p, t, e);
 }
 
 // Shoelace formula: signed area of the closed polygon X[0..n). The ring is
@@ -100,7 +102,6 @@ int main(int argc, char **argv) {
   femib::gauss::rule<double, 2> rule =
       femib::gauss::create_gauss_2_2d<double, 2>();
   femib::types::mesh<double, 2> mesh = make_unit_square_mesh(n_mesh);
-  mesh.init();
 
   femib::finite_element::finite_element<double, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P1_B_2d2d<double, 2, 2>();

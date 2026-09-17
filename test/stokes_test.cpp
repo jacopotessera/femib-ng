@@ -25,7 +25,6 @@ TEST_CASE("testing femib stokes") {
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh = femib::mesh::read<float, 2>(
       mesh_dir + "p3.mat", mesh_dir + "t3.mat", mesh_dir + "e3.mat");
-  mesh.init();
 
   // V
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
@@ -119,7 +118,6 @@ TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
 
   int n = 20;
   femib::types::mesh<float, 2> mesh = make_unit_square_mesh(n);
-  mesh.init();
 
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();

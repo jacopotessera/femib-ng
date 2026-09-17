@@ -72,8 +72,7 @@ template <typename f, int d>
 __host__ bool femib::cuda::in_box(const femib::types::dvec<f, d> &P,
                                   const femib::types::dtrian<f, d> &T) {
   f EPSILON = std::numeric_limits<f>::epsilon();
-  femib::types::mesh<f, d> mesh = {T};
-  femib::types::box<f, d> box = femib::mesh::find_box<f, d>(mesh);
+  femib::types::box<f, d> box = femib::mesh::find_box<f, d>(T);
   bool e = true;
   for (int i = 0; e && i < P.size(); ++i) {
     e = e && P(i) > (box[0](i) - EPSILON) && P(i) < (box[1](i) + EPSILON);

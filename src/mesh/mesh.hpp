@@ -95,20 +95,26 @@ femib::types::mesh<T, d> read(const std::string &filename_p,
 }
 
 template <typename T, int d>
-femib::types::box<T, d> find_box(const femib::types::mesh<T, d> &m) {
-  if (m.P.empty()) {
+femib::types::box<T, d>
+find_box(const std::vector<femib::types::dvec<T, d>> &points) {
+  if (points.empty()) {
     throw std::invalid_argument("find_box: mesh is empty");
   }
   femib::types::box<T, d> box;
-  femib::types::dvec<T, d> b1 = m.P[0];
-  femib::types::dvec<T, d> b2 = m.P[0];
-  for (int n = 1; n < m.P.size(); ++n) {
-    b1 = b1.array().min(m.P[n].array());
-    b2 = b2.array().max(m.P[n].array());
+  femib::types::dvec<T, d> b1 = points[0];
+  femib::types::dvec<T, d> b2 = points[0];
+  for (size_t n = 1; n < points.size(); ++n) {
+    b1 = b1.array().min(points[n].array());
+    b2 = b2.array().max(points[n].array());
   }
   box.emplace_back(b1);
   box.emplace_back(b2);
   return box;
+}
+
+template <typename T, int d>
+femib::types::box<T, d> find_box(const femib::types::mesh<T, d> &m) {
+  return find_box<T, d>(m.P);
 }
 
 template <typename T, int d>

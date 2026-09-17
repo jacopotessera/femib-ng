@@ -17,7 +17,6 @@ femib::ib::ib_problem<float, 2> make_ib_fixture(int n_mesh, int n_ring,
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();
   femib::types::mesh<float, 2> mesh = make_unit_square_mesh(n_mesh);
-  mesh.init();
 
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
