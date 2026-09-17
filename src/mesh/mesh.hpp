@@ -100,16 +100,13 @@ find_box(const std::vector<femib::types::dvec<T, d>> &points) {
   if (points.empty()) {
     throw std::invalid_argument("find_box: mesh is empty");
   }
-  femib::types::box<T, d> box;
   femib::types::dvec<T, d> b1 = points[0];
   femib::types::dvec<T, d> b2 = points[0];
   for (size_t n = 1; n < points.size(); ++n) {
     b1 = b1.array().min(points[n].array());
     b2 = b2.array().max(points[n].array());
   }
-  box.emplace_back(b1);
-  box.emplace_back(b2);
-  return box;
+  return femib::types::box<T, d>{.bottom = b1, .top = b2};
 }
 
 template <typename T, int d>
@@ -118,22 +115,20 @@ femib::types::box<T, d> find_box(const femib::types::mesh<T, d> &m) {
 }
 
 template <typename T, int d>
-femib::types::box<T, d> lin_spaced(
-    const femib::types::box<T, d> &b,
-    T delta) { // TODO build_uniform_grid, also a box is exactly 2 points (top,
-               // bottom), a grid is just a bunch of points, so std::vector
-  T x_min = b[0](0);
-  T x_max = b[1](0);
-  T y_min = b[0](1);
-  T y_max = b[1](1);
-  femib::types::box<T, d> box;
+std::vector<femib::types::dvec<T, d>>
+build_uniform_grid(const femib::types::box<T, d> &box, T delta) {
+  T x_min = box.bottom(0);
+  T x_max = box.top(0);
+  T y_min = box.bottom(1);
+  T y_max = box.top(1);
+  std::vector<femib::types::dvec<T, d>> grid;
   for (T x = x_min; x <= x_max; x += delta) {
     for (T y = y_min; y <= y_max; y += delta) {
       femib::types::dvec<T, d> w = {x, y};
-      box.emplace_back(w);
+      grid.emplace_back(w);
     }
   }
-  return box;
+  return grid;
 }
 
 } // namespace femib::mesh

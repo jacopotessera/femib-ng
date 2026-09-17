@@ -66,7 +66,10 @@ template <typename f, int d> struct mesh {
   inline const dtrian<f, d> &operator[](int i) const { return N[i]; }
 };
 
-template <typename f, int d> using box = std::vector<dvec<f, d>>;
+template <typename f, int d> struct box {
+  dvec<f, d> bottom;
+  dvec<f, d> top;
+};
 
 template <typename f, int d>
 dtrian_<f, d> *

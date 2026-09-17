@@ -38,13 +38,14 @@ template <typename T, int d, int e> struct finite_element_space {
 
   std::vector<std::pair<types::dvec<T, d>, types::dvec<T, e>>>
   plot(Eigen::Matrix<T, Eigen::Dynamic, 1> u, T delta) {
-    femib::types::box<T, d> box =
-        femib::mesh::lin_spaced<T, d>(femib::mesh::find_box<T, d>(mesh), delta);
-    std::vector<types::dvec<T, e>> results = interpolate(u, box);
+    femib::types::box<T, d> mesh_box = femib::mesh::find_box<T, d>(mesh);
+    std::vector<types::dvec<T, d>> grid =
+        femib::mesh::build_uniform_grid<T, d>(mesh_box, delta);
+    std::vector<types::dvec<T, e>> results = interpolate(u, grid);
 
     std::vector<std::pair<types::dvec<T, d>, types::dvec<T, e>>> plot_data;
-    plot_data.reserve(box.size());
-    for (auto [p, r] : std::views::zip(box, results)) {
+    plot_data.reserve(grid.size());
+    for (auto [p, r] : std::views::zip(grid, results)) {
       plot_data.emplace_back(
           std::pair<types::dvec<T, d>, types::dvec<T, e>>(p, r));
     }

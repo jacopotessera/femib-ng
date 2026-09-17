@@ -73,17 +73,17 @@ TEST_CASE("testing cuda accurate") {
 }
 
 TEST_CASE("testing cuda serial_accurate") {
-  femib::types::box<float, 2> boxx =
-      femib::mesh::lin_spaced<float, 2>(box, delta);
+  std::vector<femib::types::dvec<float, 2>> grid =
+      femib::mesh::build_uniform_grid<float, 2>(box, delta);
 
-  bool N[boxx.size() * mesh.N.size()];
+  bool N[grid.size() * mesh.N.size()];
 
-  femib::cuda::serial_accurate<float, 2>(boxx.data(), boxx.size(),
+  femib::cuda::serial_accurate<float, 2>(grid.data(), grid.size(),
                                          mesh.N.data(), mesh.N.size(), N);
 
   std::vector<int> NNN;
 
-  for (int i = 0; i < boxx.size(); ++i) {
+  for (int i = 0; i < grid.size(); ++i) {
     for (int n = 0; n < mesh.N.size(); ++n) {
       if (N[i * mesh.N.size() + n]) {
         NNN.push_back(n);
@@ -95,17 +95,17 @@ TEST_CASE("testing cuda serial_accurate") {
   CHECK(NNN[1] == 7);
   CHECK(NNN[2] == 7);
 
-  for (int i = 0; i < boxx.size(); ++i) {
+  for (int i = 0; i < grid.size(); ++i) {
     CHECK(NNN[i] >= 0);
     CHECK(NNN[i] < mesh.N.size());
   }
 }
 
 TEST_CASE("testing cuda parallel_accurate") {
-  femib::types::box<float, 2> boxx =
-      femib::mesh::lin_spaced<float, 2>(box, delta);
+  std::vector<femib::types::dvec<float, 2>> grid =
+      femib::mesh::build_uniform_grid<float, 2>(box, delta);
 
-  bool N[boxx.size() * mesh.N.size()];
+  bool N[grid.size() * mesh.N.size()];
 
   femib::types::dtrian_<float, 2> *T =
       femib::types::vector_dtrian2pointer_dtrian_<float, 2>(mesh.N);
@@ -114,17 +114,17 @@ TEST_CASE("testing cuda parallel_accurate") {
       femib::cuda::copyToDevice<femib::types::dtrian_<float, 2>>(T,
                                                                  mesh.N.size());
   femib::types::dvec<float, 2> *devX =
-      femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(boxx.data(),
-                                                              boxx.size());
-  bool *devN = femib::cuda::copyToDevice<bool>(N, boxx.size() * mesh.N.size());
-  femib::cuda::parallel_accurate<float, 2>(devX, boxx.size(), devT,
+      femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(grid.data(),
+                                                              grid.size());
+  bool *devN = femib::cuda::copyToDevice<bool>(N, grid.size() * mesh.N.size());
+  femib::cuda::parallel_accurate<float, 2>(devX, grid.size(), devT,
                                            mesh.N.size(), devN);
   bool *NN;
-  NN = femib::cuda::copyToHost<bool>(devN, boxx.size() * mesh.N.size());
+  NN = femib::cuda::copyToHost<bool>(devN, grid.size() * mesh.N.size());
 
   std::vector<int> NNN;
 
-  for (int i = 0; i < boxx.size(); ++i) {
+  for (int i = 0; i < grid.size(); ++i) {
     for (int n = 0; n < mesh.N.size(); ++n) {
       if (NN[i * mesh.N.size() + n]) {
         NNN.push_back(n);
@@ -146,10 +146,10 @@ TEST_CASE("testing cuda parallel_accurate") {
 }
 
 TEST_CASE("testing mesh find_points") {
-  femib::types::box<float, 2> boxx =
-      femib::mesh::lin_spaced<float, 2>(box, delta);
+  std::vector<femib::types::dvec<float, 2>> grid =
+      femib::mesh::build_uniform_grid<float, 2>(box, delta);
 
-  std::vector<int> NNN = femib::mesh::find_points<float, 2>(mesh, boxx);
+  std::vector<int> NNN = femib::mesh::find_points<float, 2>(mesh, grid);
 
   CHECK(NNN[0] == 7);
   CHECK(NNN[1] == 7);
@@ -158,12 +158,12 @@ TEST_CASE("testing mesh find_points") {
 
 // TODO parallel_accurate is not really accurate... but now it is!
 TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
-  femib::types::box<float, 2> boxx =
-      femib::mesh::lin_spaced<float, 2>(box, delta);
+  std::vector<femib::types::dvec<float, 2>> grid =
+      femib::mesh::build_uniform_grid<float, 2>(box, delta);
   int size_T = mesh.N.size();
 
-  bool Nser[boxx.size() * size_T];
-  femib::cuda::serial_accurate<float, 2>(boxx.data(), boxx.size(),
+  bool Nser[grid.size() * size_T];
+  femib::cuda::serial_accurate<float, 2>(grid.data(), grid.size(),
                                          mesh.N.data(), size_T, Nser);
 
   femib::types::dtrian_<float, 2> *T =
@@ -171,13 +171,13 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
   femib::types::dtrian_<float, 2> *devT =
       femib::cuda::copyToDevice<femib::types::dtrian_<float, 2>>(T, size_T);
   femib::types::dvec<float, 2> *devX =
-      femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(boxx.data(),
-                                                              boxx.size());
-  bool Npar_init[boxx.size() * size_T];
-  bool *devN = femib::cuda::copyToDevice<bool>(Npar_init, boxx.size() * size_T);
-  femib::cuda::parallel_accurate<float, 2>(devX, boxx.size(), devT, size_T,
+      femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(grid.data(),
+                                                              grid.size());
+  bool Npar_init[grid.size() * size_T];
+  bool *devN = femib::cuda::copyToDevice<bool>(Npar_init, grid.size() * size_T);
+  femib::cuda::parallel_accurate<float, 2>(devX, grid.size(), devT, size_T,
                                            devN);
-  bool *Npar = femib::cuda::copyToHost<bool>(devN, boxx.size() * size_T);
+  bool *Npar = femib::cuda::copyToHost<bool>(devN, grid.size() * size_T);
 
   auto shared_vertices = [&](int n1, int n2) {
     int count = 0;
@@ -196,7 +196,7 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
   int cpu_only_true_gpu_adjacent = 0;
   int cpu_only_true_gpu_elsewhere = 0;
   int cpu_only_true_gpu_lost = 0;
-  for (int k = 0; k < boxx.size() * size_T; ++k) {
+  for (int k = 0; k < grid.size() * size_T; ++k) {
     if (Npar[k] && !Nser[k]) {
       ++gpu_true_cpu_false;
     }
@@ -213,8 +213,8 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
       }
       if (gpu_match == -1) {
         ++cpu_only_true_gpu_lost;
-        std::cerr << "[cpu_only_true] point " << i << " (" << boxx[i](0) << ", "
-                  << boxx[i](1) << ") cpu triangle " << n
+        std::cerr << "[cpu_only_true] point " << i << " (" << grid[i](0) << ", "
+                  << grid[i](1) << ") cpu triangle " << n
                   << " -- gpu: unclassified in every triangle" << std::endl;
       } else {
         int shared = shared_vertices(n, gpu_match);
@@ -223,8 +223,8 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
         } else {
           ++cpu_only_true_gpu_elsewhere;
         }
-        std::cerr << "[cpu_only_true] point " << i << " (" << boxx[i](0) << ", "
-                  << boxx[i](1) << ") cpu triangle " << n << " -- gpu triangle "
+        std::cerr << "[cpu_only_true] point " << i << " (" << grid[i](0) << ", "
+                  << grid[i](1) << ") cpu triangle " << n << " -- gpu triangle "
                   << gpu_match << " (shared vertices " << shared << ")"
                   << std::endl;
       }

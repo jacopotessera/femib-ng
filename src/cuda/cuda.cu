@@ -75,7 +75,7 @@ __host__ bool femib::cuda::in_box(const femib::types::dvec<f, d> &P,
   femib::types::box<f, d> box = femib::mesh::find_box<f, d>(T);
   bool e = true;
   for (int i = 0; e && i < P.size(); ++i) {
-    e = e && P(i) > (box[0](i) - EPSILON) && P(i) < (box[1](i) + EPSILON);
+    e = e && P(i) > (box.bottom(i) - EPSILON) && P(i) < (box.top(i) + EPSILON);
   }
   return e;
 }

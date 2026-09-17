@@ -66,11 +66,6 @@ TEST_CASE("testing femib stokes_t pipeline with HDF5 persistence") {
   femib::stokes_t::stokes<float, 2> stokes =
       make_stokes_t_fixture(mesh, ones_force);
 
-  femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
-
-  femib::types::box<float, 2> boxx =
-      femib::mesh::lin_spaced<float, 2>(box, 0.1);
-
   std::string id = get_time();
 
   std::string path = "/tmp/femib_stokes_t_test_" + id + ".h5";

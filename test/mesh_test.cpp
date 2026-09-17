@@ -52,11 +52,10 @@ TEST_CASE("testing find_box") {
   femib::types::mesh<float, 2> mesh;
   mesh.P = {{1.0, 5.0}, {-2.0, 3.0}, {4.0, -1.0}, {0.0, 0.0}};
   femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
-  CHECK(box.size() == 2);
-  CHECK(box[0](0) == doctest::Approx(-2.0));
-  CHECK(box[0](1) == doctest::Approx(-1.0));
-  CHECK(box[1](0) == doctest::Approx(4.0));
-  CHECK(box[1](1) == doctest::Approx(5.0));
+  CHECK(box.bottom(0) == doctest::Approx(-2.0));
+  CHECK(box.bottom(1) == doctest::Approx(-1.0));
+  CHECK(box.top(0) == doctest::Approx(4.0));
+  CHECK(box.top(1) == doctest::Approx(5.0));
 }
 
 TEST_CASE("testing find_box: empty mesh") {
@@ -65,9 +64,9 @@ TEST_CASE("testing find_box: empty mesh") {
 }
 
 TEST_CASE("testing lin_spaced") {
-  femib::types::box<float, 2> box = {{0.0, 0.0}, {1.0, 1.0}};
+  femib::types::box<float, 2> box{.bottom = {0.0, 0.0}, .top = {1.0, 1.0}};
   std::vector<femib::types::dvec<float, 2>> points =
-      femib::mesh::lin_spaced<float, 2>(box, 0.25);
+      femib::mesh::build_uniform_grid<float, 2>(box, 0.25);
   CHECK(points.size() > 0);
   for (const auto &p : points) {
     CHECK(p(0) >= 0.0);
