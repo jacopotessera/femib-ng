@@ -160,25 +160,23 @@ TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
   stokes.V = v;
   stokes.Q = q;
 
-  femib::util::build_diagonal_result<float> result =
-      femib::util::build_diagonal<float, 2, 2>(
+  stokes.A = femib::util::triplets2sparse(
+      femib::util::build_diagonal_matrix<float, 2, 2>(
           stokes.V, rule,
           [mu = stokes.mu](femib::types::F<float, 2, 2> u,
                            femib::types::F<float, 2, 2> v) {
             return femib::stokes::stokes_a<float, 2>(u, v, mu);
-          },
-          ggg);
-  stokes.A = femib::util::triplets2sparse(result.M, stokes.V.nodes.P.size(),
-                                          stokes.V.nodes.P.size());
+          }),
+      stokes.V.nodes.P.size(), stokes.V.nodes.P.size());
   stokes.B = femib::util::triplets2sparse(
-      femib::util::build_non_diagonal<float, 2>(
+      femib::util::build_off_diagonal_matrix<float, 2>(
           stokes.V, stokes.Q, rule, femib::stokes::stokes_b<float, 2>),
       stokes.V.nodes.P.size(), stokes.Q.nodes.P.size());
 
   stokes.ff = Eigen::Matrix<float, Eigen::Dynamic, 1>::Zero(
       stokes.V.nodes.P.size() + stokes.Q.nodes.P.size());
   stokes.ff.block(0, 0, stokes.V.nodes.P.size(), 1) =
-      femib::util::triplets2dense(result.F, stokes.V.nodes.P.size(), 1);
+      femib::util::build_load_vector<float, 2, 2>(stokes.V, rule, ggg);
 
   femib::stokes::rebuild_system<float, 2>(stokes, rule);
 

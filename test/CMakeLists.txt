@@ -66,7 +66,7 @@ add_test (NAME femib_test COMMAND femib_test)
 
 add_executable (mass_test mass_test.cpp)
 target_compile_features (mass_test PRIVATE cxx_std_23)
-target_link_libraries (mass_test spdlog::spdlog Eigen3::Eigen doctest::doctest)
+target_link_libraries (mass_test spdlog::spdlog Eigen3::Eigen TBB::tbb doctest::doctest)
 add_test (NAME mass_test COMMAND mass_test)
 
 add_executable (stokes_test stokes_test.cpp)

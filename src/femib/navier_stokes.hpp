@@ -81,8 +81,8 @@ Eigen::SparseMatrix<T> assemble_convection(
         }
       });
 
-  return rho * femib::util::triplets2sparse(std::move(BB), V.nodes.P.size(),
-                                            V.nodes.P.size());
+  return rho *
+         femib::util::triplets2sparse(BB, V.nodes.P.size(), V.nodes.P.size());
 }
 
 // Picard iteration:

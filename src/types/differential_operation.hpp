@@ -56,9 +56,9 @@ convection(const femib::types::F<T, d, d> &w,
   };
 }
 
-template <typename T, int d>
-std::function<T(femib::types::dvec<T, d>)> mass(femib::types::F<T, d, d> a,
-                                                femib::types::F<T, d, d> b) {
+template <typename T, int d, int e>
+std::function<T(femib::types::dvec<T, d>)> mass(femib::types::F<T, d, e> a,
+                                                femib::types::F<T, d, e> b) {
   return
       [a, b](const femib::types::dvec<T, d> &x) { return a.x(x).dot(b.x(x)); };
 }
@@ -66,6 +66,14 @@ std::function<T(femib::types::dvec<T, d>)> mass(femib::types::F<T, d, d> a,
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)> zero(femib::types::F<T, d, d>) {
   return [](const femib::types::dvec<T, d> &) { return T(0); };
+}
+
+template <typename T, int d, int e>
+std::function<T(femib::types::dvec<T, d>)> ddot(femib::types::F<T, d, e> a,
+                                                femib::types::F<T, d, e> b) {
+  return [a, b](femib::types::dvec<T, d> x) {
+    return a.dx(x)[0] * b.dx(x)[0] + a.dx(x)[1] * b.dx(x)[1]; // TODO ? 3d?
+  };
 }
 
 #endif

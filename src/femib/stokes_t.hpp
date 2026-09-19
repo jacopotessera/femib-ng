@@ -31,7 +31,6 @@ template <typename T, int d> struct stokes {
   Eigen::SparseMatrix<T> B;
   Eigen::Matrix<T, Eigen::Dynamic, 1> f;
   Eigen::Matrix<T, Eigen::Dynamic, 1> bV;
-  femib::util::build_diagonal_result<T> result;
 
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> bQ;
   Eigen::Matrix<T, 1, Eigen::Dynamic> domain_integral_row;
@@ -72,16 +71,6 @@ stokes_b(femib::types::F<T, d, d> u, femib::types::F<T, d, 1> q) {
   return [u, q](const femib::types::dvec<T, d> &x) {
     return T(-1.0) * div(u)(x) * q.x(x)(0);
   };
-}
-
-template <typename T, int d>
-Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>
-mass_matrix(const femib::finite_element_space::finite_element_space<T, d, d> &V,
-            const femib::gauss::rule<T, d> &rule) {
-  femib::util::build_diagonal_result<T> result =
-      femib::util::build_diagonal<T, d, d>(V, rule, mass<T, d>, zero<T, d>);
-  return femib::util::triplets2dense(result.M, V.nodes.P.size(),
-                                     V.nodes.P.size());
 }
 
 // force at time t tested against the base function a
@@ -270,22 +259,18 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
   };
 
   T mu = s.mu;
-  femib::util::build_diagonal_result<T> result =
-      femib::util::build_diagonal<T, d, d>(
+  s.A = femib::util::triplets2sparse(
+      femib::util::build_diagonal_matrix<T, d, d>(
           s.V, rule,
           [mu](femib::types::F<T, d, d> u, femib::types::F<T, d, d> v) {
             return stokes_a<T, d>(u, v, mu);
-          },
-          ggg);
-
-  s.result = result;
-  s.A = femib::util::triplets2sparse(result.M, s.V.nodes.P.size(),
-                                     s.V.nodes.P.size());
-  // TODO build sparse mass_matrix
-  s.M = (s.rho * mass_matrix<T, d>(s.V, rule)).sparseView();
-  s.B = femib::util::triplets2sparse(
-      femib::util::build_non_diagonal<T, d>(s.V, s.Q, rule, stokes_b<T, d>),
-      s.V.nodes.P.size(), s.Q.nodes.P.size());
+          }),
+      s.V.nodes.P.size(), s.V.nodes.P.size());
+  s.M = s.rho * util::build_mass_matrix<T, d>(s.V, rule);
+  s.B =
+      femib::util::triplets2sparse(femib::util::build_off_diagonal_matrix<T, d>(
+                                       s.V, s.Q, rule, stokes_b<T, d>),
+                                   s.V.nodes.P.size(), s.Q.nodes.P.size());
 
   std::function<T(femib::types::dvec<T, d>)> b =
       [](const femib::types::dvec<T, d> &x) { return 0.0; };
@@ -303,7 +288,8 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 
   s.ff = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(nV + nQ, 1);
 
-  s.ff.block(0, 0, nV, 1) = femib::util::triplets2dense(s.result.F, nV, 1);
+  s.ff.block(0, 0, nV, 1) =
+      femib::util::build_load_vector<T, d, d>(s.V, rule, ggg);
 
   s.not_edges = build_stokes_t_not_edges<T, d>(s);
 
@@ -333,11 +319,8 @@ void rebuild_system(
   auto ggg = [force_n1](femib::types::F<T, d, d> a) {
     return external_force<T, d>(a, force_n1);
   };
-  std::vector<Eigen::Triplet<T>> F_triplets =
-      femib::util::build_vector<T, d, d>(s.V, s.rule, ggg);
-
   Eigen::Matrix<T, Eigen::Dynamic, 1> velocity_rhs =
-      femib::util::triplets2dense(F_triplets, s.V.nodes.P.size(), 1) + dd;
+      femib::util::build_load_vector<T, d, d>(s.V, s.rule, ggg) + dd;
 
   if (extra_velocity_rhs.has_value()) {
     velocity_rhs += extra_velocity_rhs.value();

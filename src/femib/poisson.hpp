@@ -2,10 +2,8 @@
 #define FEMIB_POISSON_HPP_INCLUDED_
 
 #include "../affine/affine.hpp"
-#include "../femib/femib.hpp"
 #include "../finite_element_space/finite_element_space.hpp"
 #include "../gauss/gauss.hpp"
-#include "../mesh/mesh.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <algorithm>
@@ -13,8 +11,11 @@
 #include <iostream>
 #include <vector>
 
+#include "femib.hpp"
+
 namespace femib::poisson {
 
+// TODO still dense
 template <typename T, int d, int e> struct poisson {
 
   femib::finite_element_space::finite_element_space<T, d, e> V;
@@ -31,14 +32,7 @@ template <typename T, int d, int e> struct poisson {
   Eigen::Matrix<T, Eigen::Dynamic, 1> dF;
 };
 
-template <typename T, int d, int e>
-std::function<T(femib::types::dvec<T, d>)> ddot(femib::types::F<T, d, e> a,
-                                                femib::types::F<T, d, e> b) {
-  return [a, b](femib::types::dvec<T, d> x) {
-    return a.dx(x)[0] * b.dx(x)[0] + a.dx(x)[1] * b.dx(x)[1];
-  };
-}
-
+// TODO add to constructor
 template <typename T, int d, int e>
 std::function<T(femib::types::dvec<T, d>)>
 external_force(femib::types::F<T, d, e> a) {
@@ -95,15 +89,9 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> add_edges(
   return xx;
 }
 
+// TODO constructor
 template <typename T, int d, int e>
 void init(poisson<T, d, e> &s, const femib::gauss::rule<T, d> &rule) {
-
-  femib::util::build_diagonal_result<T> result =
-      femib::util::build_diagonal<T, d, e>(s.V, rule, ddot<T, d, e>,
-                                           external_force<T, d, e>);
-
-  std::vector<Eigen::Triplet<T>> M = result.M;
-  std::vector<Eigen::Triplet<T>> F = result.F;
 
   std::function<T(femib::types::dvec<T, d>)> b =
       [](const femib::types::dvec<T, d> &x) { return 0; };
@@ -113,11 +101,12 @@ void init(poisson<T, d, e> &s, const femib::gauss::rule<T, d> &rule) {
   std::vector<int> not_edges = femib::util::build_not_edges<T, d, e>(s.V);
 
   s.dB = femib::util::triplets2dense<T>(B, s.V.nodes.P.size(), 1);
-  s.dM =
-      femib::util::triplets2dense<T>(M, s.V.nodes.P.size(), s.V.nodes.P.size());
-  s.dF = femib::util::triplets2dense<T>(F, s.V.nodes.P.size(), 1);
+  s.dM = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>(
+      util::build_stiffness_matrix(s.V, rule));
+  s.dF = util::build_load_vector(s.V, rule, external_force<T, d, e>);
 }
 
+// TODO use BICSTAG
 template <typename T, int d, int e>
 Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const poisson<T, d, e> &poisson) {
 

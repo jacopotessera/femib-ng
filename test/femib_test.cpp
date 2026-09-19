@@ -172,10 +172,6 @@ TEST_CASE("poisson::solve matches sin(pi x)sin(pi y) manufactured solution") {
     };
   };
 
-  femib::util::build_diagonal_result<float> result =
-      femib::util::build_diagonal<float, 2, 1>(
-          s, rule, femib::poisson::ddot<float, 2, 1>, ggg);
-
   std::function<float(femib::types::dvec<float, 2>)> zero_boundary =
       [](const femib::types::dvec<float, 2> &) { return 0.0f; };
   std::vector<Eigen::Triplet<float>> B =
@@ -185,10 +181,9 @@ TEST_CASE("poisson::solve matches sin(pi x)sin(pi y) manufactured solution") {
   femib::poisson::poisson<float, 2, 1> problem;
   problem.V = s;
   problem.dB = femib::util::triplets2dense<float>(B, s.nodes.P.size(), 1);
-  problem.dM = femib::util::triplets2dense<float>(result.M, s.nodes.P.size(),
-                                                  s.nodes.P.size());
-  problem.dF =
-      femib::util::triplets2dense<float>(result.F, s.nodes.P.size(), 1);
+  problem.dM = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(
+      femib::util::build_stiffness_matrix<float, 2, 1>(s, rule));
+  problem.dF = femib::util::build_load_vector<float, 2, 1>(s, rule, ggg);
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::poisson::solve<float, 2, 1>(problem);
