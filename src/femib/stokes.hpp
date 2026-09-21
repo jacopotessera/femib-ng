@@ -55,19 +55,6 @@ external_force(femib::types::F<T, d, d> a) {
       [a](const femib::types::dvec<T, d> &x) { return a.x(x)[0] + a.x(x)[1]; };
 }
 
-// TODO duplicated
-template <typename T>
-Eigen::SparseMatrix<T> selection_matrix(const std::vector<int> &rows, int n) {
-  Eigen::SparseMatrix<T> P(rows.size(), n);
-  std::vector<Eigen::Triplet<T>> triplets;
-  triplets.reserve(rows.size());
-  for (size_t i = 0; i < rows.size(); ++i) {
-    triplets.push_back(Eigen::Triplet<T>((int)i, rows[i], T(1)));
-  }
-  P.setFromTriplets(triplets.begin(), triplets.end());
-  return P;
-}
-
 template <typename T>
 femib::util::sparse_solvable_equations<T>
 remove_edges(const Eigen::SparseMatrix<T> &dM,
@@ -84,7 +71,7 @@ remove_edges(const Eigen::SparseMatrix<T> &dM,
   }
 
   Eigen::SparseMatrix<T> P =
-      selection_matrix<T>(not_edges, static_cast<int>(dM.rows()));
+      femib::util::selection_matrix<T>(not_edges, static_cast<int>(dM.rows()));
   Eigen::SparseMatrix<T> AAA = P * dM * P.transpose();
 
   return {AAA, bbb};

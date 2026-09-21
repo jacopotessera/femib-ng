@@ -35,6 +35,20 @@ triplets2dense(const std::vector<Eigen::Triplet<T>> &triplets, const int rows,
   return dense_matrix;
 }
 
+// selects (and permutes) the given rows/cols out of a matrix: P * A * P^T
+// keeps only rows/cols in `rows`, in that order.
+template <typename T>
+Eigen::SparseMatrix<T> selection_matrix(const std::vector<int> &rows, int n) {
+  Eigen::SparseMatrix<T> P(rows.size(), n);
+  std::vector<Eigen::Triplet<T>> triplets;
+  triplets.reserve(rows.size());
+  for (size_t i = 0; i < rows.size(); ++i) {
+    triplets.push_back(Eigen::Triplet<T>((int)i, rows[i], T(1)));
+  }
+  P.setFromTriplets(triplets.begin(), triplets.end());
+  return P;
+}
+
 // TODO are the captures correct?
 template <typename T, int d, int e>
 femib::types::F<T, d, e> base_function2real_function(

@@ -33,10 +33,7 @@ TEST_CASE("testing femib poisson") {
       .finite_element = f, .mesh = mesh};
   s.nodes = f.build_nodes(mesh); // TODO do this in constructor?
 
-  femib::poisson::poisson<float, 2, 1> poisson = {s};
-
-  femib::poisson::init<float, 2, 1>(poisson, rule);
-  auto end = std::chrono::steady_clock::now();
+  femib::poisson::poisson<float, 2, 1> poisson(s, rule);
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::poisson::solve<float, 2, 1>(poisson);
@@ -151,24 +148,14 @@ TEST_CASE("poisson::solve matches sin(pi x)sin(pi y) manufactured solution") {
   femib::finite_element_space::finite_element_space<float, 2, 1> s = {fe, mesh};
   s.nodes = fe.build_nodes(mesh);
 
-  // TODO this note says: poisson interface is wrong...
-  // NOTE on how this test wires in the forcing term: femib::poisson::init's
-  // existing pipeline calls build_diagonal with femib::poisson::external_force
-  // itself as the RHS functor, and build_diagonal always invokes that functor
-  // on a basis function of the SAME finite element space used for the
-  // stiffness matrix -- there is no hook to inject an independent, spatially
-  // varying source field through that path (it always assembles integral(phi_i)
-  // dx, i.e. an implicit constant unit forcing f===1). To genuinely exercise
-  // this manufactured solution's nonzero, non-constant forcing term -- and
-  // specifically the out-of-bounds `external_force` code path this task
-  // fixes -- this test assembles the RHS itself: it still calls
-  // femib::poisson::external_force explicitly (so the fix under test is on
-  // the exact path exercised) and multiplies its result by the manufactured
-  // `forcing` field, then hands the assembled dM/dF/dB to femib::poisson::solve
-  // exactly as femib::poisson::init would have.
+  // poisson's default force is an implicit constant unit forcing, with no
+  // hook to inject an independent source field -- so this test builds the
+  // system by hand instead of via the poisson(V, rule) constructor, scaling
+  // the default force's per-basis-function projection (a.x(x)(0), since e=1)
+  // by the manufactured `forcing` field.
   auto ggg = [forcing](femib::types::F<float, 2, 1> a) {
     return [a, forcing](const femib::types::dvec<float, 2> &x) {
-      return forcing(x) * femib::poisson::external_force<float, 2, 1>(a)(x);
+      return forcing(x) * a.x(x)(0);
     };
   };
 
@@ -181,8 +168,7 @@ TEST_CASE("poisson::solve matches sin(pi x)sin(pi y) manufactured solution") {
   femib::poisson::poisson<float, 2, 1> problem;
   problem.V = s;
   problem.dB = femib::util::triplets2dense<float>(B, s.nodes.P.size(), 1);
-  problem.dM = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(
-      femib::util::build_stiffness_matrix<float, 2, 1>(s, rule));
+  problem.dM = femib::util::build_stiffness_matrix<float, 2, 1>(s, rule);
   problem.dF = femib::util::build_load_vector<float, 2, 1>(s, rule, ggg);
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
