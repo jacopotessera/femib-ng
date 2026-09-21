@@ -36,7 +36,7 @@ triplets2dense(const std::vector<Eigen::Triplet<T>> &triplets, const int rows,
 }
 
 // selects (and permutes) the given rows/cols out of a matrix: P * A * P^T
-// keeps only rows/cols in `rows`, in that order.
+// keeps only rows/cols in `rows`, in that order
 template <typename T>
 Eigen::SparseMatrix<T> selection_matrix(const std::vector<int> &rows, int n) {
   Eigen::SparseMatrix<T> P(rows.size(), n);
@@ -67,15 +67,63 @@ femib::types::F<T, d, e> base_function2real_function(
   return a;
 }
 
-template <typename T> struct solvable_equations {
-  Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> A;
-  Eigen::Matrix<T, Eigen::Dynamic, 1> b;
-};
-
 template <typename T> struct sparse_solvable_equations {
   Eigen::SparseMatrix<T> A;
   Eigen::Matrix<T, Eigen::Dynamic, 1> b;
 };
+
+// reduces A x = f (with Dirichlet values bV on the E nodes) to a smaller
+// system over just not_edges, folding bV's contribution into the RHS.
+template <typename T>
+sparse_solvable_equations<T>
+remove_edges(const Eigen::SparseMatrix<T> &dM,              // TODO full matrix
+             const Eigen::Matrix<T, Eigen::Dynamic, 1> &dF, // TODO full vector
+             const Eigen::Matrix<T, Eigen::Dynamic, 1> &bV, // TODO edge values?
+             const std::vector<int> &not_edges) { // TODO not edges nodes
+
+  Eigen::Matrix<T, Eigen::Dynamic, 1> ss = dM * bV;
+
+  int n = static_cast<int>(not_edges.size());
+  Eigen::Matrix<T, Eigen::Dynamic, 1> bbb(n);
+  for (int i = 0; i < n; ++i) {
+    bbb(i) = dF(not_edges[i]) - ss(not_edges[i]);
+  }
+
+  Eigen::SparseMatrix<T> P =
+      selection_matrix<T>(not_edges, static_cast<int>(dM.rows()));
+  Eigen::SparseMatrix<T> AAA = P * dM * P.transpose();
+
+  return {AAA, bbb};
+}
+
+// inverse of remove_edges: expands a not_edges-only solution xxx back to the
+// full `rows`-length vector, filling E nodes with bV and everything else
+// with xxx's corresponding not_edges entry.
+template <typename T>
+Eigen::Matrix<T, Eigen::Dynamic, 1>
+add_edges(const Eigen::Matrix<T, Eigen::Dynamic, 1>
+              &xxx, // TODO solution for the reduced problem
+          const Eigen::Matrix<T, Eigen::Dynamic, 1> &bV,
+          int rows, // TODO edge values
+          const std::vector<int> &not_edges, const std::vector<int> &nodesE) {
+
+  Eigen::Matrix<T, Eigen::Dynamic, 1> xx; // TODO full solution vector
+  xx.resize(rows, 1);
+
+  for (int i = 0; i < rows; i++) {
+    xx(i, 0) = 0.0;
+    auto k = std::find(not_edges.begin(), not_edges.end(), i);
+    if (k != not_edges.end()) {
+      xx(i, 0) = xxx(k - not_edges.begin(), 0);
+    }
+    auto kk = std::find(nodesE.begin(), nodesE.end(), i);
+    if (kk != nodesE.end()) {
+      xx(i, 0) = bV(i, 0);
+    }
+  }
+
+  return xx;
+}
 
 template <typename T, int d, int e>
 std::vector<Eigen::Triplet<T>> build_diagonal_matrix(

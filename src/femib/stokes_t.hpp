@@ -4,7 +4,6 @@
 #include "../femib/femib.hpp"
 #include "../finite_element_space/finite_element_space.hpp"
 #include "../gauss/gauss.hpp"
-#include "../mesh/mesh.hpp"
 #include "../types/differential_operation.hpp"
 #include <Eigen/Dense>
 #include <Eigen/IterativeLinearSolvers>
@@ -89,53 +88,6 @@ std::function<T(femib::types::dvec<T, d>)> external_force(
   };
 }
 
-template <typename T>
-util::sparse_solvable_equations<T>
-remove_edges(const Eigen::SparseMatrix<T> &dM,
-             const Eigen::Matrix<T, Eigen::Dynamic, 1> &dF,
-             const Eigen::Matrix<T, Eigen::Dynamic, 1> &bV,
-             const std::vector<int> &not_edges) {
-
-  Eigen::Matrix<T, Eigen::Dynamic, 1> ss = dM * bV;
-
-  int n = static_cast<int>(not_edges.size());
-  Eigen::Matrix<T, Eigen::Dynamic, 1> bbb(n);
-  for (int i = 0; i < n; ++i) {
-    bbb(i) = dF(not_edges[i]) - ss(not_edges[i]);
-  }
-
-  Eigen::SparseMatrix<T> P =
-      femib::util::selection_matrix<T>(not_edges, static_cast<int>(dM.rows()));
-  Eigen::SparseMatrix<T> AAA = P * dM * P.transpose();
-
-  return {AAA, bbb};
-}
-
-template <typename T>
-Eigen::Matrix<T, Eigen::Dynamic, 1> add_edges(
-
-    Eigen::Matrix<T, Eigen::Dynamic, 1> xxx,
-    Eigen::Matrix<T, Eigen::Dynamic, 1> bV, int rowsV, int rowsQ,
-    std::vector<int> not_edges, std::vector<int> nodesE) {
-
-  Eigen::Matrix<T, Eigen::Dynamic, 1> xx;
-  xx.resize(rowsV + rowsQ, 1);
-
-  for (int i = 0; i < rowsV + rowsQ; i++) {
-    xx(i, 0) = 0.0;
-    auto k = std::find(not_edges.begin(), not_edges.end(), i);
-    if (k != not_edges.end()) {
-      xx(i, 0) = xxx(k - not_edges.begin(), 0);
-    }
-    auto kk = std::find(nodesE.begin(), nodesE.end(), i);
-    if (kk != nodesE.end()) {
-      xx(i, 0) = bV(i, 0);
-    }
-  }
-
-  return xx;
-}
-
 template <typename T, int d>
 std::vector<int> build_stokes_t_not_edges(const stokes<T, d> &s) {
   std::vector<int> not_edges = femib::util::build_not_edges<T, d, d>(s.V);
@@ -153,7 +105,7 @@ augment_with_pressure_gauge(const stokes<T, d> &s,
                             const std::vector<int> &not_edges) {
 
   util::sparse_solvable_equations<T> base =
-      remove_edges<T>(AA, ff, s.bV, not_edges);
+      femib::util::remove_edges<T>(AA, ff, s.bV, not_edges);
 
   int n = static_cast<int>(not_edges.size());
   Eigen::Matrix<T, Eigen::Dynamic, 1> constraint_row_reduced =
@@ -343,9 +295,9 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &s) {
   // drop the last row, constraint on pressure
   Eigen::Matrix<T, Eigen::Dynamic, 1> x_no_lambda = x.topRows(x.rows() - 1);
 
-  Eigen::Matrix<T, Eigen::Dynamic, 1> xx =
-      add_edges<T>(x_no_lambda, s.bV, s.V.nodes.P.size(), s.Q.nodes.P.size(),
-                   s.not_edges, s.V.nodes.E);
+  Eigen::Matrix<T, Eigen::Dynamic, 1> xx = femib::util::add_edges<T>(
+      x_no_lambda, s.bV, s.V.nodes.P.size() + s.Q.nodes.P.size(), s.not_edges,
+      s.V.nodes.E);
 
   return xx;
 }
