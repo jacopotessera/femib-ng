@@ -81,11 +81,26 @@ assemble_saddle_point_matrix(const Eigen::SparseMatrix<T> &top_left,
   return AA;
 }
 
+// entry(j) = integral of pressure basis function j over the whole domain, so
+// entry . q = integral of q over the domain: the zero-mean pressure gauge
+// constraint. Equivalent to build_load_vector(v, rule, load≡1). Un-normalized
+// (not divided by domain volume), which is fine since the constraint is
+// homogeneous (scaling it by a positive constant doesn't change the solution).
+template <typename T, int d>
+Eigen::Matrix<T, Eigen::Dynamic, 1> build_pressure_constraint_vector(
+    const femib::finite_element_space::finite_element_space<T, d, 1> &v, // TODO no need to pass finite_element_space, it's the pressure one
+    const femib::gauss::rule<T, d> &rule) {
+  return femib::util::build_load_vector<T, d, 1>(
+      v, rule, [](femib::types::F<T, d, 1> a) {
+        return [a](const femib::types::dvec<T, d> &x) { return a.x(x)(0); };
+      });
+}
+
 template <typename T, int d>
 femib::util::sparse_solvable_equations<T> augment_with_pressure_gauge(
     const stokes<T, d> &s, const Eigen::SparseMatrix<T> &AA,
     const Eigen::Matrix<T, Eigen::Dynamic, 1> &ff,
-    const Eigen::Matrix<T, 1, Eigen::Dynamic> &domain_integral_row,
+    const Eigen::Matrix<T, Eigen::Dynamic, 1> &pressure_constraint_vector,
     const std::vector<int> &not_edges) {
 
   femib::util::sparse_solvable_equations<T> base =
@@ -98,7 +113,7 @@ femib::util::sparse_solvable_equations<T> augment_with_pressure_gauge(
     int global_i = not_edges[k];
     if (global_i >= s.V.nodes.P.size()) {
       int pressure_i = global_i - s.V.nodes.P.size();
-      constraint_row_reduced(k) = domain_integral_row(pressure_i);
+      constraint_row_reduced(k) = pressure_constraint_vector(pressure_i);
     }
   }
 
@@ -149,8 +164,8 @@ void rebuild_system(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
       femib::util::triplets2dense(femib::util::build_edges<T, d, d>(s.V, b),
                                   s.V.nodes.P.size() + s.Q.nodes.P.size(), 1);
 
-  Eigen::Matrix<T, 1, Eigen::Dynamic> domain_integral_row =
-      femib::util::build_domain_integral_row<T, d>(s.Q, rule);
+  Eigen::Matrix<T, Eigen::Dynamic, 1> pressure_constraint_vector =
+      build_pressure_constraint_vector<T, d>(s.Q, rule);
 
   int nV = s.V.nodes.P.size();
   int nQ = s.Q.nodes.P.size();
@@ -162,7 +177,7 @@ void rebuild_system(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
   }
 
   s.solvable_equations = augment_with_pressure_gauge<T, d>(
-      s, s.AA, s.ff, domain_integral_row, not_edges);
+      s, s.AA, s.ff, pressure_constraint_vector, not_edges);
 }
 
 template <typename T, int d>

@@ -143,7 +143,7 @@ TEST_CASE("testing advance over several timesteps") {
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> p =
       s.solution.back().bottomRows(s.Q.nodes.P.size());
-  CHECK(std::abs(s.domain_integral_row.dot(p)) < 1e-4f);
+  CHECK(std::abs(s.pressure_constraint_vector.dot(p)) < 1e-4f);
 }
 
 // TODO MMS Method of Manufactured Solutions

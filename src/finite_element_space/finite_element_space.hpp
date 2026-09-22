@@ -13,6 +13,8 @@ template <typename T, int d, int e> struct finite_element_space {
   femib::types::mesh<T, d> mesh;
   femib::types::nodes<T, d> nodes;
 
+  [[nodiscard]] int size() const { return static_cast<int>(nodes.P.size()); }
+
   std::vector<femib::types::dvec<T, e>>
   interpolate(const Eigen::Matrix<T, Eigen::Dynamic, 1> &u,
               std::vector<femib::types::dvec<T, d>> &points) {

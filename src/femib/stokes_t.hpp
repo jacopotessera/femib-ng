@@ -2,6 +2,7 @@
 #define FEMIB_STOKES_T_HPP_INCLUDED_
 
 #include "../femib/femib.hpp"
+#include "../femib/stokes.hpp"
 #include "../finite_element_space/finite_element_space.hpp"
 #include "../gauss/gauss.hpp"
 #include "../types/differential_operation.hpp"
@@ -32,7 +33,7 @@ template <typename T, int d> struct stokes {
   Eigen::Matrix<T, Eigen::Dynamic, 1> bV;
 
   Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> bQ;
-  Eigen::Matrix<T, 1, Eigen::Dynamic> domain_integral_row;
+  Eigen::Matrix<T, Eigen::Dynamic, 1> pressure_constraint_vector;
 
   Eigen::SparseMatrix<T> AA;
   Eigen::Matrix<T, Eigen::Dynamic, 1> ff;
@@ -114,7 +115,7 @@ augment_with_pressure_gauge(const stokes<T, d> &s,
     int global_i = not_edges[k];
     if (global_i >= s.V.nodes.P.size()) {
       int pressure_i = global_i - s.V.nodes.P.size();
-      constraint_row_reduced(k) = s.domain_integral_row(pressure_i);
+      constraint_row_reduced(k) = s.pressure_constraint_vector(pressure_i);
     }
   }
 
@@ -218,8 +219,8 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
       femib::util::triplets2dense(femib::util::build_edges<T, d, d>(s.V, b),
                                   s.V.nodes.P.size() + s.Q.nodes.P.size(), 1);
 
-  s.domain_integral_row =
-      femib::util::build_domain_integral_row<T, d>(s.Q, rule);
+  s.pressure_constraint_vector =
+      femib::stokes::build_pressure_constraint_vector<T, d>(s.Q, rule);
 
   int nV = s.V.nodes.P.size();
   int nQ = s.Q.nodes.P.size();
@@ -270,7 +271,8 @@ void rebuild_system(
   // The velocity-velocity block of AA/ff just changed (the backward-Euler
   // mass term, and possibly a Picard-updated convection term), so the
   // solvable system must be rebuilt.
-  // s.domain_integral_row and s.not_edges do not change, so they're reused.
+  // s.pressure_constraint_vector and s.not_edges do not change, so they're
+  // reused.
   s.solvable_equations =
       augment_with_pressure_gauge<T, d>(s, s.AA, s.ff, s.not_edges);
 }

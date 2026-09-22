@@ -55,8 +55,7 @@ template <typename T, int d, int e> struct poisson {
               force = default_force<T, d, e>(),
           std::unique_ptr<femib::util::sparse_solver<T>> solver =
               femib::util::default_solver_factory<T>())
-      : V(std::move(v)), force(std::move(force)),
-        solver(std::move(solver)) { // TODO why move? can we take by reference?
+      : V(std::move(v)), force(std::move(force)), solver(std::move(solver)) {
     std::vector<Eigen::Triplet<T>> B =
         femib::util::build_edges<T, d, e>(V, boundary);
 
