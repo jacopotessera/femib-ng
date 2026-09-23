@@ -3,7 +3,7 @@ find_package (doctest REQUIRED)
 find_package (TBB REQUIRED)
 find_package (Eigen3 REQUIRED NO_MODULE)
 
-add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test read_test finite_element_test finite_element_space_test femib_test write_test stokes_test stokes_t_test ib_structure_test ib_coupling_test ib_test navier_stokes_test mass_test)
+add_custom_target (check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS affine_test cuda_test gauss_test types_test mesh_test read_test finite_element_test finite_element_space_test femib_test write_test stokes_test stokes_t_test ib_structure_test ib_coupling_test ib_test navier_stokes_test mass_test nonlinear_solvers_test)
 
 include_directories (../src/affine)
 add_executable (affine_test affine_test.cpp)
@@ -110,3 +110,8 @@ add_executable (navier_stokes_test navier_stokes_test.cpp)
 target_compile_features (navier_stokes_test PRIVATE cxx_std_23)
 target_link_libraries (navier_stokes_test cuda spdlog::spdlog Eigen3::Eigen TBB::tbb doctest::doctest)
 add_test (NAME navier_stokes_test COMMAND navier_stokes_test)
+
+add_executable (nonlinear_solvers_test nonlinear_solvers_test.cpp)
+target_compile_features (nonlinear_solvers_test PRIVATE cxx_std_23)
+target_link_libraries (nonlinear_solvers_test Eigen3::Eigen doctest::doctest)
+add_test (NAME nonlinear_solvers_test COMMAND nonlinear_solvers_test)
