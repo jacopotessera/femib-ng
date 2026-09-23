@@ -101,10 +101,9 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> build_pressure_constraint_vector(
 template <typename T, int d> struct stokes {
   femib::finite_element_space::finite_element_space<T, d, d> V;
   femib::finite_element_space::finite_element_space<T, d, 1> Q;
-  T rho = 1.0;
-  T mu = 1.0;
-  std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)> force =
-      default_force<T, d>();
+  T rho;
+  T mu;
+  std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)> force;
 
   Eigen::SparseMatrix<T> A;
   Eigen::SparseMatrix<T> B;
@@ -118,7 +117,6 @@ template <typename T, int d> struct stokes {
 
   std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1>> solution;
 
-  stokes() = default;
   stokes(femib::finite_element_space::finite_element_space<T, d, d> v,
          femib::finite_element_space::finite_element_space<T, d, 1> q,
          const femib::gauss::rule<T, d> &rule, T rho = 1.0, T mu = 1.0,
@@ -195,23 +193,6 @@ template <typename T, int d> void rebuild_system(stokes<T, d> &s) {
   s.solvable_equations = augment_with_pressure_gauge<T, d>(s);
 }
 
-template <typename T, int d>
-void rebuild_system(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
-  std::function<T(femib::types::dvec<T, d>)> zero_boundary =
-      [](const femib::types::dvec<T, d> &) { return T(0); };
-  s.bV = femib::util::triplets2dense(
-      femib::util::build_edges<T, d, d>(s.V, zero_boundary),
-      s.V.size() + s.Q.size(), 1);
-  s.pressure_constraint_vector =
-      build_pressure_constraint_vector<T, d>(s.Q, rule);
-  s.not_edges = femib::util::build_not_edges<T, d, d>(s.V);
-  for (int i = 0; i < s.Q.size(); ++i) {
-    s.not_edges.push_back(s.V.size() + i);
-  }
-  s.AA = assemble_saddle_point_matrix<T>(s.A, s.B, s.V.size(), s.Q.size());
-  rebuild_system<T, d>(s);
-}
-
 template <typename T, int d, int e>
 Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &s) {
 
@@ -267,7 +248,18 @@ stokes<T, d>::stokes(
         return external_force<T, d>(a, force_at_0);
       });
 
-  rebuild_system<T, d>(*this, rule);
+  std::function<T(femib::types::dvec<T, d>)> zero_boundary =
+      [](const femib::types::dvec<T, d> &) { return T(0); };
+  bV = femib::util::triplets2dense(
+      femib::util::build_edges<T, d, d>(V, zero_boundary), V.size() + Q.size(),
+      1);
+  pressure_constraint_vector = build_pressure_constraint_vector<T, d>(Q, rule);
+  not_edges = femib::util::build_not_edges<T, d, d>(V);
+  for (int i = 0; i < Q.size(); ++i) {
+    not_edges.push_back(V.size() + i);
+  }
+  AA = assemble_saddle_point_matrix<T>(A, B, V.size(), Q.size());
+  rebuild_system<T, d>(*this);
 }
 
 } // namespace femib::stokes_steady

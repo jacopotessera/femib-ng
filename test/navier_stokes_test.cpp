@@ -1,6 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../src/affine/affine.hpp"
 #include "../src/femib/navier_stokes.hpp"
+#include "../src/femib/navier_stokes_steady.hpp"
 #include "../src/femib/stokes.hpp"
 #include "../src/finite_element/P0_2d1d.hpp"
 #include "../src/finite_element/P1+B_2d2d.hpp"
@@ -12,6 +13,7 @@
 #include "../src/types/differential_operation.hpp"
 #include <cmath>
 #include <doctest/doctest.h>
+#include <memory>
 
 #include "utils.hpp"
 
@@ -95,17 +97,22 @@ TEST_CASE("solve steady Navier-Stokes") {
       .finite_element = f_p1_2d1d, .mesh = mesh};
   q.nodes = f_p1_2d1d.build_nodes(mesh);
 
-  femib::stokes_steady::stokes<float, 2> s(
+  femib::navier_stokes_steady::navier_stokes<float, 2> s(
       v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f,
       [f1, f2](const femib::types::dvec<float, 2> &x,
                float) -> femib::types::dvec<float, 2> {
         return femib::types::dvec<float, 2>(f1(x(0), x(1)), f2(x(0), x(1)));
-      });
+      },
+      std::make_unique<femib::util::picard_solver<float>>(30, 1e-5f));
+  const Eigen::SparseMatrix<float> A_before = s.A;
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
-      femib::navier_stokes::solve_steady<float, 2>(s, rule,
-                                                   /*max_picard_iters=*/30,
-                                                   /*tol=*/1e-5f);
+      femib::navier_stokes_steady::solve<float, 2>(s, rule);
+
+  CHECK_EQ((s.A - A_before).norm(), 0.0f);
+  REQUIRE_EQ(s.solution.size(), 1);
+  CHECK_EQ((s.solution.back() - xx).norm(), 0.0f);
+  CHECK_FALSE(s.plot_velocity(0.1f).empty());
 
   size_t size_P = mesh.P.size();
   size_t size_T = mesh.T.size();
@@ -152,8 +159,9 @@ TEST_CASE("assemble_convection matches by-hand-derived closed-form integrals "
   w_dofs << 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f;
 
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> M =
-      femib::navier_stokes::assemble_convection<float, 2>(v, rule, w_dofs,
-                                                          /*rho=*/1.0f);
+      femib::navier_stokes_common::assemble_convection<float, 2>(v, rule,
+                                                                 w_dofs,
+                                                                 /*rho=*/1.0f);
 
   REQUIRE_EQ(M.rows(), 6);
   REQUIRE_EQ(M.cols(), 6);
@@ -195,8 +203,9 @@ TEST_CASE("assemble_convection matches by-hand-derived closed-form integrals "
   }
   // rho scaling.
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> M_double_rho =
-      femib::navier_stokes::assemble_convection<float, 2>(v, rule, w_dofs,
-                                                          /*rho=*/2.0f);
+      femib::navier_stokes_common::assemble_convection<float, 2>(v, rule,
+                                                                 w_dofs,
+                                                                 /*rho=*/2.0f);
   CHECK_LT((M_double_rho - 2.0f * M).norm(), tol);
 }
 
@@ -376,7 +385,7 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
                                           /*tol=*/1e-5f);
 
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> conv_expected =
-      femib::navier_stokes::assemble_convection<float, 2>(
+      femib::navier_stokes_common::assemble_convection<float, 2>(
           s.V, rule, w_dofs_expected, s.rho);
   // Sanity: the expected convection contribution must clear this test's
   // own wiring-check tolerance (below) with comfortable margin -- otherwise

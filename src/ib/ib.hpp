@@ -15,12 +15,12 @@ template <typename T, int d> struct ib_problem {
   femib::stokes::stokes<T, d> fluid;
   ring<T, d> structure;
 
-  ib_problem(femib::finite_element_space::finite_element_space<T, d, d> v,
-             femib::finite_element_space::finite_element_space<T, d, 1> q,
-             femib::gauss::rule<T, d> rule, T rho = 1.0, T mu = 1.0,
-             T deltat = 0.1,
-             std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
-                 force = femib::stokes_steady::default_force<T, d>())
+  ib_problem(
+      femib::finite_element_space::finite_element_space<T, d, d> v,
+      femib::finite_element_space::finite_element_space<T, d, 1> q,
+      femib::gauss::rule<T, d> rule, T rho = 1.0, T mu = 1.0, T deltat = 0.1,
+      std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
+          force = femib::stokes_steady::default_force<T, d>())
       : fluid(std::move(v), std::move(q), std::move(rule), rho, mu, deltat,
               std::move(force)) {}
 };
