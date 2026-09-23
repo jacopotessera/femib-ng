@@ -1,66 +1,74 @@
 #ifndef FEMIB_NAVIER_STOKES_HPP_INCLUDED_
 #define FEMIB_NAVIER_STOKES_HPP_INCLUDED_
 
+#include "../femib/femib.hpp"
+#include "../finite_element_space/finite_element_space.hpp"
 #include "../gauss/gauss.hpp"
 #include "navier_stokes_common.hpp"
+#include "nonlinear_solvers.hpp"
 #include "stokes.hpp"
 #include "stokes_steady.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-#include <algorithm>
-#include <execution>
+#include <functional>
+#include <memory>
 #include <optional>
-#include <stdexcept>
+#include <utility>
 
 namespace femib::navier_stokes {
 
-// backward-Euler timestep of the time-dependent Navier-Stokes system,
-// with an inner Picard loop
 template <typename T, int d>
-void advance(femib::stokes::stokes<T, d> &s,
-             const femib::gauss::rule<T, d> &rule, int max_picard_iters, T tol,
+struct navier_stokes : public femib::stokes::stokes<T, d> {
+  std::unique_ptr<femib::util::nonlinear_solver<T>> solver;
+
+  navier_stokes(
+      femib::finite_element_space::finite_element_space<T, d, d> v,
+      femib::finite_element_space::finite_element_space<T, d, 1> q,
+      femib::gauss::rule<T, d> rule, T rho = 1.0, T mu = 1.0, T deltat = 0.1,
+      std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
+          force = femib::stokes_steady::default_force<T, d>(),
+      std::unique_ptr<femib::util::nonlinear_solver<T>> solver =
+          femib::util::default_nonlinear_solver_factory<T>())
+      : femib::stokes::stokes<T, d>(std::move(v), std::move(q), std::move(rule),
+                                    rho, mu, deltat, std::move(force)),
+        solver(std::move(solver)) {}
+};
+
+// backward-Euler timestep of the time-dependent Navier-Stokes system,
+// with the convection term handled by s.solver
+template <typename T, int d>
+void advance(navier_stokes<T, d> &s,
              std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
                  extra_velocity_rhs = std::nullopt) {
+  using vector_t = Eigen::Matrix<T, Eigen::Dynamic, 1>;
   s.time += s.deltat;
 
-  if (max_picard_iters <= 0) {
-    throw std::invalid_argument(
-        "femib::navier_stokes::advance: max_picard_iters must be >= 1");
-  }
-
-  Eigen::Matrix<T, Eigen::Dynamic, 1> u_1;
+  vector_t u_1;
   if (s.solution.size() == 0)
-    u_1 = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(s.V.nodes.P.size(), 1);
+    u_1 = vector_t::Zero(s.V.size(), 1);
   else
-    u_1 = s.solution[s.solution.size() - 1].topRows(s.V.nodes.P.size());
+    u_1 = s.solution[s.solution.size() - 1].topRows(s.V.size());
   Eigen::SparseMatrix<T> DD = (1 / s.deltat) * s.M;
-  Eigen::Matrix<T, Eigen::Dynamic, 1> dd = (1 / s.deltat) * (s.M * u_1);
+  vector_t dd = (1 / s.deltat) * (s.M * u_1);
   Eigen::SparseMatrix<T> A_base = s.A + DD;
 
-  // Picard loop
-  Eigen::Matrix<T, Eigen::Dynamic, 1> xx = u_1;
-  Eigen::Matrix<T, Eigen::Dynamic, 1> xx_new_full;
-  for (int iter = 0; iter < max_picard_iters; ++iter) {
+  // the load vector can't change within a timestep
+  femib::stokes::rebuild_rhs<T, d>(s, dd, extra_velocity_rhs);
+
+  auto step = [&s, &A_base](const vector_t &picard_velocity_dofs) -> vector_t {
     Eigen::SparseMatrix<T> top_left =
         A_base + femib::navier_stokes_common::assemble_convection<T, d>(
-                     s.V, rule, xx, s.rho);
+                     s.V, s.rule, picard_velocity_dofs, s.rho);
     s.AA = femib::stokes_steady::assemble_saddle_point_matrix<T>(
-        top_left, s.B, s.V.nodes.P.size(), s.Q.nodes.P.size());
-
-    femib::stokes::rebuild_rhs<T, d>(s, dd, extra_velocity_rhs);
+        top_left, s.B, s.V.size(), s.Q.size());
     femib::stokes_steady::rebuild_system<T, d>(s);
-    xx_new_full = femib::stokes_steady::solve<T, d, 1>(s);
+    return femib::stokes_steady::solve<T, d, 1>(s);
+  };
+  auto velocity = [&s](const vector_t &full) -> vector_t {
+    return full.topRows(s.V.size());
+  };
 
-    Eigen::Matrix<T, Eigen::Dynamic, 1> xx_new_velocity =
-        xx_new_full.topRows(s.V.nodes.P.size());
-    T rel_change = (xx_new_velocity - xx).norm() /
-                   std::max(xx_new_velocity.norm(), static_cast<T>(1e-8));
-    xx = xx_new_velocity;
-    if (iter > 0 && rel_change < tol) {
-      break;
-    }
-  }
-  s.solution.emplace_back(xx_new_full);
+  s.solution.emplace_back(s.solver->solve(u_1, step, velocity));
 }
 
 } // namespace femib::navier_stokes

@@ -16,6 +16,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <memory>
 
 namespace {
 femib::types::mesh<double, 2> make_unit_square_mesh(int n) {
@@ -120,7 +121,9 @@ int main(int argc, char **argv) {
       [](const femib::types::dvec<double, 2> &,
          double) -> femib::types::dvec<double, 2> {
         return femib::types::dvec<double, 2>::Zero();
-      });
+      },
+      std::make_unique<femib::util::picard_solver<double>>(max_picard_iters,
+                                                            tol));
   p.structure = femib::ib::build_ring<double, 2>(
       femib::types::dvec<double, 2>(0.5, 0.5), radius, n_ring, k_spring);
 
@@ -246,7 +249,7 @@ int main(int argc, char **argv) {
 
   auto t_start = std::chrono::steady_clock::now();
   for (int step = 1; step <= n_steps; ++step) {
-    femib::ib::advance_navier_stokes<double, 2>(p, rule, max_picard_iters, tol);
+    femib::ib::advance_navier_stokes<double, 2>(p);
     dump_step(step);
     if (step % 20 == 0 || step == 1) {
       double E = femib::ib::elastic_energy<double, 2>(p.structure);

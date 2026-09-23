@@ -2,27 +2,31 @@
 #define FEMIB_IB_HPP_INCLUDED_
 
 #include "../femib/navier_stokes.hpp"
+#include "../femib/nonlinear_solvers.hpp"
 #include "../femib/stokes.hpp"
 #include "coupling.hpp"
 #include "structure.hpp"
 #include <functional>
+#include <memory>
 #include <stdexcept>
 #include <utility>
 
 namespace femib::ib {
 
 template <typename T, int d> struct ib_problem {
-  femib::stokes::stokes<T, d> fluid;
+  femib::navier_stokes::navier_stokes<T, d> fluid;
   ring<T, d> structure;
 
-  ib_problem(
-      femib::finite_element_space::finite_element_space<T, d, d> v,
-      femib::finite_element_space::finite_element_space<T, d, 1> q,
-      femib::gauss::rule<T, d> rule, T rho = 1.0, T mu = 1.0, T deltat = 0.1,
-      std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
-          force = femib::stokes_steady::default_force<T, d>())
+  ib_problem(femib::finite_element_space::finite_element_space<T, d, d> v,
+             femib::finite_element_space::finite_element_space<T, d, 1> q,
+             femib::gauss::rule<T, d> rule, T rho = 1.0, T mu = 1.0,
+             T deltat = 0.1,
+             std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
+                 force = femib::stokes_steady::default_force<T, d>(),
+             std::unique_ptr<femib::util::nonlinear_solver<T>> solver =
+                 femib::util::default_nonlinear_solver_factory<T>())
       : fluid(std::move(v), std::move(q), std::move(rule), rho, mu, deltat,
-              std::move(force)) {}
+              std::move(force), std::move(solver)) {}
 };
 
 template <typename T, int d>
@@ -61,15 +65,10 @@ template <typename T, int d> void advance(ib_problem<T, d> &p) {
       });
 }
 
-template <typename T, int d>
-void advance_navier_stokes(ib_problem<T, d> &p,
-                           const femib::gauss::rule<T, d> &rule,
-                           int max_picard_iters, T tol) {
+template <typename T, int d> void advance_navier_stokes(ib_problem<T, d> &p) {
   advance_common<T, d>(
-      p, [&p, &rule, max_picard_iters,
-          tol](const Eigen::Matrix<T, Eigen::Dynamic, 1> &extra_rhs) {
-        femib::navier_stokes::advance<T, d>(p.fluid, rule, max_picard_iters,
-                                            tol, extra_rhs);
+      p, [&p](const Eigen::Matrix<T, Eigen::Dynamic, 1> &extra_rhs) {
+        femib::navier_stokes::advance<T, d>(p.fluid, extra_rhs);
       });
 }
 

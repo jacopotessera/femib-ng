@@ -258,12 +258,13 @@ TEST_CASE("testing time-dependent Navier-Stokes" * doctest::skip(true)) {
       .finite_element = f_p0_2d1d, .mesh = mesh};
   q.nodes = f_p0_2d1d.build_nodes(mesh);
 
-  femib::stokes::stokes<float, 2> s(
+  femib::navier_stokes::navier_stokes<float, 2> s(
       v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.02f,
       [f1, f2](const femib::types::dvec<float, 2> &x,
                float) -> femib::types::dvec<float, 2> {
         return femib::types::dvec<float, 2>(f1(x(0), x(1)), f2(x(0), x(1)));
-      });
+      },
+      std::make_unique<femib::util::picard_solver<float>>(3, 1e-5f));
 
   size_t size_P = mesh.P.size();
   size_t size_T = mesh.T.size();
@@ -290,7 +291,7 @@ TEST_CASE("testing time-dependent Navier-Stokes" * doctest::skip(true)) {
   float max_velocity_error_first = -1.0f;
   float max_velocity_error_last = -1.0f;
   for (int step = 0; step < n_steps; ++step) {
-    femib::navier_stokes::advance<float, 2>(s, rule, 3, 1e-5f);
+    femib::navier_stokes::advance<float, 2>(s);
     float e = velocity_error(s.solution.back());
     if (step == 0)
       max_velocity_error_first = e;
@@ -343,12 +344,13 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // own scale unless the advecting field itself is large. 5000x the
   // default forcing reliably clears this test's own wiring-check tolerance
   // with comfortable margin.
-  femib::stokes::stokes<float, 2> s(
+  femib::navier_stokes::navier_stokes<float, 2> s(
       v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.02f,
       [](const femib::types::dvec<float, 2> &,
          float) -> femib::types::dvec<float, 2> {
         return femib::types::dvec<float, 2>(5000.0f, 5000.0f);
-      });
+      },
+      std::make_unique<femib::util::picard_solver<float>>(1, 1e-5f));
 
   size_t rowsV = s.V.nodes.P.size();
 
@@ -358,9 +360,7 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // keeps this deterministic: the Picard loop's single iteration always
   // uses xx=u_1, so the field advance() actually convected against is
   // exactly known to this test, not merely assumed.
-  femib::navier_stokes::advance<float, 2>(s, rule,
-                                          /*max_picard_iters=*/1,
-                                          /*tol=*/1e-5f);
+  femib::navier_stokes::advance<float, 2>(s);
   REQUIRE_EQ(s.solution.size(), 1);
   Eigen::Matrix<float, Eigen::Dynamic, 1> w_dofs_expected =
       s.solution.back().topRows(rowsV);
@@ -380,9 +380,7 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // Step 2 is the call under test. Its Picard loop's single iteration
   // (max_picard_iters=1) must use w_dofs_expected (step 1's output,
   // captured above) as the advecting field.
-  femib::navier_stokes::advance<float, 2>(s, rule,
-                                          /*max_picard_iters=*/1,
-                                          /*tol=*/1e-5f);
+  femib::navier_stokes::advance<float, 2>(s);
 
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> conv_expected =
       femib::navier_stokes_common::assemble_convection<float, 2>(

@@ -1,11 +1,11 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "../src/femib/stokes.hpp"
 #include "../src/finite_element/P0_2d1d.hpp"
 #include "../src/finite_element/P1+B_2d2d.hpp"
-#include "../src/gauss/gauss_lagrange_2_2d.hpp"
 #include "../src/ib/ib.hpp"
+#include "../src/gauss/gauss_lagrange_2_2d.hpp"
 #include <algorithm>
 #include <doctest/doctest.h>
+#include <memory>
 
 #include "utils.hpp"
 #include "write.hpp"
@@ -35,7 +35,8 @@ femib::ib::ib_problem<float, 2> make_ib_fixture(int n_mesh, int n_ring,
       [](const femib::types::dvec<float, 2> &,
          float) -> femib::types::dvec<float, 2> {
         return femib::types::dvec<float, 2>::Zero(); // no separate body force
-      });
+      },
+      std::make_unique<femib::util::picard_solver<float>>(10, 1e-5f));
   p.structure = femib::ib::build_ring<float, 2>(
       femib::types::dvec<float, 2>(0.5f, 0.5f), radius, n_ring, 2.618f);
   return p;
@@ -152,12 +153,10 @@ TEST_CASE("a perturbed (elliptical) ring's elastic energy decays, not grows, "
 TEST_CASE("a ring at its rest configuration stays motionless under "
           "Navier-Stokes too") {
   femib::ib::ib_problem<float, 2> p = make_ib_fixture(16, 24, 0.2f);
-  femib::gauss::rule<float, 2> rule =
-      femib::gauss::create_gauss_2_2d<float, 2>();
   std::vector<femib::types::dvec<float, 2>> X0 = p.structure.X;
 
   for (int step = 0; step < 20; ++step) {
-    femib::ib::advance_navier_stokes<float, 2>(p, rule, 10, 1e-5f);
+    femib::ib::advance_navier_stokes<float, 2>(p);
   }
 
   float max_drift = 0.0f;
@@ -171,8 +170,6 @@ TEST_CASE("a perturbed (elliptical) ring's elastic energy decays, not grows, "
           "over time under Navier-Stokes too" *
           doctest::skip(true)) {
   femib::ib::ib_problem<float, 2> p = make_ib_fixture(16, 24, 0.2f);
-  femib::gauss::rule<float, 2> rule =
-      femib::gauss::create_gauss_2_2d<float, 2>();
 
   femib::types::dvec<float, 2> center(0.5f, 0.5f);
   for (auto &x : p.structure.X) {
@@ -187,7 +184,7 @@ TEST_CASE("a perturbed (elliptical) ring's elastic energy decays, not grows, "
   float E_max = E0;
   int n_steps = 20;
   for (int step = 0; step < n_steps; ++step) {
-    femib::ib::advance_navier_stokes<float, 2>(p, rule, 10, 1e-5f);
+    femib::ib::advance_navier_stokes<float, 2>(p);
     E_max = std::max(E_max, femib::ib::elastic_energy<float, 2>(p.structure));
   }
 
