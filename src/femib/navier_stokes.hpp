@@ -116,7 +116,7 @@ solve_steady(femib::stokes_steady::stokes<T, d> &s,
 // backward-Euler timestep of the time-dependent Navier-Stokes system,
 // with an inner Picard loop
 template <typename T, int d>
-void advance(femib::stokes_t::stokes<T, d> &s,
+void advance(femib::stokes::stokes<T, d> &s,
              const femib::gauss::rule<T, d> &rule, int max_picard_iters, T tol,
              std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
                  extra_velocity_rhs = std::nullopt) {
@@ -142,11 +142,12 @@ void advance(femib::stokes_t::stokes<T, d> &s,
   for (int iter = 0; iter < max_picard_iters; ++iter) {
     Eigen::SparseMatrix<T> top_left =
         A_base + assemble_convection<T, d>(s.V, rule, xx, s.rho);
-    s.AA = femib::stokes_t::assemble_saddle_point_matrix<T>(
+    s.AA = femib::stokes_steady::assemble_saddle_point_matrix<T>(
         top_left, s.B, s.V.nodes.P.size(), s.Q.nodes.P.size());
 
-    femib::stokes_t::rebuild_system<T, d>(s, dd, extra_velocity_rhs);
-    xx_new_full = femib::stokes_t::solve<T, d, 1>(s);
+    femib::stokes::rebuild_rhs<T, d>(s, dd, extra_velocity_rhs);
+    femib::stokes_steady::rebuild_system<T, d>(s);
+    xx_new_full = femib::stokes_steady::solve<T, d, 1>(s);
 
     Eigen::Matrix<T, Eigen::Dynamic, 1> xx_new_velocity =
         xx_new_full.topRows(s.V.nodes.P.size());

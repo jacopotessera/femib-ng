@@ -7,18 +7,23 @@
 #include "structure.hpp"
 #include <functional>
 #include <stdexcept>
+#include <utility>
 
 namespace femib::ib {
 
 template <typename T, int d> struct ib_problem {
-  femib::stokes_t::stokes<T, d> fluid;
+  femib::stokes::stokes<T, d> fluid;
   ring<T, d> structure;
-};
 
-template <typename T, int d>
-void init(ib_problem<T, d> &p, const femib::gauss::rule<T, d> &rule) {
-  femib::stokes_t::init<T, d>(p.fluid, rule);
-}
+  ib_problem(femib::finite_element_space::finite_element_space<T, d, d> v,
+             femib::finite_element_space::finite_element_space<T, d, 1> q,
+             femib::gauss::rule<T, d> rule, T rho = 1.0, T mu = 1.0,
+             T deltat = 0.1,
+             std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
+                 force = femib::stokes_steady::default_force<T, d>())
+      : fluid(std::move(v), std::move(q), std::move(rule), rho, mu, deltat,
+              std::move(force)) {}
+};
 
 template <typename T, int d>
 void advance_common(
@@ -52,7 +57,7 @@ void advance_common(
 template <typename T, int d> void advance(ib_problem<T, d> &p) {
   advance_common<T, d>(
       p, [&p](const Eigen::Matrix<T, Eigen::Dynamic, 1> &extra_rhs) {
-        femib::stokes_t::advance<T, d>(p.fluid, extra_rhs);
+        femib::stokes::advance<T, d>(p.fluid, extra_rhs);
       });
 }
 

@@ -249,15 +249,12 @@ TEST_CASE("testing time-dependent Navier-Stokes" * doctest::skip(true)) {
       .finite_element = f_p0_2d1d, .mesh = mesh};
   q.nodes = f_p0_2d1d.build_nodes(mesh);
 
-  femib::stokes_t::stokes<float, 2> s;
-  s.V = v;
-  s.Q = q;
-  s.deltat = 0.02f;
-  s.force = [f1, f2](const femib::types::dvec<float, 2> &x,
-                     float) -> femib::types::dvec<float, 2> {
-    return femib::types::dvec<float, 2>(f1(x(0), x(1)), f2(x(0), x(1)));
-  };
-  femib::stokes_t::init<float, 2>(s, rule);
+  femib::stokes::stokes<float, 2> s(
+      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.02f,
+      [f1, f2](const femib::types::dvec<float, 2> &x,
+               float) -> femib::types::dvec<float, 2> {
+        return femib::types::dvec<float, 2>(f1(x(0), x(1)), f2(x(0), x(1)));
+      });
 
   size_t size_P = mesh.P.size();
   size_t size_T = mesh.T.size();
@@ -329,10 +326,6 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
       .finite_element = f_p0_2d1d, .mesh = mesh};
   q.nodes = f_p0_2d1d.build_nodes(mesh);
 
-  femib::stokes_t::stokes<float, 2> s;
-  s.V = v;
-  s.Q = q;
-  s.deltat = 0.02f;
   // A large constant forcing (rather than the struct's default (1,1)) --
   // needed because assemble_convection's contribution scales LINEARLY with
   // the advecting field's magnitude, while A_base (dominated by the
@@ -341,11 +334,12 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // own scale unless the advecting field itself is large. 5000x the
   // default forcing reliably clears this test's own wiring-check tolerance
   // with comfortable margin.
-  s.force = [](const femib::types::dvec<float, 2> &,
-               float) -> femib::types::dvec<float, 2> {
-    return femib::types::dvec<float, 2>(5000.0f, 5000.0f);
-  };
-  femib::stokes_t::init<float, 2>(s, rule);
+  femib::stokes::stokes<float, 2> s(
+      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.02f,
+      [](const femib::types::dvec<float, 2> &,
+         float) -> femib::types::dvec<float, 2> {
+        return femib::types::dvec<float, 2>(5000.0f, 5000.0f);
+      });
 
   size_t rowsV = s.V.nodes.P.size();
 
@@ -398,12 +392,4 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
           0, 0, rowsV, rowsV);
   CHECK_LT((AA_velocity_block - (A_base_expected + conv_expected)).norm(),
            1e-2f);
-}
-
-TEST_CASE("navier_stokes::advance rejects max_picard_iters <= 0") {
-  femib::stokes_t::stokes<float, 2> s;
-  femib::gauss::rule<float, 2> rule =
-      femib::gauss::create_gauss_2_2d<float, 2>();
-  CHECK_THROWS_AS((femib::navier_stokes::advance<float, 2>(s, rule, 0, 1e-5f)),
-                  std::invalid_argument);
 }

@@ -115,16 +115,12 @@ int main(int argc, char **argv) {
       .finite_element = f_p0_2d1d, .mesh = mesh};
   q.nodes = f_p0_2d1d.build_nodes(mesh);
 
-  femib::ib::ib_problem<double, 2> p;
-  p.fluid.V = v;
-  p.fluid.Q = q;
-  p.fluid.deltat = deltat;
-  p.fluid.rho = rho;
-  p.fluid.mu = mu;
-  p.fluid.force = [](const femib::types::dvec<double, 2> &,
-                     double) -> femib::types::dvec<double, 2> {
-    return femib::types::dvec<double, 2>::Zero();
-  };
+  femib::ib::ib_problem<double, 2> p(
+      v, q, rule, rho, mu, deltat,
+      [](const femib::types::dvec<double, 2> &,
+         double) -> femib::types::dvec<double, 2> {
+        return femib::types::dvec<double, 2>::Zero();
+      });
   p.structure = femib::ib::build_ring<double, 2>(
       femib::types::dvec<double, 2>(0.5, 0.5), radius, n_ring, k_spring);
 
@@ -141,8 +137,6 @@ int main(int argc, char **argv) {
   // area has a unique global minimizer: the circle. This is a real
   // physical model (a soap-film/surface-tension membrane), not just a
   // numerical trick.
-
-  femib::ib::init<double, 2>(p, rule);
 
   // Perturb the circle into a dramatic ellipse (stretch x by 1.8, compress y
   // by 1/1.8, preserving enclosed area to first order), placing points at

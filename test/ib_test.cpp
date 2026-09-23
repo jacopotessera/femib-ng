@@ -30,18 +30,14 @@ femib::ib::ib_problem<float, 2> make_ib_fixture(int n_mesh, int n_ring,
       .finite_element = f_p0_2d1d, .mesh = mesh};
   q.nodes = f_p0_2d1d.build_nodes(mesh);
 
-  femib::ib::ib_problem<float, 2> p;
-  p.fluid.V = v;
-  p.fluid.Q = q;
-  p.fluid.deltat = 0.001f;
-  p.fluid.force = [](const femib::types::dvec<float, 2> &,
-                     float) -> femib::types::dvec<float, 2> {
-    return femib::types::dvec<float, 2>::Zero(); // no separate body force
-  };
+  femib::ib::ib_problem<float, 2> p(
+      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.001f,
+      [](const femib::types::dvec<float, 2> &,
+         float) -> femib::types::dvec<float, 2> {
+        return femib::types::dvec<float, 2>::Zero(); // no separate body force
+      });
   p.structure = femib::ib::build_ring<float, 2>(
       femib::types::dvec<float, 2>(0.5f, 0.5f), radius, n_ring, 2.618f);
-
-  femib::ib::init<float, 2>(p, rule);
   return p;
 }
 } // namespace
