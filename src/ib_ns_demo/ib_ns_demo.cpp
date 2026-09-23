@@ -7,7 +7,7 @@
 // suite -- a one-off visualization driver; see plot/plot_simulation.py to
 // render it.
 
-#include "../femib/stokes_t.hpp"
+#include "../femib/stokes.hpp"
 #include "../finite_element/P0_2d1d.hpp"
 #include "../finite_element/P1+B_2d2d.hpp"
 #include "../gauss/gauss_lagrange_2_2d.hpp"

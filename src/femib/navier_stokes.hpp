@@ -5,9 +5,8 @@
 #include "../femib/femib.hpp"
 #include "../finite_element_space/finite_element_space.hpp"
 #include "../gauss/gauss.hpp"
-#include "../types/differential_operation.hpp"
 #include "stokes.hpp"
-#include "stokes_t.hpp"
+#include "stokes_steady.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <algorithm>

@@ -7,7 +7,7 @@
 #include "../src/mesh/mesh.hpp"
 #include <doctest/doctest.h>
 
-#include "stokes_t.hpp"
+#include "femib.hpp"
 
 TEST_CASE("testing mass_matrix") {
   femib::types::mesh<float, 2> mesh({femib::types::dvec<float, 2>(0.0f, 0.0f),

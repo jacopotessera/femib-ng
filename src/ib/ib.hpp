@@ -2,7 +2,7 @@
 #define FEMIB_IB_HPP_INCLUDED_
 
 #include "../femib/navier_stokes.hpp"
-#include "../femib/stokes_t.hpp"
+#include "../femib/stokes.hpp"
 #include "coupling.hpp"
 #include "structure.hpp"
 #include <functional>

@@ -1,6 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../src/affine/affine.hpp"
-#include "../src/femib/stokes_t.hpp"
+#include "../src/femib/stokes.hpp"
 #include "../src/finite_element/P0_2d1d.hpp"
 #include "../src/finite_element/P1+B_2d2d.hpp"
 #include "../src/finite_element/P1_2d1d.hpp"
