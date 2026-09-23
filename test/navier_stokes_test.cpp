@@ -95,37 +95,12 @@ TEST_CASE("solve steady Navier-Stokes") {
       .finite_element = f_p1_2d1d, .mesh = mesh};
   q.nodes = f_p1_2d1d.build_nodes(mesh);
 
-  femib::stokes::stokes<float, 2> s;
-  s.V = v;
-  s.Q = q;
-
-  // external force
-  // TODO stokes interface need improvements?
-  auto ggg = [f1, f2](const femib::types::F<float, 2, 2> &a) {
-    return [a, f1, f2](const femib::types::dvec<float, 2> &x) {
-      return f1(x(0), x(1)) * a.x(x)(0) + f2(x(0), x(1)) * a.x(x)(1);
-    };
-  };
-
-  s.A = femib::util::triplets2sparse(
-      femib::util::build_diagonal_matrix<float, 2, 2>(
-          s.V, rule,
-          [mu = s.mu](femib::types::F<float, 2, 2> u,
-                      femib::types::F<float, 2, 2> v) {
-            return femib::stokes::stokes_a<float, 2>(u, v, mu);
-          }),
-      s.V.nodes.P.size(), s.V.nodes.P.size());
-  s.B = femib::util::triplets2sparse(
-      femib::util::build_off_diagonal_matrix<float, 2>(
-          s.V, s.Q, rule, femib::stokes::stokes_b<float, 2>),
-      s.V.nodes.P.size(), s.Q.nodes.P.size());
-
-  s.ff = Eigen::Matrix<float, Eigen::Dynamic, 1>::Zero(
-      s.V.nodes.P.size() + s.Q.nodes.P.size(), 1);
-  s.ff.block(0, 0, s.V.nodes.P.size(), 1) =
-      femib::util::build_load_vector<float, 2, 2>(s.V, rule, ggg);
-
-  femib::stokes::rebuild_system<float, 2>(s, rule);
+  femib::stokes_steady::stokes<float, 2> s(
+      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f,
+      [f1, f2](const femib::types::dvec<float, 2> &x,
+               float) -> femib::types::dvec<float, 2> {
+        return femib::types::dvec<float, 2>(f1(x(0), x(1)), f2(x(0), x(1)));
+      });
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::navier_stokes::solve_steady<float, 2>(s, rule,

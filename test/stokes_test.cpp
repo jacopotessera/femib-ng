@@ -41,10 +41,7 @@ TEST_CASE("testing femib stokes") {
   q.nodes = f_p0_2d1d.build_nodes(mesh);
 
   // STOKES
-  femib::stokes::stokes<float, 2> stokes;
-  stokes.V = v;
-  stokes.Q = q;
-  femib::stokes::init<float, 2>(stokes, rule);
+  femib::stokes_steady::stokes<float, 2> stokes(v, q, rule);
 
   {
     std::vector<int> not_edges =
@@ -79,7 +76,7 @@ TEST_CASE("testing femib stokes") {
   }
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
-      femib::stokes::solve<float, 2, 1>(stokes);
+      femib::stokes_steady::solve<float, 2, 1>(stokes);
   CHECK(xx.allFinite());
 }
 
@@ -134,54 +131,15 @@ TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
                                                                       mesh};
   q.nodes = f_p1_2d1d.build_nodes(mesh);
 
-  // TODO this note says: stokes interface is wrong...
-  // NOTE on how this test wires in the forcing term: femib::stokes::init's
-  // existing pipeline calls build_diagonal with femib::stokes::external_force
-  // itself as the RHS functor, and that functor always evaluates
-  // a.x(x)[0] + a.x(x)[1] on the SAME basis function used for the stiffness
-  // matrix -- i.e. an implicit constant (1,1) body force, with no hook to
-  // inject an independent, spatially varying force field through init().
-  // Following the precedent in femib_test.cpp's Poisson manufactured-solution
-  // test (Task 10), this test bypasses femib::stokes::init and assembles the
-  // system itself, calling femib::stokes::stokes_a/stokes_b/remove_edges and
-  // femib::util::build_diagonal/build_non_diagonal directly -- the exact same
-  // primitives init() uses -- substituting a ggg that dots the manufactured
-  // (f1, f2) force field with each velocity test function's two components,
-  // then handing the assembled system to femib::stokes::solve exactly as
-  // init() would have.
-  auto ggg = [f1, f2](femib::types::F<float, 2, 2> a) {
-    return [a, f1, f2](const femib::types::dvec<float, 2> &x) {
-      return f1(x(0), x(1)) * a.x(x)(0) + f2(x(0), x(1)) * a.x(x)(1);
-    };
-  };
-
-  // TODO why all this stuff? stokes must solve
-  femib::stokes::stokes<float, 2> stokes;
-  stokes.V = v;
-  stokes.Q = q;
-
-  stokes.A = femib::util::triplets2sparse(
-      femib::util::build_diagonal_matrix<float, 2, 2>(
-          stokes.V, rule,
-          [mu = stokes.mu](femib::types::F<float, 2, 2> u,
-                           femib::types::F<float, 2, 2> v) {
-            return femib::stokes::stokes_a<float, 2>(u, v, mu);
-          }),
-      stokes.V.nodes.P.size(), stokes.V.nodes.P.size());
-  stokes.B = femib::util::triplets2sparse(
-      femib::util::build_off_diagonal_matrix<float, 2>(
-          stokes.V, stokes.Q, rule, femib::stokes::stokes_b<float, 2>),
-      stokes.V.nodes.P.size(), stokes.Q.nodes.P.size());
-
-  stokes.ff = Eigen::Matrix<float, Eigen::Dynamic, 1>::Zero(
-      stokes.V.nodes.P.size() + stokes.Q.nodes.P.size());
-  stokes.ff.block(0, 0, stokes.V.nodes.P.size(), 1) =
-      femib::util::build_load_vector<float, 2, 2>(stokes.V, rule, ggg);
-
-  femib::stokes::rebuild_system<float, 2>(stokes, rule);
+  femib::stokes_steady::stokes<float, 2> stokes(
+      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f,
+      [f1, f2](const femib::types::dvec<float, 2> &x,
+               float) -> femib::types::dvec<float, 2> {
+        return femib::types::dvec<float, 2>(f1(x(0), x(1)), f2(x(0), x(1)));
+      });
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
-      femib::stokes::solve<float, 2, 1>(stokes);
+      femib::stokes_steady::solve<float, 2, 1>(stokes);
 
   int size_P = mesh.P.size();
   int size_T = mesh.T.size();

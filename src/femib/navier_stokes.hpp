@@ -90,17 +90,18 @@ Eigen::SparseMatrix<T> assemble_convection(
 // relative change is below tol or max_picard_iters is reached.
 template <typename T, int d>
 Eigen::Matrix<T, Eigen::Dynamic, 1>
-solve_steady(femib::stokes::stokes<T, d> &s,
+solve_steady(femib::stokes_steady::stokes<T, d> &s,
              const femib::gauss::rule<T, d> &rule, int max_picard_iters,
              T tol) {
   Eigen::SparseMatrix<T> A_stokes = s.A;
-  Eigen::Matrix<T, Eigen::Dynamic, 1> xx = femib::stokes::solve<T, d, 1>(s);
+  Eigen::Matrix<T, Eigen::Dynamic, 1> xx =
+      femib::stokes_steady::solve<T, d, 1>(s);
   for (int iter = 0; iter < max_picard_iters; ++iter) {
     Eigen::Matrix<T, Eigen::Dynamic, 1> w_dofs = xx.topRows(s.V.nodes.P.size());
     s.A = A_stokes + assemble_convection<T, d>(s.V, rule, w_dofs, s.rho);
-    femib::stokes::rebuild_system<T, d>(s, rule);
+    femib::stokes_steady::rebuild_system<T, d>(s, rule);
     Eigen::Matrix<T, Eigen::Dynamic, 1> xx_new =
-        femib::stokes::solve<T, d, 1>(s);
+        femib::stokes_steady::solve<T, d, 1>(s);
     T rel_change =
         (xx_new - xx).norm() / std::max(xx_new.norm(), static_cast<T>(1e-8));
     xx = xx_new;

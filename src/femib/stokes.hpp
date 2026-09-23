@@ -220,7 +220,7 @@ void init(stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
                                   s.V.nodes.P.size() + s.Q.nodes.P.size(), 1);
 
   s.pressure_constraint_vector =
-      femib::stokes::build_pressure_constraint_vector<T, d>(s.Q, rule);
+      femib::stokes_steady::build_pressure_constraint_vector<T, d>(s.Q, rule);
 
   int nV = s.V.nodes.P.size();
   int nQ = s.Q.nodes.P.size();
