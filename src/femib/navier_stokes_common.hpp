@@ -14,7 +14,7 @@
 
 namespace femib::navier_stokes_common {
 
-// convection term, using Picard's iterative method
+// Assembles the convection matrix linearized around a given velocity field.
 template <typename T, int d>
 Eigen::SparseMatrix<T> assemble_convection(
     const femib::finite_element_space::finite_element_space<T, d, d> &V,
@@ -35,7 +35,6 @@ Eigen::SparseMatrix<T> assemble_convection(
       std::execution::par, tri_indices.begin(), tri_indices.end(), [&](int n) {
         const femib::types::dtrian<T, d> &t = V.mesh[n];
         femib::types::dmat<T, d> Binv = femib::affine::affineBinv(t);
-        femib::types::dvec<T, d> bb = femib::affine::affineb(t);
         T detB = femib::affine::affineBdet(t);
 
         std::vector<femib::types::dvec<T, d>> phi(

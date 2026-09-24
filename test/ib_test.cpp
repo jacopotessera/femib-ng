@@ -1,8 +1,8 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../src/finite_element/P0_2d1d.hpp"
 #include "../src/finite_element/P1+B_2d2d.hpp"
-#include "../src/ib/ib.hpp"
 #include "../src/gauss/gauss_lagrange_2_2d.hpp"
+#include "../src/ib/ib.hpp"
 #include <algorithm>
 #include <doctest/doctest.h>
 #include <memory>

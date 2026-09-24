@@ -2,6 +2,7 @@
 #include "../src/femib/nonlinear_solvers.hpp"
 #include <Eigen/Dense>
 #include <doctest/doctest.h>
+#include <memory>
 #include <stdexcept>
 
 using vector_t = Eigen::Matrix<double, Eigen::Dynamic, 1>;
@@ -54,4 +55,15 @@ TEST_CASE("picard_solver rejects max_iters <= 0") {
   auto identity = [](const vector_t &u) { return u; };
   CHECK_THROWS_AS(solver.solve(start, identity, identity),
                   std::invalid_argument);
+}
+
+TEST_CASE("default_nonlinear_solver_factory returns a picard_solver with the "
+          "default settings") {
+  std::unique_ptr<femib::util::nonlinear_solver<double>> solver =
+      femib::util::default_nonlinear_solver_factory<double>();
+  auto *picard =
+      dynamic_cast<femib::util::picard_solver<double> *>(solver.get());
+  REQUIRE(picard != nullptr);
+  CHECK(picard->max_iters == 20);
+  CHECK(picard->tol == doctest::Approx(1e-6));
 }

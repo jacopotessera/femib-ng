@@ -41,7 +41,12 @@ TEST_CASE("testing femib stokes") {
   q.nodes = f_p0_2d1d.build_nodes(mesh);
 
   // STOKES
-  femib::stokes_steady::stokes<float, 2> stokes(v, q, rule);
+  femib::stokes_steady::stokes<float, 2> stokes(
+      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f,
+      [](const femib::types::dvec<float, 2> &,
+         float) -> femib::types::dvec<float, 2> {
+        return femib::types::dvec<float, 2>(1.0f, 1.0f);
+      });
 
   {
     std::vector<int> not_edges =
@@ -78,6 +83,7 @@ TEST_CASE("testing femib stokes") {
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::stokes_steady::solve<float, 2, 1>(stokes);
   CHECK(xx.allFinite());
+  CHECK(xx.topRows(stokes.V.size()).norm() > 0.0f);
 }
 
 TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "

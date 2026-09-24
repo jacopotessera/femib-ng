@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
         return femib::types::dvec<double, 2>::Zero();
       },
       std::make_unique<femib::util::picard_solver<double>>(max_picard_iters,
-                                                            tol));
+                                                           tol));
   p.structure = femib::ib::build_ring<double, 2>(
       femib::types::dvec<double, 2>(0.5, 0.5), radius, n_ring, k_spring);
 

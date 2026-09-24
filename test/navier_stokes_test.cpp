@@ -336,14 +336,7 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
       .finite_element = f_p0_2d1d, .mesh = mesh};
   q.nodes = f_p0_2d1d.build_nodes(mesh);
 
-  // A large constant forcing (rather than the struct's default (1,1)) --
-  // needed because assemble_convection's contribution scales LINEARLY with
-  // the advecting field's magnitude, while A_base (dominated by the
-  // backward-Euler mass term (1/deltat)*I) does NOT depend on velocity at
-  // all -- so no amount of scaling makes convection comparable to A_base's
-  // own scale unless the advecting field itself is large. 5000x the
-  // default forcing reliably clears this test's own wiring-check tolerance
-  // with comfortable margin.
+  // a large constant forcing
   femib::navier_stokes::navier_stokes<float, 2> s(
       v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.02f,
       [](const femib::types::dvec<float, 2> &,
@@ -356,10 +349,11 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
 
   // Step 1: establishes a nonzero previous-timestep velocity, starting from
   // rest -- its own convection input (u_1=0) never matters here, only its
-  // OUTPUT (used as step 2's advecting field) does. max_picard_iters=1
-  // keeps this deterministic: the Picard loop's single iteration always
-  // uses xx=u_1, so the field advance() actually convected against is
-  // exactly known to this test, not merely assumed.
+  // OUTPUT (used as step 2's advecting field) does. The injected
+  // picard_solver is configured with a single iteration, so its one step
+  // linearizes convection around the previous timestep's velocity: the
+  // field advance() actually convected against is exactly known to this
+  // test, not merely assumed.
   femib::navier_stokes::advance<float, 2>(s);
   REQUIRE_EQ(s.solution.size(), 1);
   Eigen::Matrix<float, Eigen::Dynamic, 1> w_dofs_expected =
@@ -377,9 +371,9 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> A_base_expected =
       s.A + (1.0f / s.deltat) * s.M;
 
-  // Step 2 is the call under test. Its Picard loop's single iteration
-  // (max_picard_iters=1) must use w_dofs_expected (step 1's output,
-  // captured above) as the advecting field.
+  // Step 2 is the call under test. The injected picard_solver's single
+  // iteration must linearize convection around w_dofs_expected (step 1's
+  // output, captured above) as the advecting field.
   femib::navier_stokes::advance<float, 2>(s);
 
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> conv_expected =

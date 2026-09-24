@@ -31,8 +31,6 @@ struct navier_stokes : public femib::stokes_steady::stokes<T, d> {
         solver(std::move(solver)) {}
 };
 
-// Starts from the Stokes solution. Leaves s.A untouched; s.AA and
-// s.solvable_equations end up holding the last linearized system.
 template <typename T, int d>
 Eigen::Matrix<T, Eigen::Dynamic, 1>
 solve(navier_stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {

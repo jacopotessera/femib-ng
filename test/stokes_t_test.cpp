@@ -189,13 +189,6 @@ TEST_CASE("test stokes::advance with a non-stationary known problem") {
                                                                       mesh};
   v.nodes = f_p1_2d2d.build_nodes(mesh);
 
-  // TODO this comment says: stokes_t interface is wrong!
-  // P1 pressure instead of stokes_t's hardcoded P0: stokes_t.hpp's default
-  // P1+bubble velocity / P0 pressure pairing was found (during development of
-  // this test) to be markedly less accurate for this manufactured solution
-  // than P1+bubble/P1 -- see the accuracy note on the CHECKs below.
-  // test/stokes_test.cpp's already-validated steady MMS uses P1 pressure
-  // with this exact velocity element.
   femib::finite_element::finite_element<float, 2, 1> f_p1_2d1d =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
   femib::finite_element_space::finite_element_space<float, 2, 1> q = {f_p1_2d1d,
