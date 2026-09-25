@@ -7,6 +7,7 @@
 
 namespace femib::finite_element {
 
+// TODO move to finite_element, duplicated
 template <typename T, int d>
 dvec<T, d> find_center_of(const femib::types::mesh<T, d> &mesh, int n) {
   dvec<T, d> c = {0.0, 0.0};

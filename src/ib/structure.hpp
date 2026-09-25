@@ -14,7 +14,9 @@ inline int get_next_point(const int i, const int n_points) {
 }
 
 template <typename T, int d> struct ring {
-  std::vector<femib::types::dvec<T, d>> X; // TODO we need to keep the "story"
+  std::vector<femib::types::dvec<T, d>>
+      X; // TODO we need to keep the "story"? or the story is kept in the
+         // problem?
   T k = 0;
   T dS = 0; // fixed material arc-length weight per point (circumference / n)
 };
@@ -28,6 +30,7 @@ void advance_ring(ring<T, d> &r, T deltat,
   }
 }
 
+// TODO constructor?
 // build a ring with center "c", radius "radius", elastic constant "k", and
 // "n_points" material points
 template <typename T, int d>
@@ -59,6 +62,7 @@ std::vector<femib::types::dvec<T, d>> elastic_force(const ring<T, d> &r) {
   return F;
 }
 
+// spread force on the finite element space nodes
 template <typename T, int d>
 Eigen::Matrix<T, Eigen::Dynamic, 1>
 spread_force(ring<T, d> &r,

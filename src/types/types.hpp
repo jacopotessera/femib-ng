@@ -8,6 +8,7 @@
 
 namespace femib::types {
 
+// TODO we like these names?
 template <typename T, int d> using dvec = Eigen::Matrix<T, d, 1>;
 template <typename T, int d> using dmat = Eigen::Matrix<T, d, d>;
 template <typename T, int d, int e> using rmat = Eigen::Matrix<T, d, e>;
@@ -74,7 +75,7 @@ template <typename f, int d> struct box {
 template <typename f, int d>
 dtrian_<f, d> *
 vector_dtrian2pointer_dtrian_(const std::vector<dtrian<f, d>> &N) {
-  dtrian_<f, d> *p = new dtrian_<f, d>[N.size()];
+  auto *p = new dtrian_<f, d>[N.size()];
   for (int i = 0; i < N.size(); ++i) {
     p[i][0] = N[i][0];
     p[i][1] = N[i][1];

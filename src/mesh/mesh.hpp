@@ -41,7 +41,8 @@ std::vector<int> find_points(const femib::types::mesh<T, d> &mesh,
 
   femib::cuda::parallel_accurate<T, d>(devX, points.size(), devT, meshSize,
                                        devN);
-  bool *NN = femib::cuda::copyToHost<bool>(devN, points.size() * meshSize);
+  const bool *NN =
+      femib::cuda::copyToHost<bool>(devN, points.size() * meshSize);
 
   std::vector<int> NNN;
   NNN.reserve(points.size());
@@ -81,7 +82,7 @@ T integrate(const femib::gauss::rule<T, d> &rule,
   auto unary_op = [&rule, &f](const femib::types::dtrian<T, d> &t) {
     return femib::mesh::integrate(rule, f, t);
   };
-  return std::transform_reduce(std::execution::seq, mesh.N.begin(),
+  return std::transform_reduce(std::execution::par_unseq, mesh.N.begin(),
                                mesh.N.end(), T(0.0), std::plus<>(), unary_op);
 }
 

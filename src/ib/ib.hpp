@@ -14,7 +14,8 @@
 namespace femib::ib {
 
 template <typename T, int d> struct ib_problem {
-  femib::navier_stokes::navier_stokes<T, d> fluid;
+  femib::navier_stokes::navier_stokes<T, d>
+      fluid; // TODO this can be stokes or navier_stokes, both have advance
   ring<T, d> structure;
 
   ib_problem(
@@ -58,6 +59,7 @@ void advance_common(
   advance_ring(p.structure, p.fluid.deltat, U);
 }
 
+// TODO eh
 template <typename T, int d> void advance(ib_problem<T, d> &p) {
   advance_common<T, d>(
       p, [&p](const Eigen::Matrix<T, Eigen::Dynamic, 1> &extra_rhs) {
@@ -65,6 +67,7 @@ template <typename T, int d> void advance(ib_problem<T, d> &p) {
       });
 }
 
+// TODO eh
 template <typename T, int d> void advance_navier_stokes(ib_problem<T, d> &p) {
   advance_common<T, d>(
       p, [&p](const Eigen::Matrix<T, Eigen::Dynamic, 1> &extra_rhs) {

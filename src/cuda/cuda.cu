@@ -27,23 +27,23 @@ size_t femib::cuda::getHeapSize() {
   return size_heap;
 }
 
-void femib::cuda::setStackSize(size_t stackSize) {
+void femib::cuda::setStackSize(const size_t stackSize) {
   cudaDeviceSetLimit(cudaLimitStackSize, stackSize);
 }
 
 // TODO why mess with this?
-void femib::cuda::setHeapSize(size_t heapSize) {
+void femib::cuda::setHeapSize(const size_t heapSize) {
   cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapSize * sizeof(double));
 }
 
-template <typename T> T *femib::cuda::copyToDevice(T *x, int size) {
+template <typename T> T *femib::cuda::copyToDevice(T *x, const int size) {
   T *X;
   HANDLE_ERROR(cudaMalloc((void **)&X, sizeof(T) * size));
   HANDLE_ERROR(cudaMemcpy(X, x, sizeof(T) * size, cudaMemcpyHostToDevice));
   return X;
 }
 
-template <typename T> T *femib::cuda::copyToHost(T *X, int size) {
+template <typename T> T *femib::cuda::copyToHost(T *X, const int size) {
   T *x = new T[size];
   HANDLE_ERROR(cudaMemcpy(x, X, sizeof(T) * size, cudaMemcpyDeviceToHost));
   return x;
@@ -53,15 +53,15 @@ template <typename T> void femib::cuda::freeDevice(T *X) {
   HANDLE_ERROR(cudaFree(X));
 }
 
-template <typename T> T *femib::cuda::allocDevice(int size) {
+template <typename T> T *femib::cuda::allocDevice(const int size) {
   T *X;
   HANDLE_ERROR(cudaMalloc((void **)&X, sizeof(T) * size));
   return X;
 }
 
 template <typename T> void femib::cuda::freeDeviceQuiet(T *X) {
-  cudaError_t err = cudaFree(X);
-  if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
+  if (const cudaError_t err = cudaFree(X);
+      err != cudaSuccess && err != cudaErrorCudartUnloading) {
     HandleError(err, __FILE__, __LINE__);
   }
 }
@@ -81,8 +81,8 @@ __host__ bool femib::cuda::in_box(const femib::types::dvec<f, d> &P,
 }
 
 template <typename f, int d>
-__device__ bool in_box_(const femib::types::dvec<f, d> &P,
-                        femib::types::dvec<f, d> *T) {
+__device__ static bool in_box_(const femib::types::dvec<f, d> &P,
+                               femib::types::dvec<f, d> *T) {
   f EPSILON = std::numeric_limits<f>::epsilon();
   for (int i = 0; i < d; ++i) {
     f min = T[0](i), max = T[0](i);
@@ -107,8 +107,8 @@ __host__ bool femib::cuda::in_triangle(const femib::types::dvec<f, d> &P,
 }
 
 template <typename f, int d>
-__host__ f distance_point_segment(const femib::types::dvec<f, d> &P,
-                                  const femib::types::dtrian<f, d> &T) {
+__host__ static f distance_point_segment(const femib::types::dvec<f, d> &P,
+                                         const femib::types::dtrian<f, d> &T) {
   femib::types::dvec<f, d> D = T[1] - T[0];
   femib::types::dvec<f, d> E = P - T[0];
   femib::types::dvec<f, d> F = P - T[1];
@@ -125,9 +125,9 @@ __host__ f distance_point_segment(const femib::types::dvec<f, d> &P,
 }
 
 template <typename f, int d>
-__device__ f distance_point_segment_(const femib::types::dvec<f, d> &P,
-                                     const femib::types::dvec<f, d> &A,
-                                     const femib::types::dvec<f, d> &B) {
+__device__ static f distance_point_segment_(const femib::types::dvec<f, d> &P,
+                                            const femib::types::dvec<f, d> &A,
+                                            const femib::types::dvec<f, d> &B) {
   femib::types::dvec<f, d> D = B - A;
   femib::types::dvec<f, d> E = P - A;
   f P1P2 = D.dot(D);
@@ -153,23 +153,18 @@ __host__ bool femib::cuda::accurate(const femib::types::dvec<f, d> &P,
   if (femib::cuda::in_triangle(P, T)) {
     return true;
   }
-  // TODO eh
-  if (false) {
-    return false;
-  } else if (distance_point_segment(P, {T[0], T[1]}) <= EPSILON * EPSILON) {
+
+  if ((distance_point_segment(P, {T[0], T[1]}) <= EPSILON * EPSILON) ||
+      (distance_point_segment(P, {T[1], T[2]}) <= EPSILON * EPSILON) ||
+      (distance_point_segment(P, {T[2], T[0]}) <= EPSILON * EPSILON)) {
     return true;
-  } else if (distance_point_segment(P, {T[1], T[2]}) <= EPSILON * EPSILON) {
-    return true;
-  } else if (distance_point_segment(P, {T[2], T[0]}) <= EPSILON * EPSILON) {
-    return true;
-  } else {
-    return false;
   }
+  return false;
 }
 
 template <typename f, int d>
-__device__ bool accurate_(const femib::types::dvec<f, d> &x,
-                          femib::types::dvec<f, d> *t) {
+__device__ static bool accurate_(const femib::types::dvec<f, d> &x,
+                                 femib::types::dvec<f, d> *t) {
   if (!in_box_<f, d>(x, t)) {
     return false;
   }
@@ -199,9 +194,9 @@ __device__ bool accurate_(const femib::types::dvec<f, d> &x,
 
 template <typename f, int d>
 __host__ void femib::cuda::serial_accurate(femib::types::dvec<f, d> *X,
-                                           int size_X,
+                                           const int size_X,
                                            femib::types::dtrian<f, d> *T,
-                                           int size_T, bool *N) {
+                                           const int size_T, bool *N) {
   for (int j = 0; j < size_X; ++j) {
     for (int i = 0; i < size_T; ++i) {
       femib::types::dtrian<f, d> t = T[i];
@@ -212,26 +207,27 @@ __host__ void femib::cuda::serial_accurate(femib::types::dvec<f, d> *X,
 }
 
 template <typename f, int d>
-__global__ void parallel_accurate_kernel(femib::types::dtrian_<f, d> *T,
-                                         int size_T,
-                                         femib::types::dvec<f, d> *X, bool *N) {
-  int point_idx = blockIdx.x;
-  int tri_idx = blockIdx.y * blockDim.x + threadIdx.x;
+__global__ static void
+parallel_accurate_kernel(femib::types::dtrian_<f, d> *T, const int size_T,
+                         femib::types::dvec<f, d> *X, bool *N) {
+  unsigned int point_idx = blockIdx.x;
+  unsigned int tri_idx = blockIdx.y * blockDim.x + threadIdx.x;
   if (tri_idx >= size_T) {
     return;
   }
   femib::types::dvec<f, d> p = X[point_idx];
-  bool n = accurate_<f, d>(p, T[tri_idx]);
+  const bool n = accurate_<f, d>(p, T[tri_idx]);
   N[point_idx * size_T + tri_idx] = n;
 }
 
 template <typename f, int d>
 __host__ void femib::cuda::parallel_accurate(femib::types::dvec<f, d> *X,
-                                             int size_X,
+                                             const int size_X,
                                              femib::types::dtrian_<f, d> *T,
-                                             int size_T, bool *N) {
-  const int threads_per_block = 256; //  hardware limit = 1024
-  int blocks_per_point = (size_T + threads_per_block - 1) / threads_per_block;
+                                             const int size_T, bool *N) {
+  constexpr int threads_per_block = 256; //  hardware limit = 1024
+  const int blocks_per_point =
+      (size_T + threads_per_block - 1) / threads_per_block;
   dim3 grid(size_X, blocks_per_point);
   parallel_accurate_kernel<f, d><<<grid, threads_per_block>>>(T, size_T, X, N);
 }

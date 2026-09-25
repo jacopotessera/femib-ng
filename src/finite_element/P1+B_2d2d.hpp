@@ -8,6 +8,7 @@
 // TODO derive this generators with sympy https://www.sympy.org/en/index.html
 namespace femib::finite_element {
 
+// TODO move to finite_element, duplicated
 template <typename T, int d>
 dvec<T, d> find_center_of(const femib::types::dtrian<T, d> &t) {
   dvec<T, d> c = {0.0, 0.0};

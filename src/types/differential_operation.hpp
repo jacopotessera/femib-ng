@@ -1,6 +1,6 @@
 #ifndef DIFFERENTIAL_OPERATION_HPP_INCLUDED_
 #define DIFFERENTIAL_OPERATION_HPP_INCLUDED_
-
+// TODO rename to operators?
 #include "types.hpp"
 
 template <typename T, int d>
@@ -72,7 +72,11 @@ template <typename T, int d, int e>
 std::function<T(femib::types::dvec<T, d>)> ddot(femib::types::F<T, d, e> a,
                                                 femib::types::F<T, d, e> b) {
   return [a, b](femib::types::dvec<T, d> x) {
-    return a.dx(x)[0] * b.dx(x)[0] + a.dx(x)[1] * b.dx(x)[1]; // TODO ? 3d?
+    T val = T(0.0);
+    for (int i = 0; i < d; ++i) {
+      val += a.dx(x)[i] * b.dx(x)[i];
+    }
+    return val;
   };
 }
 

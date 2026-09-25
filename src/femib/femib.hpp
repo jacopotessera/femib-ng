@@ -35,15 +35,16 @@ triplets2dense(const std::vector<Eigen::Triplet<T>> &triplets, const int rows,
   return dense_matrix;
 }
 
-// selects (and permutes) the given rows/cols out of a matrix: P * A * P^T
+// selects (and permutes) the given rows/cols out of a matrix
 // keeps only rows/cols in `rows`, in that order
 template <typename T>
-Eigen::SparseMatrix<T> selection_matrix(const std::vector<int> &rows, int n) {
+Eigen::SparseMatrix<T> selection_matrix(const std::vector<int> &rows,
+                                        size_t n) {
   Eigen::SparseMatrix<T> P(rows.size(), n);
   std::vector<Eigen::Triplet<T>> triplets;
   triplets.reserve(rows.size());
   for (size_t i = 0; i < rows.size(); ++i) {
-    triplets.push_back(Eigen::Triplet<T>((int)i, rows[i], T(1)));
+    triplets.push_back(Eigen::Triplet<T>(i, rows[i], T(1)));
   }
   P.setFromTriplets(triplets.begin(), triplets.end());
   return P;
@@ -66,40 +67,40 @@ femib::types::F<T, d, e> base_function2real_function(
   return a;
 }
 
+// TODO name?
+// A x = b
 template <typename T> struct sparse_solvable_equations {
   Eigen::SparseMatrix<T> A;
   Eigen::Matrix<T, Eigen::Dynamic, 1> b;
 };
 
+// TODO name?
 // reduces A x = f (with Dirichlet values boundary_values on the E nodes) to a
-// smaller system over just not_edges, folding boundary_values's contribution
-// into the RHS.
+// smaller system over just not_edges
 template <typename T>
 sparse_solvable_equations<T>
 remove_edges(const Eigen::SparseMatrix<T> &A,
-             const Eigen::Matrix<T, Eigen::Dynamic, 1> &f,
+             const Eigen::Matrix<T, Eigen::Dynamic, 1> &b,
              const Eigen::Matrix<T, Eigen::Dynamic, 1> &boundary_values,
              const std::vector<int> &not_edges) {
 
+  // TODO explanation of how this work (it's simple but...)
   Eigen::Matrix<T, Eigen::Dynamic, 1> ss = A * boundary_values;
 
   int n = static_cast<int>(not_edges.size());
-  Eigen::Matrix<T, Eigen::Dynamic, 1> bbb(n);
+  Eigen::Matrix<T, Eigen::Dynamic, 1> smaller_b(n);
   for (int i = 0; i < n; ++i) {
-    bbb(i) = f(not_edges[i]) - ss(not_edges[i]);
+    smaller_b(i) = b(not_edges[i]) - ss(not_edges[i]);
   }
 
-  Eigen::SparseMatrix<T> P =
-      selection_matrix<T>(not_edges, static_cast<int>(A.rows()));
-  Eigen::SparseMatrix<T> AAA = P * A * P.transpose();
+  Eigen::SparseMatrix<T> P = selection_matrix<T>(not_edges, A.rows());
+  Eigen::SparseMatrix<T> smaller_A = P * A * P.transpose();
 
-  return {AAA, bbb};
+  return {smaller_A, smaller_b};
 }
 
-// inverse of remove_edges: expands a not_edges-only solution reduced_solution
-// back to the full `full_size`-length vector, filling edge nodes with
-// boundary_values and everything else with reduced_solution's corresponding
-// not_edges entry.
+// TODO name?
+// TODO inverse of remove_edges, rebuild the full solution
 template <typename T>
 Eigen::Matrix<T, Eigen::Dynamic, 1>
 add_edges(const Eigen::Matrix<T, Eigen::Dynamic, 1> &reduced_solution,
@@ -112,12 +113,10 @@ add_edges(const Eigen::Matrix<T, Eigen::Dynamic, 1> &reduced_solution,
 
   for (int i = 0; i < full_size; i++) {
     full_solution(i, 0) = 0.0;
-    auto k = std::find(not_edges.begin(), not_edges.end(), i);
-    if (k != not_edges.end()) {
+    if (auto k = std::ranges::find(not_edges, i); k != not_edges.end()) {
       full_solution(i, 0) = reduced_solution(k - not_edges.begin(), 0);
     }
-    auto kk = std::find(edges.begin(), edges.end(), i);
-    if (kk != edges.end()) {
+    if (auto k = std::ranges::find(edges, i); k != edges.end()) {
       full_solution(i, 0) = boundary_values(i, 0);
     }
   }
@@ -125,6 +124,7 @@ add_edges(const Eigen::Matrix<T, Eigen::Dynamic, 1> &reduced_solution,
   return full_solution;
 }
 
+// TODO diagonal block
 template <typename T, int d, int e>
 std::vector<Eigen::Triplet<T>> build_diagonal_matrix(
     const femib::finite_element_space::finite_element_space<T, d, e> &v,
@@ -142,7 +142,8 @@ std::vector<Eigen::Triplet<T>> build_diagonal_matrix(
   std::iota(tri_indices.begin(), tri_indices.end(), 0);
 
   std::for_each(
-      std::execution::par, tri_indices.begin(), tri_indices.end(), [&](int n) {
+      std::execution::par_unseq, tri_indices.begin(), tri_indices.end(),
+      [&](int n) {
         femib::types::dtrian<T, d> triangle = v.mesh[n];
         femib::types::dmat<T, d> affine_Binv =
             femib::affine::affineBinv(triangle);
@@ -155,7 +156,8 @@ std::vector<Eigen::Triplet<T>> build_diagonal_matrix(
             femib::types::F<T, d, e> real_function_j =
                 femib::util::base_function2real_function<T, d, e>(
                     v, j, affine_Binv, affine_b);
-            T val = femib::mesh::integrate<T, d>(
+            T val = femib::mesh::integrate<T, d>( // TODO mesh integrate? can
+                                                  // inline here?
                 integration_rule, _operator(real_function_i, real_function_j),
                 triangle);
             size_t idx =
@@ -203,7 +205,8 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> build_load_vector(
   std::iota(tri_indices.begin(), tri_indices.end(), 0); // 0 -> n_tri - 1
 
   std::for_each(
-      std::execution::par, tri_indices.begin(), tri_indices.end(), [&](int n) {
+      std::execution::par_unseq, tri_indices.begin(), tri_indices.end(),
+      [&](int n) {
         femib::types::dtrian<T, d> triangle = v.mesh[n];
         femib::types::dmat<T, d> affine_Binv =
             femib::affine::affineBinv(triangle);
@@ -212,8 +215,9 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> build_load_vector(
           femib::types::F<T, d, e> real_function =
               femib::util::base_function2real_function<T, d, e>(
                   v, i, affine_Binv, affine_b);
-          T val = femib::mesh::integrate<T, d>(quadrature_rule,
-                                               load(real_function), triangle);
+          T val = femib::mesh::integrate<T, d>(
+              quadrature_rule, // TODO mesh integrate? can inline here?
+              load(real_function), triangle);
           size_t idx = static_cast<size_t>(n) * basis_count + i;
           load_vector[idx] = Eigen::Triplet<T>(v.nodes.get_index(i, n), 0, val);
         }
@@ -222,6 +226,7 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> build_load_vector(
       triplets2dense(load_vector, v.size(), 1));
 }
 
+// TODO off diagonal block
 template <typename T, int d>
 std::vector<Eigen::Triplet<T>> build_off_diagonal_matrix(
     const femib::finite_element_space::finite_element_space<T, d, d> &v,
@@ -240,7 +245,8 @@ std::vector<Eigen::Triplet<T>> build_off_diagonal_matrix(
       for (int j = 0; j < q.finite_element.base_functions.size(); ++j) {
         femib::types::F<T, d, 1> b =
             femib::util::base_function2real_function<T, d, 1>(q, j, Binv, bb);
-        T m = femib::mesh::integrate<T, d>(rule, fff(a, b), t);
+        T m = femib::mesh::integrate<T, d>(
+            rule, fff(a, b), t); // TODO mesh integrate? can inline here?
         BB.push_back(Eigen::Triplet<T>(v.nodes.get_index(i, n),
                                        q.nodes.get_index(j, n), m));
       }
@@ -249,6 +255,7 @@ std::vector<Eigen::Triplet<T>> build_off_diagonal_matrix(
   return BB;
 }
 
+// TODO name?
 template <typename T, int d, int e>
 std::vector<Eigen::Triplet<T>>
 build_edges(const femib::finite_element_space::finite_element_space<T, d, e> &s,
@@ -260,6 +267,7 @@ build_edges(const femib::finite_element_space::finite_element_space<T, d, e> &s,
   return B;
 }
 
+// TODO name?
 template <typename T, int d, int e>
 std::vector<int> build_not_edges(
     const femib::finite_element_space::finite_element_space<T, d, e> &s) {

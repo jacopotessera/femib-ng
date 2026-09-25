@@ -8,6 +8,7 @@
 #include "../types/types.hpp"
 
 // TODO add comments on types, methods, etc
+// transform a triangle in the reference triangle
 namespace femib::affine {
 
 template <typename T, int d>

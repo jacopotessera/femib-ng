@@ -9,8 +9,7 @@
 namespace femib::util {
 
 // Solves A x = b for a sparse A. A concrete implementation owns its own
-// strategy/parameters (e.g. which iterative method, tolerance); callers only
-// ever see this interface.
+// strategy/parameters (e.g. which iterative method, tolerance)
 template <typename T> struct sparse_solver {
   virtual ~sparse_solver() = default;
   virtual Eigen::Matrix<T, Eigen::Dynamic, 1>
