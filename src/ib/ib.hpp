@@ -3,6 +3,7 @@
 
 #include "../femib/navier_stokes.hpp"
 #include "../femib/nonlinear_solvers.hpp"
+#include "../femib/sparse_solvers.hpp"
 #include "../femib/stokes.hpp"
 #include "coupling.hpp"
 #include "structure.hpp"
@@ -25,9 +26,11 @@ template <typename T, int d> struct ib_problem {
       std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
           force = femib::stokes_steady::default_force<T, d>(),
       std::unique_ptr<femib::util::nonlinear_solver<T>> solver =
-          femib::util::default_nonlinear_solver_factory<T>())
+          femib::util::default_nonlinear_solver_factory<T>(),
+      std::unique_ptr<femib::util::sparse_solver<T>> linear_solver =
+          femib::util::default_solver_factory<T>())
       : fluid(std::move(v), std::move(q), std::move(rule), rho, mu, deltat,
-              std::move(force), std::move(solver)) {}
+              std::move(force), std::move(solver), std::move(linear_solver)) {}
 };
 
 template <typename T, int d>

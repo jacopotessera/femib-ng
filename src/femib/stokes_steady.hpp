@@ -5,10 +5,11 @@
 #include "../finite_element_space/finite_element_space.hpp"
 #include "../gauss/gauss.hpp"
 #include "../types/differential_operation.hpp"
+#include "sparse_solvers.hpp"
 #include <Eigen/Dense>
-#include <Eigen/IterativeLinearSolvers>
 #include <Eigen/Sparse>
 #include <functional>
+#include <memory>
 #include <spdlog/spdlog.h>
 #include <utility>
 #include <vector>
@@ -120,6 +121,7 @@ template <typename T, int d> struct stokes {
   Eigen::SparseMatrix<T> AA;              // TODO name?
   Eigen::Matrix<T, Eigen::Dynamic, 1> ff; // TODO name?
   femib::util::sparse_solvable_equations<T> solvable_equations;
+  std::unique_ptr<femib::util::sparse_solver<T>> linear_solver;
 
   std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1>> solution; // TODO solutions?
 
@@ -128,7 +130,9 @@ template <typename T, int d> struct stokes {
          const femib::gauss::rule<T, d> &integration_rule, T rho = 1.0,
          T mu = 1.0,
          std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
-             force = default_force<T, d>());
+             force = default_force<T, d>(),
+         std::unique_ptr<femib::util::sparse_solver<T>> linear_solver =
+             femib::util::default_solver_factory<T>());
 
   std::vector<std::pair<types::dvec<T, d>, types::dvec<T, d>>>
   plot_velocity(T delta) {
@@ -206,20 +210,8 @@ template <typename T, int d> void rebuild_system(stokes<T, d> &s) {
 template <typename T, int d, int e>
 Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &s) {
 
-  // TODO this one must use sparse_solver
-  Eigen::BiCGSTAB<Eigen::SparseMatrix<T>, Eigen::IncompleteLUT<T>> solver;
-  solver.setTolerance(1e-10);
-  solver.setMaxIterations(500);
-  solver.compute(s.solvable_equations.A);
-
-  Eigen::Matrix<T, Eigen::Dynamic, 1> x = solver.solve(s.solvable_equations.b);
-  if (solver.info() != Eigen::Success) {
-    SPDLOG_ERROR("femib::stokes_steady::solve: BiCGSTAB+ILUT failed to "
-                 "converge (Eigen::ComputationInfo = {}, iterations = {}, "
-                 "estimated error = {})",
-                 static_cast<int>(solver.info()), solver.iterations(),
-                 solver.error());
-  }
+  Eigen::Matrix<T, Eigen::Dynamic, 1> x =
+      s.linear_solver->solve(s.solvable_equations.A, s.solvable_equations.b);
 
   // drop the last row, constraint on pressure
   Eigen::Matrix<T, Eigen::Dynamic, 1> x_no_lambda = x.topRows(x.rows() - 1);
@@ -233,9 +225,10 @@ stokes<T, d>::stokes(
     femib::finite_element_space::finite_element_space<T, d, d> v,
     femib::finite_element_space::finite_element_space<T, d, 1> q,
     const femib::gauss::rule<T, d> &integration_rule, T rho, T mu,
-    std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)> force)
+    std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)> force,
+    std::unique_ptr<femib::util::sparse_solver<T>> linear_solver)
     : V(std::move(v)), Q(std::move(q)), rho(rho), mu(mu),
-      force(std::move(force)) {
+      force(std::move(force)), linear_solver(std::move(linear_solver)) {
   // TODO
   //  the parameters rho, mu, force shadow the members (force is moved from)
   const T viscosity = this->mu;

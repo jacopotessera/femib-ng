@@ -5,6 +5,7 @@
 #include "../gauss/gauss.hpp"
 #include "navier_stokes_common.hpp"
 #include "nonlinear_solvers.hpp"
+#include "sparse_solvers.hpp"
 #include "stokes_steady.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
@@ -25,9 +26,12 @@ struct navier_stokes : public femib::stokes_steady::stokes<T, d> {
       std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
           force = femib::stokes_steady::default_force<T, d>(),
       std::unique_ptr<femib::util::nonlinear_solver<T>> solver =
-          femib::util::default_nonlinear_solver_factory<T>())
+          femib::util::default_nonlinear_solver_factory<T>(),
+      std::unique_ptr<femib::util::sparse_solver<T>> linear_solver =
+          femib::util::default_solver_factory<T>())
       : femib::stokes_steady::stokes<T, d>(std::move(v), std::move(q), rule,
-                                           rho, mu, std::move(force)),
+                                           rho, mu, std::move(force),
+                                           std::move(linear_solver)),
         solver(std::move(solver)) {}
 };
 

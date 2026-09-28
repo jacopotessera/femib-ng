@@ -413,7 +413,8 @@ TEST_CASE("testing advance() with an extra_velocity_rhs") {
   femib::types::mesh<float, 2> mesh;
   femib::stokes::stokes<float, 2> s_plain =
       make_stokes_t_fixture(mesh, ones_force);
-  femib::stokes::stokes<float, 2> s_extra = s_plain;
+  femib::stokes::stokes<float, 2> s_extra =
+      make_stokes_t_fixture(mesh, ones_force);
 
   int rowsV = s_plain.V.nodes.P.size();
   Eigen::Matrix<float, Eigen::Dynamic, 1> extra =

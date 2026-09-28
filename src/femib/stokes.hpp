@@ -4,10 +4,12 @@
 #include "../femib/femib.hpp"
 #include "../finite_element_space/finite_element_space.hpp"
 #include "../gauss/gauss.hpp"
+#include "sparse_solvers.hpp"
 #include "stokes_steady.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -25,9 +27,12 @@ struct stokes : public femib::stokes_steady::stokes<T, d> {
          femib::gauss::rule<T, d> rule, T rho = 1.0, T mu = 1.0,
          T deltat = 0.1, // TODO eh
          std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
-             force = femib::stokes_steady::default_force<T, d>())
+             force = femib::stokes_steady::default_force<T, d>(),
+         std::unique_ptr<femib::util::sparse_solver<T>> linear_solver =
+             femib::util::default_solver_factory<T>())
       : femib::stokes_steady::stokes<T, d>(std::move(v), std::move(q), rule,
-                                           rho, mu, std::move(force)),
+                                           rho, mu, std::move(force),
+                                           std::move(linear_solver)),
         rule(std::move(rule)), deltat(deltat) {
     M = this->rho *
         femib::util::build_mass_matrix<T, d, d>(this->V, this->rule);
