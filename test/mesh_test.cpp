@@ -21,29 +21,29 @@ TEST_CASE("testing mesh") {
     std::function<float(femib::types::dvec<float, 2>)> f =
         [](femib::types::dvec<float, 2> x) { return 1; };
     float area = femib::mesh::integrate<float, 2>(rule, f, mesh);
-    CHECK(std::fabs(area - 1.0) <= EPSILON);
+    CHECK_LE(std::fabs(area - 1.0), EPSILON);
   }
   {
     std::function<float(femib::types::dvec<float, 2>)> f =
         [](femib::types::dvec<float, 2> x) { return x(0) + x(1); };
     float integral = femib::mesh::integrate<float, 2>(rule, f, mesh);
-    CHECK(std::fabs(integral - 1.0) <= EPSILON);
+    CHECK_LE(std::fabs(integral - 1.0), EPSILON);
   }
   {
     std::function<float(femib::types::dvec<float, 2>)> f =
         [](femib::types::dvec<float, 2> x) { return x(0) + x(1) + 1; };
     float integral = femib::mesh::integrate<float, 2>(rule, f, mesh);
-    CHECK(std::fabs(integral - 2.0) <= EPSILON);
+    CHECK_LE(std::fabs(integral - 2.0), EPSILON);
   }
 
   std::string mesh_dir = MESH_DIR;
   femib::types::mesh<float, 2> mesh_from_file = femib::mesh::read<float, 2>(
       mesh_dir + "p0.mat", mesh_dir + "t0.mat", mesh_dir + "e0.mat");
-  CHECK(std::fabs(mesh_from_file.P[0][0] - (-1.0)) <= EPSILON);
-  CHECK(mesh_from_file.T[0][0] == 0);
-  CHECK(mesh_from_file.P.size() == 5);
-  CHECK(mesh_from_file.T.size() == 4);
-  CHECK(mesh_from_file.E.size() == 4);
+  CHECK_LE(std::fabs(mesh_from_file.P[0][0] - (-1.0)), EPSILON);
+  CHECK_EQ(mesh_from_file.T[0][0], 0);
+  CHECK_EQ(mesh_from_file.P.size(), 5);
+  CHECK_EQ(mesh_from_file.T.size(), 4);
+  CHECK_EQ(mesh_from_file.E.size(), 4);
 
   CHECK_THROWS(femib::mesh::read<float, 2>("a", "b", "c"));
 }
@@ -52,10 +52,10 @@ TEST_CASE("testing find_box") {
   femib::types::mesh<float, 2> mesh;
   mesh.P = {{1.0, 5.0}, {-2.0, 3.0}, {4.0, -1.0}, {0.0, 0.0}};
   femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
-  CHECK(box.bottom(0) == doctest::Approx(-2.0));
-  CHECK(box.bottom(1) == doctest::Approx(-1.0));
-  CHECK(box.top(0) == doctest::Approx(4.0));
-  CHECK(box.top(1) == doctest::Approx(5.0));
+  CHECK_EQ(box.bottom(0), doctest::Approx(-2.0));
+  CHECK_EQ(box.bottom(1), doctest::Approx(-1.0));
+  CHECK_EQ(box.top(0), doctest::Approx(4.0));
+  CHECK_EQ(box.top(1), doctest::Approx(5.0));
 }
 
 TEST_CASE("testing find_box: empty mesh") {
@@ -67,11 +67,11 @@ TEST_CASE("testing lin_spaced") {
   femib::types::box<float, 2> box{.bottom = {0.0, 0.0}, .top = {1.0, 1.0}};
   std::vector<femib::types::dvec<float, 2>> points =
       femib::mesh::build_uniform_grid<float, 2>(box, 0.25);
-  CHECK(points.size() > 0);
+  CHECK_GT(points.size(), 0);
   for (const auto &p : points) {
-    CHECK(p(0) >= 0.0);
-    CHECK(p(0) <= 1.0);
-    CHECK(p(1) >= 0.0);
-    CHECK(p(1) <= 1.0);
+    CHECK_GE(p(0), 0.0);
+    CHECK_LE(p(0), 1.0);
+    CHECK_GE(p(1), 0.0);
+    CHECK_LE(p(1), 1.0);
   }
 }

@@ -63,7 +63,7 @@ TEST_CASE("default_nonlinear_solver_factory returns a picard_solver with the "
       femib::util::default_nonlinear_solver_factory<double>();
   auto *picard =
       dynamic_cast<femib::util::picard_solver<double> *>(solver.get());
-  REQUIRE(picard != nullptr);
-  CHECK(picard->max_iters == 20);
-  CHECK(picard->tol == doctest::Approx(1e-6));
+  REQUIRE_NE(picard, nullptr);
+  CHECK_EQ(picard->max_iters, 20);
+  CHECK_EQ(picard->tol, doctest::Approx(1e-6));
 }

@@ -13,10 +13,10 @@ TEST_CASE("testing save_sim") {
   HighFive::File file(path, HighFive::File::ReadOnly);
   std::string sim_name;
   file.getAttribute("sim_name").read(sim_name);
-  CHECK(sim_name == "test_sim");
+  CHECK_EQ(sim_name, "test_sim");
   std::string sim_type;
   file.getAttribute("sim_type").read(sim_type);
-  CHECK(sim_type == "");
+  CHECK_EQ(sim_type, "");
 
   std::remove(path.c_str());
 }
@@ -30,7 +30,7 @@ TEST_CASE("testing save_sim with an explicit sim_type") {
   HighFive::File file(path, HighFive::File::ReadOnly);
   std::string sim_type;
   file.getAttribute("sim_type").read(sim_type);
-  CHECK(sim_type == "ring");
+  CHECK_EQ(sim_type, "ring");
 
   std::remove(path.c_str());
 }
@@ -55,7 +55,7 @@ TEST_CASE("save_sim mode::overwrite succeeds even if the file already exists") {
   HighFive::File file(path, HighFive::File::ReadOnly);
   std::string sim_name;
   file.getAttribute("sim_name").read(sim_name);
-  CHECK(sim_name == "second"); // proves the file was actually replaced
+  CHECK_EQ(sim_name, "second"); // proves the file was actually replaced
 
   std::remove(path.c_str());
 }
@@ -74,7 +74,7 @@ TEST_CASE("save_sim mode::resume opens without truncating existing data") {
       femib::write::save_sim(path, "test_sim", "", femib::write::mode::resume));
 
   HighFive::File file(path, HighFive::File::ReadOnly);
-  CHECK(file.exist("timestep_0"));
+  CHECK_UNARY(file.exist("timestep_0"));
 
   std::remove(path.c_str());
 }
@@ -108,33 +108,33 @@ TEST_CASE("testing save_plot_data") {
 
   std::vector<std::vector<float>> x_read;
   file.getDataSet("timestep_0/x").read(x_read);
-  CHECK(x_read.size() == 2);
-  CHECK(x_read[0][0] == doctest::Approx(0.0));
-  CHECK(x_read[1][1] == doctest::Approx(1.0));
+  CHECK_EQ(x_read.size(), 2);
+  CHECK_EQ(x_read[0][0], doctest::Approx(0.0));
+  CHECK_EQ(x_read[1][1], doctest::Approx(1.0));
 
   std::vector<std::vector<float>> u_read;
   file.getDataSet("timestep_0/u").read(u_read);
-  CHECK(u_read.size() == 2);
-  CHECK(u_read[0][0] == doctest::Approx(1.0));
-  CHECK(u_read[0][1] == doctest::Approx(2.0));
-  CHECK(u_read[1][0] == doctest::Approx(3.0));
-  CHECK(u_read[1][1] == doctest::Approx(4.0));
+  CHECK_EQ(u_read.size(), 2);
+  CHECK_EQ(u_read[0][0], doctest::Approx(1.0));
+  CHECK_EQ(u_read[0][1], doctest::Approx(2.0));
+  CHECK_EQ(u_read[1][0], doctest::Approx(3.0));
+  CHECK_EQ(u_read[1][1], doctest::Approx(4.0));
 
   CHECK_FALSE(file.exist("timestep_0/q"));
 
   std::vector<std::vector<float>> q_read;
   file.getDataSet("timestep_1/q").read(q_read);
-  CHECK(q_read.size() == 1);
-  CHECK(q_read[0][0] == doctest::Approx(7.0));
+  CHECK_EQ(q_read.size(), 1);
+  CHECK_EQ(q_read[0][0], doctest::Approx(7.0));
 
   std::vector<std::vector<float>> x1_read;
   file.getDataSet("timestep_1/x").read(x1_read);
-  CHECK(x1_read.size() == 1);
-  CHECK(x1_read[0][0] == doctest::Approx(0.5));
+  CHECK_EQ(x1_read.size(), 1);
+  CHECK_EQ(x1_read[0][0], doctest::Approx(0.5));
 
   std::string sim_name;
   file.getAttribute("sim_name").read(sim_name);
-  CHECK(sim_name == "test_sim");
+  CHECK_EQ(sim_name, "test_sim");
 
   std::remove(path.c_str());
 }
@@ -153,11 +153,11 @@ TEST_CASE("testing save_metadata") {
 
   double deltat_read;
   metadata.getAttribute("deltat").read(deltat_read);
-  CHECK(deltat_read == doctest::Approx(0.0005));
+  CHECK_EQ(deltat_read, doctest::Approx(0.0005));
 
   std::string fe_read;
   metadata.getAttribute("finite_element").read(fe_read);
-  CHECK(fe_read == "P1_B_2d2d");
+  CHECK_EQ(fe_read, "P1_B_2d2d");
 
   std::remove(path.c_str());
 }
@@ -178,20 +178,20 @@ TEST_CASE("testing save_mesh") {
 
   std::vector<std::vector<double>> points_read;
   file.getDataSet("mesh/points").read(points_read);
-  CHECK(points_read.size() == 4);
-  CHECK(points_read[3][0] == doctest::Approx(1.0));
-  CHECK(points_read[3][1] == doctest::Approx(1.0));
+  CHECK_EQ(points_read.size(), 4);
+  CHECK_EQ(points_read[3][0], doctest::Approx(1.0));
+  CHECK_EQ(points_read[3][1], doctest::Approx(1.0));
 
   std::vector<std::vector<int>> triangles_read;
   file.getDataSet("mesh/triangles").read(triangles_read);
-  CHECK(triangles_read.size() == 2);
-  CHECK(triangles_read[1][0] == 1);
-  CHECK(triangles_read[1][1] == 3);
-  CHECK(triangles_read[1][2] == 2);
+  CHECK_EQ(triangles_read.size(), 2);
+  CHECK_EQ(triangles_read[1][0], 1);
+  CHECK_EQ(triangles_read[1][1], 3);
+  CHECK_EQ(triangles_read[1][2], 2);
 
   std::vector<int> edges_read;
   file.getDataSet("mesh/edges").read(edges_read);
-  CHECK(edges_read.size() == 4);
+  CHECK_EQ(edges_read.size(), 4);
 
   std::remove(path.c_str());
 }

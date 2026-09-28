@@ -35,39 +35,39 @@ TEST_CASE("testing cuda size") {
   femib::cuda::setStackSize(FEMIB_CUDA_STACK_SIZE);
   femib::cuda::setHeapSize(FEMIB_CUDA_HEAP_SIZE);
   femib::cuda::printSize();
-  CHECK(femib::cuda::getStackSize() == FEMIB_CUDA_STACK_SIZE);
+  CHECK_EQ(femib::cuda::getStackSize(), FEMIB_CUDA_STACK_SIZE);
   // the CUDA driver rounds up to its own alignment
-  CHECK(femib::cuda::getHeapSize() >= FEMIB_CUDA_HEAP_SIZE * sizeof(double));
+  CHECK_GE(femib::cuda::getHeapSize(), FEMIB_CUDA_HEAP_SIZE * sizeof(double));
 }
 
 TEST_CASE("testing cuda copy") {
   double x = 10;
   double *X = femib::cuda::copyToDevice<double>(&x, 1);
   double *y = femib::cuda::copyToHost<double>(X, 1);
-  CHECK(x == *y);
+  CHECK_EQ(x, *y);
   // TODO missing free
 }
 
 TEST_CASE("testing cuda in_box") {
-  CHECK(femib::cuda::in_box<float, 2>(P1, T));
+  CHECK_UNARY(femib::cuda::in_box<float, 2>(P1, T));
   CHECK_FALSE(femib::cuda::in_box<float, 2>(P2, T));
-  CHECK(femib::cuda::in_box<float, 2>(P3, T));
+  CHECK_UNARY(femib::cuda::in_box<float, 2>(P3, T));
   CHECK_FALSE(femib::cuda::in_box<float, 2>(P4, T));
-  CHECK(femib::cuda::in_box<float, 2>(P5, T));
+  CHECK_UNARY(femib::cuda::in_box<float, 2>(P5, T));
 }
 
 TEST_CASE("testing cuda in_triangle") {
-  CHECK(femib::cuda::in_triangle<float, 2>(P1, T));
+  CHECK_UNARY(femib::cuda::in_triangle<float, 2>(P1, T));
   CHECK_FALSE(femib::cuda::in_triangle<float, 2>(P2, T));
-  CHECK(femib::cuda::in_triangle<float, 2>(P3, T));
+  CHECK_UNARY(femib::cuda::in_triangle<float, 2>(P3, T));
   CHECK_FALSE(femib::cuda::in_triangle<float, 2>(P4, T));
   CHECK_FALSE(femib::cuda::in_triangle<float, 2>(P5, T));
 }
 
 TEST_CASE("testing cuda accurate") {
-  CHECK(femib::cuda::accurate<float, 2>(P1, T));
+  CHECK_UNARY(femib::cuda::accurate<float, 2>(P1, T));
   CHECK_FALSE(femib::cuda::accurate<float, 2>(P2, T));
-  CHECK(femib::cuda::accurate<float, 2>(P3, T));
+  CHECK_UNARY(femib::cuda::accurate<float, 2>(P3, T));
   CHECK_FALSE(femib::cuda::accurate<float, 2>(P4, T));
   CHECK_FALSE(femib::cuda::accurate<float, 2>(P5, T));
 }
@@ -91,13 +91,13 @@ TEST_CASE("testing cuda serial_accurate") {
       }
     }
   }
-  CHECK(NNN[0] == 7);
-  CHECK(NNN[1] == 7);
-  CHECK(NNN[2] == 7);
+  CHECK_EQ(NNN[0], 7);
+  CHECK_EQ(NNN[1], 7);
+  CHECK_EQ(NNN[2], 7);
 
   for (int i = 0; i < grid.size(); ++i) {
-    CHECK(NNN[i] >= 0);
-    CHECK(NNN[i] < mesh.N.size());
+    CHECK_GE(NNN[i], 0);
+    CHECK_LT(NNN[i], mesh.N.size());
   }
 }
 
@@ -140,9 +140,9 @@ TEST_CASE("testing cuda parallel_accurate") {
   delete[] T;
   T = NULL;
 
-  CHECK(NNN[0] == 7);
-  CHECK(NNN[1] == 7);
-  CHECK(NNN[2] == 7);
+  CHECK_EQ(NNN[0], 7);
+  CHECK_EQ(NNN[1], 7);
+  CHECK_EQ(NNN[2], 7);
 }
 
 TEST_CASE("testing mesh find_points") {
@@ -151,9 +151,9 @@ TEST_CASE("testing mesh find_points") {
 
   std::vector<int> NNN = femib::mesh::find_points<float, 2>(mesh, grid);
 
-  CHECK(NNN[0] == 7);
-  CHECK(NNN[1] == 7);
-  CHECK(NNN[2] == 7);
+  CHECK_EQ(NNN[0], 7);
+  CHECK_EQ(NNN[1], 7);
+  CHECK_EQ(NNN[2], 7);
 }
 
 TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
@@ -229,11 +229,11 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
       }
     }
   }
-  CHECK(gpu_true_cpu_false == 0);
-  CHECK(cpu_only_true == 0);
+  CHECK_EQ(gpu_true_cpu_false, 0);
+  CHECK_EQ(cpu_only_true, 0);
   CAPTURE(cpu_only_true_gpu_adjacent);
-  CHECK(cpu_only_true_gpu_lost == 0);
-  CHECK(cpu_only_true_gpu_elsewhere == 0);
+  CHECK_EQ(cpu_only_true_gpu_lost, 0);
+  CHECK_EQ(cpu_only_true_gpu_elsewhere, 0);
 
   delete[] Npar;
   Npar = NULL;

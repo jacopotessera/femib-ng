@@ -41,11 +41,11 @@ TEST_CASE("testing affine") {
       dmat affine_matrix = affineB<float, 2>(triangle);
       dmat inv_affine_matrix = affineBinv<float, 2>(triangle);
 
-      CHECK((transformed_point - linear_combination(triangle, c)).norm() <=
-            EPSILON * transformed_point.norm());
-      CHECK((inv_transf_point - point).norm() <= EPSILON * 1);
-      CHECK((affine_matrix * inv_affine_matrix).determinant() - 1 <=
-            EPSILON * 1);
+      CHECK_LE((transformed_point - linear_combination(triangle, c)).norm(),
+               EPSILON * transformed_point.norm());
+      CHECK_LE((inv_transf_point - point).norm(), EPSILON * 1);
+      CHECK_LE((affine_matrix * inv_affine_matrix).determinant() - 1,
+               EPSILON * 1);
     }
   }
 }
@@ -54,12 +54,12 @@ TEST_CASE("testing affineBdet") {
   femib::types::dtrian<float, 2> t = {{0.0, 0.0}, {2.0, 0.0}, {0.0, 2.0}};
   // affineBdet must be twice the triangle area
   float det = femib::affine::affineBdet<float, 2>(t);
-  CHECK(det == doctest::Approx(4.0));
+  CHECK_EQ(det, doctest::Approx(4.0));
 }
 
 TEST_CASE("testing affineBdet: degenerate triangle") {
   femib::types::dtrian<float, 2> degenerate = {
       {0.0, 0.0}, {1.0, 0.0}, {2.0, 0.0}};
   float det = femib::affine::affineBdet<float, 2>(degenerate);
-  CHECK(det == doctest::Approx(0.0));
+  CHECK_EQ(det, doctest::Approx(0.0));
 }

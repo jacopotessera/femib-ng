@@ -62,29 +62,30 @@ TEST_CASE("testing femib stokes") {
 
     // Expected size: (rowsV_free + rowsQ + 1) -- one Lagrange-multiplier
     // row/column on top of the velocity-reduced, fully-free-pressure system.
-    REQUIRE(A.rows() == expected_n);
-    REQUIRE(A.cols() == expected_n);
-    REQUIRE(b.rows() == expected_n);
+    REQUIRE_EQ(A.rows(), expected_n);
+    REQUIRE_EQ(A.cols(), expected_n);
+    REQUIRE_EQ(b.rows(), expected_n);
 
     // Symmetric saddle-point structure.
-    CHECK((A - Eigen::SparseMatrix<float>(A.transpose())).norm() < 1e-5f);
+    CHECK_LT((A - Eigen::SparseMatrix<float>(A.transpose())).norm(), 1e-5f);
 
     // Bottom-right corner is the Tikhonov regularization term, not exactly 0
-    CHECK(std::abs(A.coeff(expected_n - 1, expected_n - 1)) < 1e-5f);
+    CHECK_LT(std::abs(A.coeff(expected_n - 1, expected_n - 1)), 1e-5f);
 
     // RHS of "integral(p) = 0" is exactly 0.
-    CHECK(b(expected_n - 1) == 0.0f);
+    CHECK_EQ(b(expected_n - 1), 0.0f);
 
     // The augmented row/column (excluding the corner) is non-trivial
-    CHECK(Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(A)
-              .block(0, expected_n - 1, expected_n - 1, 1)
-              .norm() > 0.0f);
+    CHECK_GT(Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(A)
+                 .block(0, expected_n - 1, expected_n - 1, 1)
+                 .norm(),
+             0.0f);
   }
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::stokes_steady::solve<float, 2, 1>(stokes);
-  CHECK(xx.allFinite());
-  CHECK(xx.topRows(stokes.V.size()).norm() > 0.0f);
+  CHECK_UNARY(xx.allFinite());
+  CHECK_GT(xx.topRows(stokes.V.size()).norm(), 0.0f);
 }
 
 TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
@@ -176,7 +177,7 @@ TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
     max_velocity_error = std::max(max_velocity_error, error_u1);
     max_velocity_error = std::max(max_velocity_error, error_u2);
   }
-  CHECK(max_velocity_error < 0.15f);
+  CHECK_LT(max_velocity_error, 0.15f);
 
   // Stokes pressure is only defined up to an additive constant for
   // pure-Dirichlet-velocity boundary conditions, so subtract the mean from
@@ -201,5 +202,5 @@ TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
     max_pressure_error = std::max(max_pressure_error, err);
   }
 
-  CHECK(max_pressure_error < 6.0f);
+  CHECK_LT(max_pressure_error, 6.0f);
 }

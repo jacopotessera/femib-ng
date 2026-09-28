@@ -82,8 +82,8 @@ TEST_CASE("testing femib stokes_t pipeline with HDF5 persistence") {
     femib::write::save_plot_data(path, p);
   }
 
-  CHECK(stokes.solution.size() == (size_t)TMAX);
-  CHECK(stokes.solution.back().allFinite());
+  CHECK_EQ(stokes.solution.size(), (size_t)TMAX);
+  CHECK_UNARY(stokes.solution.back().allFinite());
 
   // TODO
   // std::remove(path.c_str());
@@ -100,8 +100,8 @@ TEST_CASE("testing advance") {
   femib::stokes::advance<float, 2>(s);
   CHECK_NOTHROW(femib::stokes::advance<float, 2>(s));
 
-  CHECK(s.solution.back().rows() == s.V.nodes.P.size() + s.Q.nodes.P.size());
-  CHECK(s.solution.back().topRows(s.V.nodes.P.size()).allFinite());
+  CHECK_EQ(s.solution.back().rows(), s.V.nodes.P.size() + s.Q.nodes.P.size());
+  CHECK_UNARY(s.solution.back().topRows(s.V.nodes.P.size()).allFinite());
 }
 
 TEST_CASE("testing advance over several timesteps") {
@@ -123,7 +123,7 @@ TEST_CASE("testing advance over several timesteps") {
     femib::stokes::advance<float, 2>(s);
     Eigen::Matrix<float, Eigen::Dynamic, 1> v =
         s.solution.back().topRows(rowsV);
-    CHECK(v.allFinite());
+    CHECK_UNARY(v.allFinite());
     velocity_norm.push_back(v.norm());
     if (step > 0) {
       step_diff_norm.push_back((v - prev_v).norm());
@@ -135,13 +135,13 @@ TEST_CASE("testing advance over several timesteps") {
       *std::max_element(velocity_norm.begin(), velocity_norm.end());
   float min_norm =
       *std::min_element(velocity_norm.begin(), velocity_norm.end());
-  CHECK(max_norm < 2.0f * min_norm);
+  CHECK_LT(max_norm, 2.0f * min_norm);
 
-  CHECK(step_diff_norm.back() < 1.1f * step_diff_norm.front());
+  CHECK_LT(step_diff_norm.back(), 1.1f * step_diff_norm.front());
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> p =
       s.solution.back().bottomRows(s.Q.nodes.P.size());
-  CHECK(std::abs(s.pressure_constraint_vector.dot(p)) < 1e-4f);
+  CHECK_LT(std::abs(s.pressure_constraint_vector.dot(p)), 1e-4f);
 }
 
 // TODO MMS Method of Manufactured Solutions
@@ -264,17 +264,17 @@ TEST_CASE("test stokes::advance with a non-stationary known problem") {
   }
 
   float g_max = *std::max_element(g_values.begin(), g_values.end());
-  CHECK(g_values.front() < 0.1f);
-  CHECK(g_max > 1.9f);
-  CHECK(g_values.back() < g_max - 0.5f);
+  CHECK_LT(g_values.front(), 0.1f);
+  CHECK_GT(g_max, 1.9f);
+  CHECK_LT(g_values.back(), g_max - 0.5f);
 
   float max_velocity_error_over_run =
       *std::max_element(velocity_errors.begin(), velocity_errors.end());
   float max_pressure_error_over_run =
       *std::max_element(pressure_errors.begin(), pressure_errors.end());
 
-  CHECK(max_velocity_error_over_run < 0.6f);
-  CHECK(max_pressure_error_over_run < 20.0f);
+  CHECK_LT(max_velocity_error_over_run, 0.6f);
+  CHECK_LT(max_pressure_error_over_run, 20.0f);
 }
 
 TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
@@ -394,13 +394,13 @@ TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
     femib::write::save_plot_data(path, p);
   }
 
-  CHECK(last_step_diff < 0.1f);
+  CHECK_LT(last_step_diff, 0.1f);
 
   float final_velocity_error = velocity_error(s.solution.back());
   float final_pressure_error = pressure_error(s.solution.back());
 
-  CHECK(final_velocity_error < 1.0f);
-  CHECK(final_pressure_error < 10.0f);
+  CHECK_LT(final_velocity_error, 1.0f);
+  CHECK_LT(final_pressure_error, 10.0f);
 }
 
 TEST_CASE("testing advance() with an extra_velocity_rhs") {
@@ -426,7 +426,7 @@ TEST_CASE("testing advance() with an extra_velocity_rhs") {
   femib::stokes::advance<float, 2>(s_extra, extra);
 
   float diff = (s_plain.solution.back() - s_extra.solution.back()).norm();
-  CHECK(diff > 1e-4f);
+  CHECK_GT(diff, 1e-4f);
 
   femib::stokes::stokes<float, 2> s_null =
       make_stokes_t_fixture(mesh, ones_force);
@@ -434,5 +434,5 @@ TEST_CASE("testing advance() with an extra_velocity_rhs") {
   femib::stokes::stokes<float, 2> s_default =
       make_stokes_t_fixture(mesh, ones_force);
   femib::stokes::advance<float, 2>(s_default);
-  CHECK((s_null.solution.back() - s_default.solution.back()).norm() < 1e-8f);
+  CHECK_LT((s_null.solution.back() - s_default.solution.back()).norm(), 1e-8f);
 }

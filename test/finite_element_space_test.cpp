@@ -131,9 +131,9 @@ TEST_CASE("testing finite_element_space") {
     }
   }
 
-  CHECK(xx.size() == s.nodes.P.size());
+  CHECK_EQ(xx.size(), s.nodes.P.size());
   for (int e : s.nodes.E) {
-    CHECK(xx(e, 0) == doctest::Approx(b(s.nodes.P[e])));
+    CHECK_EQ(xx(e, 0), doctest::Approx(b(s.nodes.P[e])));
   }
 }
 

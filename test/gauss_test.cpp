@@ -13,10 +13,10 @@ TEST_CASE("testing gauss") {
   std::function<float(femib::types::dvec<float, 2>)> f =
       [](femib::types::dvec<float, 2> x) { return 1; };
   float area = femib::gauss::integrate<float, 2>(rule, f);
-  CHECK(std::fabs(area - 1.0 / 2.0) <= EPSILON);
+  CHECK_LE(std::fabs(area - 1.0 / 2.0), EPSILON);
 
   std::function<float(femib::types::dvec<float, 2>)> g =
       [](femib::types::dvec<float, 2> x) { return x(0) + x(1); };
   float integral = femib::gauss::integrate<float, 2>(rule, g);
-  CHECK(std::fabs(integral - 1.0 / 3.0) <= EPSILON);
+  CHECK_LE(std::fabs(integral - 1.0 / 3.0), EPSILON);
 }

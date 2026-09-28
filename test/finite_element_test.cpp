@@ -17,7 +17,7 @@ TEST_CASE("testing finite_element P1_2d1d") {
       CAPTURE(i);
       CAPTURE(j);
       float value = f.base_functions[j].x(f.base_nodes[i])(0);
-      CHECK(value == doctest::Approx(i == j ? 1.0 : 0.0));
+      CHECK_EQ(value, doctest::Approx(i == j ? 1.0 : 0.0));
     }
   }
 }
@@ -29,8 +29,8 @@ TEST_CASE("testing P1_2d1d build_nodes") {
       {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}, {0.5, 0.5}},
       {{0, 1, 4}, {1, 2, 4}, {2, 3, 4}, {3, 0, 4}}, {0, 1, 2, 3});
   femib::types::nodes<float, 2> nodes = f.build_nodes(mesh);
-  CHECK(nodes.P.size() == mesh.P.size());
-  CHECK(nodes.T.size() == mesh.T.size());
+  CHECK_EQ(nodes.P.size(), mesh.P.size());
+  CHECK_EQ(nodes.T.size(), mesh.T.size());
 }
 
 TEST_CASE("testing finite_element P0_2d1d") {
@@ -41,7 +41,7 @@ TEST_CASE("testing finite_element P0_2d1d") {
       CAPTURE(i);
       CAPTURE(j);
       float value = f.base_functions[j].x(f.base_nodes[i])(0);
-      CHECK(value == doctest::Approx(i == j ? 1.0 : 0.0));
+      CHECK_EQ(value, doctest::Approx(i == j ? 1.0 : 0.0));
     }
   }
 }
@@ -50,8 +50,8 @@ TEST_CASE("testing finite_element P1_2d2d") {
   femib::finite_element::finite_element<float, 2, 2> f =
       femib::finite_element::create_finite_element_P1_2d2d<float, 2, 2>();
   int n_nodes = f.base_nodes.size();
-  CHECK(n_nodes == 3);
-  CHECK(f.base_functions.size() == 6);
+  CHECK_EQ(n_nodes, 3);
+  CHECK_EQ(f.base_functions.size(), 6);
   for (int k = 0; k < f.base_functions.size(); ++k) {
     int component = k / n_nodes;
     int node_idx = k % n_nodes;
@@ -60,7 +60,7 @@ TEST_CASE("testing finite_element P1_2d2d") {
           f.base_functions[k].x(f.base_nodes[i]);
       for (int c = 0; c < 2; ++c) {
         float expected = (c == component && i == node_idx) ? 1.0f : 0.0f;
-        CHECK(value(c) == doctest::Approx(expected));
+        CHECK_EQ(value(c), doctest::Approx(expected));
       }
     }
   }
@@ -70,8 +70,8 @@ TEST_CASE("testing finite_element P2_2d2d") {
   femib::finite_element::finite_element<float, 2, 2> f =
       femib::finite_element::create_finite_element_P2_2d2d<float, 2, 2>();
   int n_nodes = f.base_nodes.size();
-  CHECK(n_nodes == 6);
-  CHECK(f.base_functions.size() == 12);
+  CHECK_EQ(n_nodes, 6);
+  CHECK_EQ(f.base_functions.size(), 12);
   for (int k = 0; k < f.base_functions.size(); ++k) {
     int component = k / n_nodes;
     int node_idx = k % n_nodes;
@@ -83,7 +83,7 @@ TEST_CASE("testing finite_element P2_2d2d") {
         CAPTURE(k);
         CAPTURE(i);
         CAPTURE(c);
-        CHECK(value(c) == doctest::Approx(expected));
+        CHECK_EQ(value(c), doctest::Approx(expected));
       }
     }
   }
@@ -101,28 +101,28 @@ TEST_CASE("testing P2_2d2d build_nodes shares edge midpoints between "
 
   int size_P = (int)mesh.P.size();
   int n_edges = 8;
-  CHECK(nodes.P.size() == 2 * size_P + 2 * n_edges);
-  CHECK(nodes.T.size() == mesh.T.size());
+  CHECK_EQ(nodes.P.size(), 2 * size_P + 2 * n_edges);
+  CHECK_EQ(nodes.T.size(), mesh.T.size());
   for (const auto &row : nodes.T) {
-    CHECK(row.size() == 12);
+    CHECK_EQ(row.size(), 12);
   }
 
   // Triangle 0 = {0,1,4}: its 4th nodes (local index 3) is the midpoint of edge
   // (1,4). Triangle 1 = {1,2,4}: its 5th nodes (local index 4) is the midpoint
   // of the same edge.
-  CHECK(nodes.T[0][3] == nodes.T[1][4]);
+  CHECK_EQ(nodes.T[0][3], nodes.T[1][4]);
 
   // Every boundary vertex/edge-midpoint DOF is doubled (u1, u2): 4 boundary
   // vertices + 4 boundary edges (the 4 outer square edges), times 2.
-  CHECK(nodes.E.size() == 2 * (4 + 4));
+  CHECK_EQ(nodes.E.size(), 2 * (4 + 4));
 }
 
 TEST_CASE("testing finite_element P1+B_2d2d") {
   femib::finite_element::finite_element<float, 2, 2> f =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
   int n_nodes = f.base_nodes.size();
-  CHECK(n_nodes == 4);
-  CHECK(f.base_functions.size() == 8);
+  CHECK_EQ(n_nodes, 4);
+  CHECK_EQ(f.base_functions.size(), 8);
   int component[8] = {0, 0, 0, 1, 1, 1, 0, 1};
   int node_idx[8] = {0, 1, 2, 0, 1, 2, 3, 3};
   for (int k = 0; k < f.base_functions.size(); ++k) {
@@ -131,7 +131,7 @@ TEST_CASE("testing finite_element P1+B_2d2d") {
           f.base_functions[k].x(f.base_nodes[i]);
       for (int c = 0; c < 2; ++c) {
         float expected = (c == component[k] && i == node_idx[k]) ? 1.0f : 0.0f;
-        CHECK(value(c) == doctest::Approx(expected));
+        CHECK_EQ(value(c), doctest::Approx(expected));
       }
     }
   }

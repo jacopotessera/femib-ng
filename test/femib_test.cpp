@@ -37,7 +37,7 @@ TEST_CASE("testing femib poisson") {
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::poisson::solve<float, 2, 1>(poisson);
 
-  CHECK(xx.allFinite());
+  CHECK_UNARY(xx.allFinite());
   // TODO check? it is a known problem with known solutions. there is a test
   //  below. is this test still needed?
 }
@@ -57,9 +57,9 @@ TEST_CASE("testing build_not_edges") {
 
   std::vector<int> not_edges = femib::util::build_not_edges<float, 2, 1>(s);
   // TODO https://github.com/doctest/doctest/issues/1004
-  CHECK(not_edges.size() + s.nodes.E.size() == s.nodes.P.size());
+  CHECK_EQ(not_edges.size() + s.nodes.E.size(), s.nodes.P.size());
   for (int i : not_edges) {
-    CHECK(std::find(s.nodes.E.begin(), s.nodes.E.end(), i) == s.nodes.E.end());
+    CHECK_EQ(std::find(s.nodes.E.begin(), s.nodes.E.end(), i), s.nodes.E.end());
   }
 }
 
@@ -70,18 +70,18 @@ TEST_CASE("testing triplets2dense") {
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> dense =
       femib::util::triplets2dense<float>(triplets, 3, 3);
 
-  REQUIRE(dense.rows() == 3);
-  REQUIRE(dense.cols() == 3);
-  CHECK(dense(0, 0) == doctest::Approx(2.0f));
-  CHECK(dense(1, 2) == doctest::Approx(3.5f));
-  CHECK(dense(2, 1) == doctest::Approx(-1.0f));
+  REQUIRE_EQ(dense.rows(), 3);
+  REQUIRE_EQ(dense.cols(), 3);
+  CHECK_EQ(dense(0, 0), doctest::Approx(2.0f));
+  CHECK_EQ(dense(1, 2), doctest::Approx(3.5f));
+  CHECK_EQ(dense(2, 1), doctest::Approx(-1.0f));
 
   for (int i = 0; i < dense.rows(); ++i) {
     for (int j = 0; j < dense.cols(); ++j) {
       bool listed = (i == 0 && j == 0) || (i == 1 && j == 2) ||
                     (i == 2 && j == 1); // TODO eh. use find_if?
       if (!listed) {
-        CHECK(dense(i, j) == doctest::Approx(0.0f));
+        CHECK_EQ(dense(i, j), doctest::Approx(0.0f));
       }
     }
   }
@@ -94,19 +94,19 @@ TEST_CASE("tesint triplets2sparse") {
   Eigen::SparseMatrix<float> sparse =
       femib::util::triplets2sparse<float>(triplets, 3, 3);
 
-  REQUIRE(sparse.rows() == 3);
-  REQUIRE(sparse.cols() == 3);
-  REQUIRE(sparse.nonZeros() == 3);
-  CHECK(sparse.coeff(0, 0) == doctest::Approx(2.0f));
-  CHECK(sparse.coeff(1, 2) == doctest::Approx(3.5f));
-  CHECK(sparse.coeff(2, 1) == doctest::Approx(-1.0f));
+  REQUIRE_EQ(sparse.rows(), 3);
+  REQUIRE_EQ(sparse.cols(), 3);
+  REQUIRE_EQ(sparse.nonZeros(), 3);
+  CHECK_EQ(sparse.coeff(0, 0), doctest::Approx(2.0f));
+  CHECK_EQ(sparse.coeff(1, 2), doctest::Approx(3.5f));
+  CHECK_EQ(sparse.coeff(2, 1), doctest::Approx(-1.0f));
 
   for (int i = 0; i < sparse.rows(); ++i) {
     for (int j = 0; j < sparse.cols(); ++j) {
       bool listed = (i == 0 && j == 0) || (i == 1 && j == 2) ||
                     (i == 2 && j == 1); // TODO as above, use find or similar
       if (!listed) {
-        CHECK(sparse.coeff(i, j) == doctest::Approx(0.0f));
+        CHECK_EQ(sparse.coeff(i, j), doctest::Approx(0.0f));
       }
     }
   }
@@ -116,7 +116,7 @@ TEST_CASE("tesint triplets2sparse") {
       femib::util::triplets2dense<float>(triplets, 3, 3);
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> sparse_densified =
       Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(sparse);
-  CHECK((dense_check - sparse_densified).norm() == doctest::Approx(0.0f));
+  CHECK_EQ((dense_check - sparse_densified).norm(), doctest::Approx(0.0f));
 }
 
 TEST_CASE("poisson::solve matches sin(pi x)sin(pi y) manufactured solution") {
@@ -182,5 +182,5 @@ TEST_CASE("poisson::solve matches sin(pi x)sin(pi y) manufactured solution") {
     float error = std::abs(xx(i, 0) - exact);
     max_error = std::max(max_error, error);
   }
-  CHECK(max_error < 0.05f);
+  CHECK_LT(max_error, 0.05f);
 }

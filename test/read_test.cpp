@@ -19,12 +19,12 @@ TEST_CASE("testing read_mesh_file") {
   femib::types::mesh<float, 2> mesh =
       read_mesh_file<float, 2>(p_path, t_path, e_path);
 
-  CHECK(mesh.P[77](0) == doctest::Approx(-0.84436));
-  CHECK(mesh.P[77](1) == doctest::Approx(0.84098));
+  CHECK_EQ(mesh.P[77](0), doctest::Approx(-0.84436));
+  CHECK_EQ(mesh.P[77](1), doctest::Approx(0.84098));
 
-  CHECK(mesh.T[1](0) == doctest::Approx(1));
-  CHECK(mesh.T[1](1) == doctest::Approx(1921));
-  CHECK(mesh.T[1](2) == doctest::Approx(692));
+  CHECK_EQ(mesh.T[1](0), doctest::Approx(1));
+  CHECK_EQ(mesh.T[1](1), doctest::Approx(1921));
+  CHECK_EQ(mesh.T[1](2), doctest::Approx(692));
 
-  CHECK(mesh.E[34] == doctest::Approx(63));
+  CHECK_EQ(mesh.E[34], doctest::Approx(63));
 }

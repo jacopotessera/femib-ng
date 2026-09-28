@@ -5,20 +5,20 @@
 
 TEST_CASE("testing types") {
   femib::types::dvec<float, 2> v = {1.0, 2.0};
-  CHECK(v(0) == doctest::Approx(1.0));
-  CHECK(v(1) == doctest::Approx(2.0));
+  CHECK_EQ(v(0), doctest::Approx(1.0));
+  CHECK_EQ(v(1), doctest::Approx(2.0));
 
   femib::types::F<float, 2, 1> f;
   f.x = [](const femib::types::dvec<float, 2> &x) {
     return femib::types::dvec<float, 1>{x(0) + x(1)};
   };
   femib::types::dvec<float, 2> p = {2.0, 3.0};
-  CHECK(f.x(p)(0) == doctest::Approx(5.0));
+  CHECK_EQ(f.x(p)(0), doctest::Approx(5.0));
 }
 
 TEST_CASE("testing mesh constructor populates N") {
   femib::types::mesh<float, 2> mesh({{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}},
                                     {{0, 1, 2}}, {});
 
-  CHECK(mesh.N.size() == mesh.T.size());
+  CHECK_EQ(mesh.N.size(), mesh.T.size());
 }
