@@ -75,8 +75,8 @@ void advance(stokes<T, d> &s, std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
   Eigen::SparseMatrix<T> DD = (1 / s.deltat) * s.M;
   Eigen::Matrix<T, Eigen::Dynamic, 1> dd = (1 / s.deltat) * (s.M * u_1);
 
-  int nV = s.V.size();
-  int nQ = s.Q.size();
+  const int nV = s.V.size();
+  const int nQ = s.Q.size();
   Eigen::SparseMatrix<T> top_left = s.A + DD;
   s.AA = femib::stokes_steady::assemble_saddle_point_matrix<T>(top_left, s.B,
                                                                nV, nQ);

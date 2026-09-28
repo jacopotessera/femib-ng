@@ -156,7 +156,6 @@ TEST_CASE("testing mesh find_points") {
   CHECK(NNN[2] == 7);
 }
 
-// TODO parallel_accurate is not really accurate... but now it is!
 TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
   std::vector<femib::types::dvec<float, 2>> grid =
       femib::mesh::build_uniform_grid<float, 2>(box, delta);

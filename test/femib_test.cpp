@@ -7,13 +7,12 @@
 #include "../src/gauss/gauss.hpp"
 #include "../src/gauss/gauss_lagrange_2_2d.hpp"
 #include "../src/mesh/mesh.hpp"
-#include "../src/read/read.hpp"
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <algorithm>
 #include <cmath>
 #include <doctest/doctest.h>
-#include <iostream>
+#include <numbers>
 #include <vector>
 
 #include "utils.hpp"
@@ -128,7 +127,7 @@ TEST_CASE("poisson::solve matches sin(pi x)sin(pi y) manufactured solution") {
   // (standard, single-term textbook derivation: each second partial
   // derivative contributes -pi^2 sin(pi x) sin(pi y), so
   // -Delta(u) = -(u_xx + u_yy) = 2 pi^2 sin(pi x) sin(pi y).)
-  const float PI = 3.14159265358979f; // TODO math?
+  const float PI = std::numbers::pi_v<float>;
   auto u_exact = [PI](const femib::types::dvec<float, 2> &x) {
     return std::sin(PI * x(0)) * std::sin(PI * x(1));
   };
@@ -167,9 +166,12 @@ TEST_CASE("poisson::solve matches sin(pi x)sin(pi y) manufactured solution") {
 
   femib::poisson::poisson<float, 2, 1> problem;
   problem.V = s;
-  problem.dB = femib::util::triplets2dense<float>(B, s.nodes.P.size(), 1);
-  problem.dM = femib::util::build_stiffness_matrix<float, 2, 1>(s, rule);
-  problem.dF = femib::util::build_load_vector<float, 2, 1>(s, rule, ggg);
+  problem.edge_values = femib::util::triplets2dense<float>(
+      B, s.nodes.P.size(), 1); // s.nodes.P.size() ?
+  problem.stiffness_matrix =
+      femib::util::build_stiffness_matrix<float, 2, 1>(s, rule);
+  problem.load_vector =
+      femib::util::build_load_vector<float, 2, 1>(s, rule, ggg);
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::poisson::solve<float, 2, 1>(problem);

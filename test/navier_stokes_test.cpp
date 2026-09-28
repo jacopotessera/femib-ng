@@ -14,6 +14,7 @@
 #include <cmath>
 #include <doctest/doctest.h>
 #include <memory>
+#include <numbers>
 
 #include "utils.hpp"
 
@@ -209,8 +210,7 @@ TEST_CASE("assemble_convection matches by-hand-derived closed-form integrals "
   CHECK_LT((M_double_rho - 2.0f * M).norm(), tol);
 }
 
-// TODO fix this when the solver is fast, using sparse solver
-TEST_CASE("testing time-dependent Navier-Stokes" * doctest::skip(true)) {
+TEST_CASE("testing time-dependent Navier-Stokes") {
   constexpr float PI = std::numbers::pi_v<float>;
   float eps = 0.05f;
 

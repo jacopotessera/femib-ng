@@ -4,16 +4,18 @@
 #include "../src/gauss/gauss_lagrange_2_2d.hpp"
 #include "../src/ib/ib.hpp"
 #include <algorithm>
+#include <cmath>
 #include <doctest/doctest.h>
 #include <memory>
+#include <vector>
 
 #include "utils.hpp"
 #include "write.hpp"
 
 namespace {
 
-femib::ib::ib_problem<float, 2> make_ib_fixture(int n_mesh, int n_ring,
-                                                float radius) {
+femib::ib::ib_problem<float, 2>
+make_ib_fixture(int n_mesh, int n_ring, float radius, float k_spring = 2.618f) {
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();
   femib::types::mesh<float, 2> mesh = make_unit_square_mesh(n_mesh);
@@ -38,8 +40,45 @@ femib::ib::ib_problem<float, 2> make_ib_fixture(int n_mesh, int n_ring,
       },
       std::make_unique<femib::util::picard_solver<float>>(10, 1e-5f));
   p.structure = femib::ib::build_ring<float, 2>(
-      femib::types::dvec<float, 2>(0.5f, 0.5f), radius, n_ring, 2.618f);
+      femib::types::dvec<float, 2>(0.5f, 0.5f), radius, n_ring, k_spring);
   return p;
+}
+
+// sqrt(var(x) / var(y)) of the points: a/b for an axis-aligned ellipse
+float moment_aspect(const std::vector<femib::types::dvec<float, 2>> &X) {
+  femib::types::dvec<float, 2> c = femib::types::dvec<float, 2>::Zero();
+  for (const auto &x : X) {
+    c += x;
+  }
+  c /= static_cast<float>(X.size());
+  float var_x = 0.0f;
+  float var_y = 0.0f;
+  for (const auto &x : X) {
+    var_x += (x(0) - c(0)) * (x(0) - c(0));
+    var_y += (x(1) - c(1)) * (x(1) - c(1));
+  }
+  return std::sqrt(var_x / var_y);
+}
+
+femib::types::dvec<float, 2>
+extent(const std::vector<femib::types::dvec<float, 2>> &X) {
+  femib::types::dvec<float, 2> lo = X[0];
+  femib::types::dvec<float, 2> hi = X[0];
+  for (const auto &x : X) {
+    lo = lo.cwiseMin(x);
+    hi = hi.cwiseMax(x);
+  }
+  return hi - lo;
+}
+
+float polygon_area(const std::vector<femib::types::dvec<float, 2>> &X) {
+  float A = 0.0f;
+  for (size_t k = 0; k < X.size(); ++k) {
+    const auto &a = X[k];
+    const auto &b = X[(k + 1) % X.size()];
+    A += a(0) * b(1) - b(0) * a(1);
+  }
+  return std::abs(A) * 0.5f;
 }
 } // namespace
 
@@ -77,9 +116,10 @@ TEST_CASE("a ring at its rest configuration stays motionless") {
 }
 
 TEST_CASE(
-    "a ring in perturbed configuration moves toward its rest configuration" *
-    doctest::skip(true)) {
-  femib::ib::ib_problem<float, 2> p = make_ib_fixture(16, 24, 0.2f);
+    "a ring in perturbed configuration moves toward its rest configuration") {
+  // n_ring keeps the ring's point spacing under half the mesh spacing, so the
+  // boundary doesn't leak; k_spring=100 is unstable at this mesh and deltat
+  femib::ib::ib_problem<float, 2> p = make_ib_fixture(24, 96, 0.2f, 50.0f);
   femib::types::dvec<float, 2> center(0.5f, 0.5f);
   for (auto &x : p.structure.X) {
     femib::types::dvec<float, 2> rel = x - center;
@@ -87,40 +127,40 @@ TEST_CASE(
     x(1) = center(1) + rel(1) / 1.3f;
   }
   std::vector<femib::types::dvec<float, 2>> X0 = p.structure.X;
+  const femib::types::dvec<float, 2> extent0 = extent(X0);
+  const float area0 = polygon_area(X0);
 
-  std::string id = get_time();
-  std::string path = "/tmp/femib_ib_test_" + id + ".h5";
-  femib::write::save_sim(path, id, "ring", femib::write::mode::overwrite);
-
-  for (int step = 0; step < 200; ++step) {
+  float aspect = moment_aspect(X0);
+  for (int step = 1; step <= 200; ++step) {
     femib::ib::advance<float, 2>(p);
-
-    femib::write::plot_data<float, 2> plot_data;
-    plot_data.time = step;
-    for (const auto &[position, velocity] : p.fluid.plot_velocity(0.01f)) {
-      plot_data.x.push_back(position);
-      plot_data.u.push_back(velocity);
+    if (step % 50 == 0) {
+      const float new_aspect = moment_aspect(p.structure.X);
+      CHECK_LT(new_aspect, aspect);
+      aspect = new_aspect;
     }
-    for (const auto &pressure :
-         p.fluid.plot_pressure(0.01f) | std::views::values) {
-      plot_data.q.push_back(pressure);
-    }
-    for (const auto &val : p.structure.X) {
-      plot_data.X.push_back(val);
-    }
-    femib::write::save_plot_data(path, plot_data);
   }
 
   float max_drift = 0.0f;
+  femib::types::dvec<float, 2> centroid = femib::types::dvec<float, 2>::Zero();
   for (size_t k = 0; k < X0.size(); ++k) {
     max_drift = std::max(max_drift, (p.structure.X[k] - X0[k]).norm());
+    centroid += p.structure.X[k];
   }
-  CHECK_LT(max_drift, 1e-4f);
+  centroid /= static_cast<float>(X0.size());
+  const femib::types::dvec<float, 2> extent1 = extent(p.structure.X);
+
+  CHECK_GT(max_drift, 0.015f);
+  CHECK_LT(aspect, 1.62f); // starts at 1.3^2 = 1.69
+  // shrinking alone would narrow both axes: the short one grows only if the
+  // ring is rounding out
+  CHECK_LT(extent1(0), 0.97f * extent0(0));
+  CHECK_GT(extent1(1), 1.02f * extent0(1));
+  CHECK_GT(polygon_area(p.structure.X), 0.9f * area0);
+  CHECK_LT((centroid - center).norm(), 2e-3f);
 }
 
 TEST_CASE("a perturbed (elliptical) ring's elastic energy decays, not grows, "
-          "over time" *
-          doctest::skip(true)) {
+          "over time") {
   femib::ib::ib_problem<float, 2> p = make_ib_fixture(16, 24, 0.2f);
 
   femib::types::dvec<float, 2> center(0.5f, 0.5f);
@@ -167,8 +207,7 @@ TEST_CASE("a ring at its rest configuration stays motionless under "
 }
 
 TEST_CASE("a perturbed (elliptical) ring's elastic energy decays, not grows, "
-          "over time under Navier-Stokes too" *
-          doctest::skip(true)) {
+          "over time under Navier-Stokes too") {
   femib::ib::ib_problem<float, 2> p = make_ib_fixture(16, 24, 0.2f);
 
   femib::types::dvec<float, 2> center(0.5f, 0.5f);

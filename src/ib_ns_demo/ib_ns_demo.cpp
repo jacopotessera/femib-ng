@@ -17,6 +17,7 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include <numbers>
 
 namespace {
 femib::types::mesh<double, 2> make_unit_square_mesh(int n) {
@@ -158,7 +159,7 @@ int main(int argc, char **argv) {
   int n_dense = 20000;
   std::vector<double> cum_arc(n_dense + 1, 0.0);
   std::vector<double> theta_dense(n_dense + 1);
-  const double PI = 3.14159265358979;
+  const double PI = std::numbers::pi_v<double>;
   for (int i = 0; i <= n_dense; ++i) {
     theta_dense[i] = 2.0 * PI * i / n_dense;
   }

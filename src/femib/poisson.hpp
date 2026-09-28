@@ -41,13 +41,13 @@ template <typename T, int d, int e> struct poisson {
   std::unique_ptr<femib::util::sparse_solver<T>> solver =
       femib::util::default_solver_factory<T>();
 
-  Eigen::Matrix<T, Eigen::Dynamic, 1> dB;
-  Eigen::SparseMatrix<T> dM;
-  Eigen::Matrix<T, Eigen::Dynamic, 1> dF;
+  Eigen::Matrix<T, Eigen::Dynamic, 1> edge_values;
+  Eigen::SparseMatrix<T> stiffness_matrix;
+  Eigen::Matrix<T, Eigen::Dynamic, 1> load_vector;
 
   poisson() = default;
   poisson(femib::finite_element_space::finite_element_space<T, d, e> v,
-          const femib::gauss::rule<T, d> &rule,
+          const femib::gauss::rule<T, d> &integration_rule,
           std::function<T(femib::types::dvec<T, d>)> boundary =
               default_boundary<T, d>(),
           std::function<std::function<T(femib::types::dvec<T, d>)>(
@@ -56,12 +56,14 @@ template <typename T, int d, int e> struct poisson {
           std::unique_ptr<femib::util::sparse_solver<T>> solver =
               femib::util::default_solver_factory<T>())
       : V(std::move(v)), force(std::move(force)), solver(std::move(solver)) {
-    std::vector<Eigen::Triplet<T>> B =
+    std::vector<Eigen::Triplet<T>> edge_values_triplets =
         femib::util::build_edges<T, d, e>(V, boundary);
 
-    dB = femib::util::triplets2dense<T>(B, V.nodes.P.size(), 1);
-    dM = femib::util::build_stiffness_matrix(V, rule);
-    dF = femib::util::build_load_vector(V, rule, this->force);
+    edge_values = femib::util::triplets2dense<T>(
+        edge_values_triplets, V.nodes.P.size(), 1); // TODO V.nodes.P.size() ?
+    stiffness_matrix = femib::util::build_stiffness_matrix(V, integration_rule);
+    load_vector =
+        femib::util::build_load_vector(V, integration_rule, this->force);
   }
 };
 
@@ -71,14 +73,16 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const poisson<T, d, e> &poisson) {
   std::vector<int> not_edges = femib::util::build_not_edges<T, d, e>(poisson.V);
 
   femib::util::sparse_solvable_equations<T> solvable_equations =
-      femib::util::remove_edges<T>(poisson.dM, poisson.dF, poisson.dB,
+      femib::util::remove_edges<T>(poisson.stiffness_matrix,
+                                   poisson.load_vector, poisson.edge_values,
                                    not_edges);
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> x =
       poisson.solver->solve(solvable_equations.A, solvable_equations.b);
 
-  return femib::util::add_edges<T>(x, poisson.dB, poisson.V.nodes.P.size(),
-                                   not_edges, poisson.V.nodes.E);
+  return femib::util::add_edges<T>(x, poisson.edge_values,
+                                   poisson.V.nodes.P.size(), not_edges,
+                                   poisson.V.nodes.E);
 }
 
 } // namespace femib::poisson

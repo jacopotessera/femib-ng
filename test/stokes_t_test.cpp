@@ -15,6 +15,7 @@
 #include <ctime>
 #include <doctest/doctest.h>
 #include <iostream>
+#include <numbers>
 #include <utility>
 #include <vector>
 
@@ -149,7 +150,7 @@ TEST_CASE("test stokes::advance with a non-stationary known problem") {
 
   //   u(x,y,t) = g(t) * U(x,y),  p(x,y,t) = g(t) * P(x,y),  g(t) = 1 - cos(t)
 
-  const float PI = 3.14159265358979f; // TODO math? std::numbers::pi_v<float>
+  const float PI = std::numbers::pi_v<float>;
 
   auto u1_exact = [PI](float x, float y) {
     return 2.0f * PI * std::sin(PI * x) * std::sin(PI * x) * std::sin(PI * y) *

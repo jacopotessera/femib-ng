@@ -23,6 +23,7 @@ default_force() {
   };
 }
 
+// TODO name?
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
 stokes_a(femib::types::F<T, d, d> u, femib::types::F<T, d, d> v, T mu) {
@@ -31,6 +32,7 @@ stokes_a(femib::types::F<T, d, d> u, femib::types::F<T, d, d> v, T mu) {
   };
 }
 
+// TODO name?
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
 stokes_b(femib::types::F<T, d, d> u, femib::types::F<T, d, 1> q) {
@@ -55,25 +57,30 @@ std::function<T(femib::types::dvec<T, d>)> external_force(
   };
 }
 
+// TODO name?
 template <typename T>
-Eigen::SparseMatrix<T>
-assemble_saddle_point_matrix(const Eigen::SparseMatrix<T> &top_left,
-                             const Eigen::SparseMatrix<T> &B, int nV, int nQ) {
+Eigen::SparseMatrix<T> assemble_saddle_point_matrix(
+    const Eigen::SparseMatrix<T> &top_left, // TODO name?
+    const Eigen::SparseMatrix<T> &B         // TODO name?
+    ,
+    const int nV, const int nQ) {
   std::vector<Eigen::Triplet<T>> triplets;
-  triplets.reserve((size_t)top_left.nonZeros() + 2 * (size_t)B.nonZeros());
+  triplets.reserve(static_cast<size_t>(top_left.nonZeros()) +
+                   2 * static_cast<size_t>(B.nonZeros()));
   for (int k = 0; k < top_left.outerSize(); ++k) {
     for (typename Eigen::SparseMatrix<T>::InnerIterator it(top_left, k); it;
          ++it) {
-      triplets.push_back(
-          Eigen::Triplet<T>((int)it.row(), (int)it.col(), it.value()));
+      triplets.push_back(Eigen::Triplet<T>(it.row(), it.col(), it.value()));
     }
   }
   for (int k = 0; k < B.outerSize(); ++k) {
     for (typename Eigen::SparseMatrix<T>::InnerIterator it(B, k); it; ++it) {
-      triplets.push_back(
-          Eigen::Triplet<T>((int)it.row(), nV + (int)it.col(), it.value()));
-      triplets.push_back(
-          Eigen::Triplet<T>(nV + (int)it.col(), (int)it.row(), it.value()));
+      triplets.push_back(Eigen::Triplet<T>(static_cast<int>(it.row()),
+                                           nV + static_cast<int>(it.col()),
+                                           it.value()));
+      triplets.push_back(Eigen::Triplet<T>(nV + static_cast<int>(it.col()),
+                                           static_cast<int>(it.row()),
+                                           it.value()));
     }
   }
   Eigen::SparseMatrix<T> AA(nV + nQ, nV + nQ);
@@ -98,27 +105,28 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> build_pressure_constraint_vector(
 }
 
 template <typename T, int d> struct stokes {
-  femib::finite_element_space::finite_element_space<T, d, d> V;
-  femib::finite_element_space::finite_element_space<T, d, 1> Q;
-  T rho;
-  T mu;
+  femib::finite_element_space::finite_element_space<T, d, d> V; // TODO velocity
+  femib::finite_element_space::finite_element_space<T, d, 1> Q; // TODO pressure
+  T rho;                                                        // TODO density
+  T mu; // TODO viscosity
   std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)> force;
 
-  Eigen::SparseMatrix<T> A;
-  Eigen::SparseMatrix<T> B;
-  Eigen::Matrix<T, Eigen::Dynamic, 1> bV;
+  Eigen::SparseMatrix<T> A;               // TODO name?
+  Eigen::SparseMatrix<T> B;               // TODO name?
+  Eigen::Matrix<T, Eigen::Dynamic, 1> bV; // TODO boundary velocity
   Eigen::Matrix<T, Eigen::Dynamic, 1> pressure_constraint_vector;
   std::vector<int> not_edges;
 
-  Eigen::SparseMatrix<T> AA;
-  Eigen::Matrix<T, Eigen::Dynamic, 1> ff;
+  Eigen::SparseMatrix<T> AA;              // TODO name?
+  Eigen::Matrix<T, Eigen::Dynamic, 1> ff; // TODO name?
   femib::util::sparse_solvable_equations<T> solvable_equations;
 
-  std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1>> solution;
+  std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1>> solution; // TODO solutions?
 
   stokes(femib::finite_element_space::finite_element_space<T, d, d> v,
          femib::finite_element_space::finite_element_space<T, d, 1> q,
-         const femib::gauss::rule<T, d> &rule, T rho = 1.0, T mu = 1.0,
+         const femib::gauss::rule<T, d> &integration_rule, T rho = 1.0,
+         T mu = 1.0,
          std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
              force = default_force<T, d>());
 
@@ -165,6 +173,8 @@ augment_with_pressure_gauge(const stokes<T, d> &s) {
     }
   }
 
+  // TODO this must be a "regularize problem" , tikhonov as implementation
+
   // Tikhonov regularization
   T reg = T(1e-8) * s.A.diagonal().cwiseAbs().maxCoeff();
   if (reg == T(0)) {
@@ -188,6 +198,7 @@ augment_with_pressure_gauge(const stokes<T, d> &s) {
   return {AAA_aug, bbb_aug};
 }
 
+// TODO for not steady problems?
 template <typename T, int d> void rebuild_system(stokes<T, d> &s) {
   s.solvable_equations = augment_with_pressure_gauge<T, d>(s);
 }
@@ -195,6 +206,7 @@ template <typename T, int d> void rebuild_system(stokes<T, d> &s) {
 template <typename T, int d, int e>
 Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &s) {
 
+  // TODO this one must use sparse_solver
   Eigen::BiCGSTAB<Eigen::SparseMatrix<T>, Eigen::IncompleteLUT<T>> solver;
   solver.setTolerance(1e-10);
   solver.setMaxIterations(500);
@@ -220,22 +232,23 @@ template <typename T, int d>
 stokes<T, d>::stokes(
     femib::finite_element_space::finite_element_space<T, d, d> v,
     femib::finite_element_space::finite_element_space<T, d, 1> q,
-    const femib::gauss::rule<T, d> &rule, T rho, T mu,
+    const femib::gauss::rule<T, d> &integration_rule, T rho, T mu,
     std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)> force)
     : V(std::move(v)), Q(std::move(q)), rho(rho), mu(mu),
       force(std::move(force)) {
-  // the parameters rho, mu, force shadow the members (force is moved from)
+  // TODO
+  //  the parameters rho, mu, force shadow the members (force is moved from)
   const T viscosity = this->mu;
   A = femib::util::triplets2sparse(
       femib::util::build_diagonal_matrix<T, d, d>(
-          V, rule,
+          V, integration_rule,
           [viscosity](femib::types::F<T, d, d> u, femib::types::F<T, d, d> w) {
             return stokes_a<T, d>(u, w, viscosity);
           }),
       V.size(), V.size());
-  B = femib::util::triplets2sparse(
-      femib::util::build_off_diagonal_matrix<T, d>(V, Q, rule, stokes_b<T, d>),
-      V.size(), Q.size());
+  B = femib::util::triplets2sparse(femib::util::build_off_diagonal_matrix<T, d>(
+                                       V, Q, integration_rule, stokes_b<T, d>),
+                                   V.size(), Q.size());
 
   std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)> force_at_0 =
       [f = this->force](const femib::types::dvec<T, d> &x) {
@@ -243,7 +256,7 @@ stokes<T, d>::stokes(
       };
   ff = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(V.size() + Q.size(), 1);
   ff.block(0, 0, V.size(), 1) = femib::util::build_load_vector<T, d, d>(
-      V, rule, [force_at_0](femib::types::F<T, d, d> a) {
+      V, integration_rule, [force_at_0](femib::types::F<T, d, d> a) {
         return external_force<T, d>(a, force_at_0);
       });
 
@@ -252,7 +265,8 @@ stokes<T, d>::stokes(
   bV = femib::util::triplets2dense(
       femib::util::build_edges<T, d, d>(V, zero_boundary), V.size() + Q.size(),
       1);
-  pressure_constraint_vector = build_pressure_constraint_vector<T, d>(Q, rule);
+  pressure_constraint_vector =
+      build_pressure_constraint_vector<T, d>(Q, integration_rule);
   not_edges = femib::util::build_not_edges<T, d, d>(V);
   for (int i = 0; i < Q.size(); ++i) {
     not_edges.push_back(V.size() + i);

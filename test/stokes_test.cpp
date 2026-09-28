@@ -13,6 +13,7 @@
 #include <cmath>
 #include <doctest/doctest.h>
 #include <iostream>
+#include <numbers>
 #include <vector>
 
 #include "utils.hpp"
@@ -91,7 +92,7 @@ TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
   // TODO stokes implementation supports only 0-boundary-condition... we need
   //  others?
 
-  const float PI = 3.14159265358979f; // TODO math
+  const float PI = std::numbers::pi_v<float>;
 
   auto u1_exact = [PI](float x, float y) {
     return 2.0f * PI * std::sin(PI * x) * std::sin(PI * x) * std::sin(PI * y) *
