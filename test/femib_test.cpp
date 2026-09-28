@@ -56,7 +56,6 @@ TEST_CASE("testing build_not_edges") {
   s.nodes = f.build_nodes(mesh);
 
   std::vector<int> not_edges = femib::util::build_not_edges<float, 2, 1>(s);
-  // TODO https://github.com/doctest/doctest/issues/1004
   CHECK_EQ(not_edges.size() + s.nodes.E.size(), s.nodes.P.size());
   for (int i : not_edges) {
     CHECK_EQ(std::find(s.nodes.E.begin(), s.nodes.E.end(), i), s.nodes.E.end());
