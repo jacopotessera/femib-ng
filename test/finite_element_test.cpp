@@ -12,8 +12,8 @@
 TEST_CASE("testing finite_element P1_2d1d") {
   femib::finite_element::finite_element<float, 2, 1> f =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
-  for (int i = 0; i < f.base_nodes.size(); ++i) {
-    for (int j = 0; j < f.base_functions.size(); ++j) {
+  for (int i = 0; i < std::ssize(f.base_nodes); ++i) {
+    for (int j = 0; j < std::ssize(f.base_functions); ++j) {
       CAPTURE(i);
       CAPTURE(j);
       float value = f.base_functions[j].x(f.base_nodes[i])(0);
@@ -36,8 +36,8 @@ TEST_CASE("testing P1_2d1d build_nodes") {
 TEST_CASE("testing finite_element P0_2d1d") {
   femib::finite_element::finite_element<float, 2, 1> f =
       femib::finite_element::create_finite_element_P0_2d1d<float, 2, 1>();
-  for (int i = 0; i < f.base_nodes.size(); ++i) {
-    for (int j = 0; j < f.base_functions.size(); ++j) {
+  for (int i = 0; i < std::ssize(f.base_nodes); ++i) {
+    for (int j = 0; j < std::ssize(f.base_functions); ++j) {
       CAPTURE(i);
       CAPTURE(j);
       float value = f.base_functions[j].x(f.base_nodes[i])(0);
@@ -52,7 +52,7 @@ TEST_CASE("testing finite_element P1_2d2d") {
   int n_nodes = f.base_nodes.size();
   CHECK_EQ(n_nodes, 3);
   CHECK_EQ(f.base_functions.size(), 6);
-  for (int k = 0; k < f.base_functions.size(); ++k) {
+  for (int k = 0; k < std::ssize(f.base_functions); ++k) {
     int component = k / n_nodes;
     int node_idx = k % n_nodes;
     for (int i = 0; i < n_nodes; ++i) {
@@ -72,7 +72,7 @@ TEST_CASE("testing finite_element P2_2d2d") {
   int n_nodes = f.base_nodes.size();
   CHECK_EQ(n_nodes, 6);
   CHECK_EQ(f.base_functions.size(), 12);
-  for (int k = 0; k < f.base_functions.size(); ++k) {
+  for (int k = 0; k < std::ssize(f.base_functions); ++k) {
     int component = k / n_nodes;
     int node_idx = k % n_nodes;
     for (int i = 0; i < n_nodes; ++i) {
@@ -125,7 +125,7 @@ TEST_CASE("testing finite_element P1+B_2d2d") {
   CHECK_EQ(f.base_functions.size(), 8);
   int component[8] = {0, 0, 0, 1, 1, 1, 0, 1};
   int node_idx[8] = {0, 1, 2, 0, 1, 2, 3, 3};
-  for (int k = 0; k < f.base_functions.size(); ++k) {
+  for (int k = 0; k < std::ssize(f.base_functions); ++k) {
     for (int i = 0; i < n_nodes; ++i) {
       femib::types::dvec<float, 2> value =
           f.base_functions[k].x(f.base_nodes[i]);

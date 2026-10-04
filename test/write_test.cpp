@@ -165,11 +165,10 @@ TEST_CASE("testing save_metadata") {
 TEST_CASE("testing save_mesh") {
   const std::string path = "/tmp/femib_write_test_mesh.h5";
 
-  femib::types::mesh<double, 2> mesh;
-  mesh.P = {{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}, {1.0, 1.0}};
-  mesh.T = {femib::types::ditrian<2>(0, 1, 2),
-            femib::types::ditrian<2>(1, 3, 2)};
-  mesh.E = {0, 1, 2, 3};
+  femib::types::mesh<double, 2> mesh(
+      {{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}, {1.0, 1.0}},
+      {femib::types::ditrian<2>(0, 1, 2), femib::types::ditrian<2>(1, 3, 2)},
+      {0, 1, 2, 3});
 
   femib::write::save_sim(path, "test_sim", "", femib::write::mode::overwrite);
   femib::write::save_mesh<double, 2>(path, mesh);

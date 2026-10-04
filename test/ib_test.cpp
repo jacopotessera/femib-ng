@@ -22,15 +22,11 @@ make_ib_fixture(int n_mesh, int n_ring, float radius, float k_spring = 2.618f) {
 
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space v = {
-      .finite_element = f_p1_2d2d, .mesh = mesh};
-  v.nodes = f_p1_2d2d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space v(f_p1_2d2d, mesh);
 
   femib::finite_element::finite_element<float, 2, 1> f_p0_2d1d =
       femib::finite_element::create_finite_element_P0_2d1d<float, 2, 1>();
-  femib::finite_element_space::finite_element_space q = {
-      .finite_element = f_p0_2d1d, .mesh = mesh};
-  q.nodes = f_p0_2d1d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space q(f_p0_2d1d, mesh);
 
   femib::ib::ib_problem<float, 2> p(
       v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.001f,

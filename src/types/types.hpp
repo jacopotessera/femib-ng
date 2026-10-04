@@ -49,7 +49,6 @@ template <typename f, int d> struct mesh {
 
   mutable std::shared_ptr<void> device_triangles_cache;
 
-  mesh() = default;
   mesh(std::vector<dvec<f, d>> p, std::vector<ditrian<d>> t,
        std::vector<int> e = {})
       : P(std::move(p)), T(std::move(t)), E(std::move(e)) {
@@ -76,7 +75,7 @@ template <typename f, int d>
 dtrian_<f, d> *
 vector_dtrian2pointer_dtrian_(const std::vector<dtrian<f, d>> &N) {
   auto *p = new dtrian_<f, d>[N.size()];
-  for (int i = 0; i < N.size(); ++i) {
+  for (size_t i = 0; i < N.size(); ++i) {
     p[i][0] = N[i][0];
     p[i][1] = N[i][1];
     p[i][2] = N[i][2];

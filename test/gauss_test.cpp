@@ -11,7 +11,7 @@ TEST_CASE("testing gauss") {
       femib::gauss::create_gauss_2_2d<float, 2>();
 
   std::function<float(femib::types::dvec<float, 2>)> f =
-      [](femib::types::dvec<float, 2> x) { return 1; };
+      [](femib::types::dvec<float, 2>) { return 1; };
   float area = femib::gauss::integrate<float, 2>(rule, f);
   CHECK_LE(std::fabs(area - 1.0 / 2.0), EPSILON);
 

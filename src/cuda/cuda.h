@@ -16,11 +16,10 @@ size_t getHeapSize();
 void setStackSize(size_t stackSize);
 void setHeapSize(size_t heapSize);
 
-// TODO size are probably not int
-template <typename T> T *copyToDevice(T *x, int size);
-template <typename T> T *copyToHost(T *X, int size);
+template <typename T> T *copyToDevice(T *x, size_t size);
+template <typename T> T *copyToHost(T *X, size_t size);
 template <typename T> void freeDevice(T *X);
-template <typename T> T *allocDevice(int size);
+template <typename T> T *allocDevice(size_t size);
 template <typename T> void freeDeviceQuiet(T *X);
 
 template <typename f, int d>
@@ -33,11 +32,13 @@ template <typename f, int d>
 bool accurate(const femib::types::dvec<f, d> &P,
               const femib::types::dtrian<f, d> &T);
 template <typename f, int d>
-void serial_accurate(femib::types::dvec<f, d> *X, int size_X,
-                     femib::types::dtrian<f, d> *T, int size_T, bool *N);
+void serial_accurate(femib::types::dvec<f, d> *X, size_t size_X,
+                     femib::types::dtrian<f, d> *T, size_t size_T, bool *N);
+// throws std::invalid_argument if size_X or size_T exceed the device's grid
+// limits
 template <typename f, int d>
-void parallel_accurate(femib::types::dvec<f, d> *X, int size_X,
-                       femib::types::dtrian_<f, d> *T, int size_T, bool *N);
+void parallel_accurate(femib::types::dvec<f, d> *X, size_t size_X,
+                       femib::types::dtrian_<f, d> *T, size_t size_T, bool *N);
 } // namespace femib::cuda
 
 #endif

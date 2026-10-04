@@ -28,8 +28,7 @@ template <typename T, typename W> std::vector<T> read(std::string filename) {
       a[i] = doc.GetCell<W>(0, i);
     } else {
       // points and triangles files
-      // TODO replace size_t with Eigen::Index when looping on rows and cols
-      for (size_t j = 0; j < a[i].size(); ++j) {
+      for (Eigen::Index j = 0; j < a[i].size(); ++j) {
         a[i](j) = doc.GetCell<W>(j, i);
       }
     }

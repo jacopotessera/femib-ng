@@ -88,15 +88,11 @@ TEST_CASE("solve steady Navier-Stokes") {
 
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space v = {
-      .finite_element = f_p1_2d2d, .mesh = mesh};
-  v.nodes = f_p1_2d2d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space v(f_p1_2d2d, mesh);
 
   femib::finite_element::finite_element<float, 2, 1> f_p1_2d1d =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
-  femib::finite_element_space::finite_element_space q = {
-      .finite_element = f_p1_2d1d, .mesh = mesh};
-  q.nodes = f_p1_2d1d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space q(f_p1_2d1d, mesh);
 
   femib::navier_stokes_steady::navier_stokes<float, 2> s(
       v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f,
@@ -115,8 +111,8 @@ TEST_CASE("solve steady Navier-Stokes") {
   CHECK_EQ((s.solution.back() - xx).norm(), 0.0f);
   CHECK_FALSE(s.plot_velocity(0.1f).empty());
 
-  size_t size_P = mesh.P.size();
-  size_t size_T = mesh.T.size();
+  const Eigen::Index size_P = std::ssize(mesh.P);
+  const Eigen::Index size_T = std::ssize(mesh.T);
   float max_velocity_error = 0.0f;
   for (int i = 0; i < size_P; ++i) {
     float x = mesh.P[i](0), y = mesh.P[i](1);
@@ -152,9 +148,8 @@ TEST_CASE("assemble_convection matches by-hand-derived closed-form integrals "
 
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P1_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space<float, 2, 2> v = {
-      .finite_element = f_p1_2d2d, .mesh = mesh};
-  v.nodes = f_p1_2d2d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 2> v(f_p1_2d2d,
+                                                                   mesh);
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> w_dofs(6);
   w_dofs << 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f;
@@ -248,15 +243,13 @@ TEST_CASE("testing time-dependent Navier-Stokes") {
 
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space<float, 2, 2> v = {
-      .finite_element = f_p1_2d2d, .mesh = mesh};
-  v.nodes = f_p1_2d2d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 2> v(f_p1_2d2d,
+                                                                   mesh);
 
   femib::finite_element::finite_element<float, 2, 1> f_p0_2d1d =
       femib::finite_element::create_finite_element_P0_2d1d<float, 2, 1>();
-  femib::finite_element_space::finite_element_space<float, 2, 1> q = {
-      .finite_element = f_p0_2d1d, .mesh = mesh};
-  q.nodes = f_p0_2d1d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 1> q(f_p0_2d1d,
+                                                                   mesh);
 
   femib::navier_stokes::navier_stokes<float, 2> s(
       v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.02f,
@@ -266,8 +259,8 @@ TEST_CASE("testing time-dependent Navier-Stokes") {
       },
       std::make_unique<femib::util::picard_solver<float>>(3, 1e-5f));
 
-  size_t size_P = mesh.P.size();
-  size_t size_T = mesh.T.size();
+  const Eigen::Index size_P = std::ssize(mesh.P);
+  const Eigen::Index size_T = std::ssize(mesh.T);
   auto velocity_error = [&](const Eigen::Matrix<float, Eigen::Dynamic, 1> &xx) {
     float max_error = 0.0f;
     for (int i = 0; i < size_P; ++i) {
@@ -326,15 +319,13 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
 
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space<float, 2, 2> v = {
-      .finite_element = f_p1_2d2d, .mesh = mesh};
-  v.nodes = f_p1_2d2d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 2> v(f_p1_2d2d,
+                                                                   mesh);
 
   femib::finite_element::finite_element<float, 2, 1> f_p0_2d1d =
       femib::finite_element::create_finite_element_P0_2d1d<float, 2, 1>();
-  femib::finite_element_space::finite_element_space<float, 2, 1> q = {
-      .finite_element = f_p0_2d1d, .mesh = mesh};
-  q.nodes = f_p0_2d1d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 1> q(f_p0_2d1d,
+                                                                   mesh);
 
   // a large constant forcing
   femib::navier_stokes::navier_stokes<float, 2> s(

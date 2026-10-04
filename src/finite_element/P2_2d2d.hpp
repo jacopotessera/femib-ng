@@ -31,8 +31,8 @@ finite_element<T, d, e> create_finite_element_P2_2d2d() {
       return a < b ? std::make_pair(a, b) : std::make_pair(b, a);
     };
 
-    for (int n = 0; n < mesh.T.size(); ++n) {
-      int v0 = mesh.T[n](0), v1 = mesh.T[n](1), v2 = mesh.T[n](2);
+    for (const auto &tri : mesh.T) {
+      int v0 = tri(0), v1 = tri(1), v2 = tri(2);
       std::pair<int, int> edges[3] = {edge_key(v1, v2), edge_key(v0, v2),
                                       edge_key(v0, v1)};
       for (const auto &edge : edges) {
@@ -59,8 +59,8 @@ finite_element<T, d, e> create_finite_element_P2_2d2d() {
       nodes.P.push_back(m);
     }
 
-    for (int n = 0; n < mesh.T.size(); ++n) {
-      int v0 = mesh.T[n](0), v1 = mesh.T[n](1), v2 = mesh.T[n](2);
+    for (const auto &tri : mesh.T) {
+      int v0 = tri(0), v1 = tri(1), v2 = tri(2);
       int m12 = 2 * size_P + edge_id[edge_key(v1, v2)];
       int m02 = 2 * size_P + edge_id[edge_key(v0, v2)];
       int m01 = 2 * size_P + edge_id[edge_key(v0, v1)];
@@ -82,8 +82,8 @@ finite_element<T, d, e> create_finite_element_P2_2d2d() {
     }
 
     nodes.E = mesh.E;
-    for (int i = 0; i < mesh.E.size(); ++i) {
-      nodes.E.push_back(mesh.E[i] + size_P);
+    for (const int boundary_node : mesh.E) {
+      nodes.E.push_back(boundary_node + size_P);
     }
     for (const auto &kv : edge_count) {
       if (kv.second == 1) {

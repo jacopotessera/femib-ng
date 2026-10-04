@@ -22,7 +22,7 @@ finite_element<T, d, e> create_finite_element_P1_2d2d() {
     }
 
     int size_P = mesh.P.size();
-    for (int n = 0; n < mesh.T.size(); ++n) {
+    for (int n = 0; n < std::ssize(mesh.T); ++n) {
       std::vector<int> row;
       nodes.T.push_back(row);
       for (int i = 0; i < mesh.T[n].size(); ++i) {
@@ -33,8 +33,8 @@ finite_element<T, d, e> create_finite_element_P1_2d2d() {
       }
     }
     nodes.E = mesh.E;
-    for (int i = 0; i < mesh.E.size(); ++i) {
-      nodes.E.push_back(mesh.E[i] + size_P);
+    for (const int boundary_node : mesh.E) {
+      nodes.E.push_back(boundary_node + size_P);
     }
     return nodes;
   };

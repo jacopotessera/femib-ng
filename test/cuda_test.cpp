@@ -6,6 +6,7 @@
 #include "spdlog/spdlog.h"
 #include <doctest/doctest.h>
 #include <iostream>
+#include <stdexcept>
 #include <vector>
 
 femib::types::dtrian<float, 2> T = {{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}};
@@ -45,7 +46,8 @@ TEST_CASE("testing cuda copy") {
   double *X = femib::cuda::copyToDevice<double>(&x, 1);
   double *y = femib::cuda::copyToHost<double>(X, 1);
   CHECK_EQ(x, *y);
-  // TODO missing free
+  femib::cuda::freeDevice<double>(X);
+  delete[] y;
 }
 
 TEST_CASE("testing cuda in_box") {
@@ -83,8 +85,8 @@ TEST_CASE("testing cuda serial_accurate") {
 
   std::vector<int> NNN;
 
-  for (int i = 0; i < grid.size(); ++i) {
-    for (int n = 0; n < mesh.N.size(); ++n) {
+  for (size_t i = 0; i < grid.size(); ++i) {
+    for (int n = 0; n < std::ssize(mesh.N); ++n) {
       if (N[i * mesh.N.size() + n]) {
         NNN.push_back(n);
         break;
@@ -95,7 +97,7 @@ TEST_CASE("testing cuda serial_accurate") {
   CHECK_EQ(NNN[1], 7);
   CHECK_EQ(NNN[2], 7);
 
-  for (int i = 0; i < grid.size(); ++i) {
+  for (size_t i = 0; i < grid.size(); ++i) {
     CHECK_GE(NNN[i], 0);
     CHECK_LT(NNN[i], mesh.N.size());
   }
@@ -124,8 +126,8 @@ TEST_CASE("testing cuda parallel_accurate") {
 
   std::vector<int> NNN;
 
-  for (int i = 0; i < grid.size(); ++i) {
-    for (int n = 0; n < mesh.N.size(); ++n) {
+  for (size_t i = 0; i < grid.size(); ++i) {
+    for (int n = 0; n < std::ssize(mesh.N); ++n) {
       if (NN[i * mesh.N.size() + n]) {
         NNN.push_back(n);
         break;
@@ -135,6 +137,9 @@ TEST_CASE("testing cuda parallel_accurate") {
 
   // TODO add a better interface in cuda, that copies and then deletes and just
   //  gives the result
+  femib::cuda::freeDevice<femib::types::dtrian_<float, 2>>(devT);
+  femib::cuda::freeDevice<femib::types::dvec<float, 2>>(devX);
+  femib::cuda::freeDevice<bool>(devN);
   delete[] NN;
   NN = NULL;
   delete[] T;
@@ -143,6 +148,20 @@ TEST_CASE("testing cuda parallel_accurate") {
   CHECK_EQ(NNN[0], 7);
   CHECK_EQ(NNN[1], 7);
   CHECK_EQ(NNN[2], 7);
+}
+
+TEST_CASE("parallel_accurate checks the grid limits before launching") {
+  // every GPU since compute capability 3.0: grid.x <= 2^31 - 1, grid.y <= 65535
+  const size_t too_many_points = size_t{1} << 31;
+  const size_t too_many_triangles = size_t{65535} * 256 + 1;
+  CHECK_THROWS_AS((femib::cuda::parallel_accurate<float, 2>(
+                      nullptr, too_many_points, nullptr, 1, nullptr)),
+                  std::invalid_argument);
+  CHECK_THROWS_AS((femib::cuda::parallel_accurate<float, 2>(
+                      nullptr, 1, nullptr, too_many_triangles, nullptr)),
+                  std::invalid_argument);
+  CHECK_NOTHROW((femib::cuda::parallel_accurate<float, 2>(nullptr, 0, nullptr,
+                                                          10, nullptr)));
 }
 
 TEST_CASE("testing mesh find_points") {
@@ -195,7 +214,7 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
   int cpu_only_true_gpu_adjacent = 0;
   int cpu_only_true_gpu_elsewhere = 0;
   int cpu_only_true_gpu_lost = 0;
-  for (int k = 0; k < grid.size() * size_T; ++k) {
+  for (int k = 0; k < std::ssize(grid) * size_T; ++k) {
     if (Npar[k] && !Nser[k]) {
       ++gpu_true_cpu_false;
     }
@@ -235,6 +254,9 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
   CHECK_EQ(cpu_only_true_gpu_lost, 0);
   CHECK_EQ(cpu_only_true_gpu_elsewhere, 0);
 
+  femib::cuda::freeDevice<femib::types::dtrian_<float, 2>>(devT);
+  femib::cuda::freeDevice<femib::types::dvec<float, 2>>(devX);
+  femib::cuda::freeDevice<bool>(devN);
   delete[] Npar;
   Npar = NULL;
   delete[] T;

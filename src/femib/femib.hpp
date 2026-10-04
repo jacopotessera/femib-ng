@@ -235,14 +235,14 @@ std::vector<Eigen::Triplet<T>> build_off_diagonal_matrix(
     const std::function<std::function<T(femib::types::dvec<T, d>)>(
         femib::types::F<T, d, d>, femib::types::F<T, d, 1>)> &fff) {
   std::vector<Eigen::Triplet<T>> BB;
-  for (int n = 0; n < v.mesh.T.size(); ++n) {
+  for (int n = 0; n < std::ssize(v.mesh.T); ++n) {
     femib::types::dtrian<T, d> t = v.mesh[n];
     femib::types::dmat<T, d> Binv = femib::affine::affineBinv(t);
     femib::types::dvec<T, d> bb = femib::affine::affineb(t);
-    for (int i = 0; i < v.finite_element.base_functions.size(); ++i) {
+    for (int i = 0; i < std::ssize(v.finite_element.base_functions); ++i) {
       femib::types::F<T, d, d> a =
           femib::util::base_function2real_function<T, d, d>(v, i, Binv, bb);
-      for (int j = 0; j < q.finite_element.base_functions.size(); ++j) {
+      for (int j = 0; j < std::ssize(q.finite_element.base_functions); ++j) {
         femib::types::F<T, d, 1> b =
             femib::util::base_function2real_function<T, d, 1>(q, j, Binv, bb);
         T m = femib::mesh::integrate<T, d>(

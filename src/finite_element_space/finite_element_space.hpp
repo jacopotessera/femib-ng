@@ -5,6 +5,7 @@
 #include "../mesh/mesh.hpp"
 #include "../types/types.hpp"
 #include <ranges>
+#include <utility>
 
 namespace femib::finite_element_space {
 
@@ -12,6 +13,11 @@ template <typename T, int d, int e> struct finite_element_space {
   femib::finite_element::finite_element<T, d, e> finite_element;
   femib::types::mesh<T, d> mesh;
   femib::types::nodes<T, d> nodes;
+
+  finite_element_space(femib::finite_element::finite_element<T, d, e> element,
+                       femib::types::mesh<T, d> domain)
+      : finite_element(std::move(element)), mesh(std::move(domain)),
+        nodes(finite_element.build_nodes(mesh)) {}
 
   [[nodiscard]] int size() const { return static_cast<int>(nodes.P.size()); }
 
@@ -30,7 +36,7 @@ template <typename T, int d, int e> struct finite_element_space {
       femib::types::dtrian<T, d> t = mesh[points_positions[k]];
       femib::types::dvec<T, d> ref =
           femib::affine::affine_inv<T, d>(t, points[k]);
-      for (int j = 0; j < finite_element.base_functions.size(); ++j) {
+      for (int j = 0; j < std::ssize(finite_element.base_functions); ++j) {
         const femib::types::F<T, d, e> &phi = finite_element.base_functions[j];
         result[k] += u(nodes.get_index(j, points_positions[k])) * phi.x(ref);
       }

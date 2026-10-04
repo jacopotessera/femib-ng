@@ -29,13 +29,11 @@ TEST_CASE("testing finite_element_space") {
   femib::finite_element::finite_element<float, 2, 1> f =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
 
-  femib::finite_element_space::finite_element_space<float, 2, 1> s = {
-      .finite_element = f, .mesh = mesh};
-  s.nodes = f.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 1> s(f, mesh);
 
-  for (int n = 0; n < s.mesh.T.size(); ++n) {
-    for (int i = 0; i < s.finite_element.base_functions.size(); ++i) {
-      for (int j = 0; j < s.finite_element.base_functions.size(); ++j) {
+  for (int n = 0; n < std::ssize(s.mesh.T); ++n) {
+    for (int i = 0; i < std::ssize(s.finite_element.base_functions); ++i) {
+      for (int j = 0; j < std::ssize(s.finite_element.base_functions); ++j) {
         femib::types::dtrian<float, 2> t = s.mesh[n];
         femib::types::dmat<float, 2> Binv = femib::affine::affineBinv(t);
         femib::types::dvec<float, 2> bb = femib::affine::affineb(t);
@@ -79,7 +77,7 @@ TEST_CASE("testing finite_element_space") {
   }
 
   std::vector<int> not_edges;
-  for (int i = 0; i < s.nodes.P.size(); i++) {
+  for (int i = 0; i < std::ssize(s.nodes.P); i++) {
     if (std::find(s.nodes.E.begin(), s.nodes.E.end(), i) == s.nodes.E.end()) {
       not_edges.push_back(i);
     }
@@ -98,7 +96,7 @@ TEST_CASE("testing finite_element_space") {
   Eigen::Matrix<float, Eigen::Dynamic, 1> ss = dM * dB;
   Eigen::Matrix<float, Eigen::Dynamic, 1> mf;
   mf.resize(s.nodes.P.size(), 1);
-  for (int i = 0; i < s.nodes.P.size(); i++) {
+  for (int i = 0; i < std::ssize(s.nodes.P); i++) {
     auto k = std::find(not_edges.begin(), not_edges.end(), i);
     mf(i, 0) = 0.0;
     if (k != not_edges.end()) {
@@ -119,7 +117,7 @@ TEST_CASE("testing finite_element_space") {
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx;
   xx.resize(s.nodes.P.size(), 1);
 
-  for (int i = 0; i < s.nodes.P.size(); i++) {
+  for (int i = 0; i < std::ssize(s.nodes.P); i++) {
     xx(i, 0) = 0.0;
     auto k = std::find(not_edges.begin(), not_edges.end(), i);
     if (k != not_edges.end()) {
@@ -153,8 +151,7 @@ TEST_CASE("plot() does not read out of bounds on a non-rectangular mesh") {
 
   femib::finite_element::finite_element<float, 2, 2> f =
       femib::finite_element::create_finite_element_P1_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space<float, 2, 2> s = {f, mesh};
-  s.nodes = f.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 2> s(f, mesh);
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       Eigen::Matrix<float, Eigen::Dynamic, 1>::Zero(s.nodes.P.size(), 1);

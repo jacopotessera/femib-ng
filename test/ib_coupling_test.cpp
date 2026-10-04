@@ -14,9 +14,7 @@ TEST_CASE("interpolate_velocity exactly reproduces a linear velocity field") {
 
   femib::finite_element::finite_element<float, 2, 2> fe =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space V = {.finite_element = fe,
-                                                         .mesh = mesh};
-  V.nodes = fe.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space V(fe, mesh);
 
   auto u_exact = [](const float x, const float y) {
     return femib::types::dvec<float, 2>(1.0f + 2.0f * x - 1.0f * y,
@@ -31,7 +29,7 @@ TEST_CASE("interpolate_velocity exactly reproduces a linear velocity field") {
     u(static_cast<Eigen::Index>(i)) = uv(0);
     u(static_cast<Eigen::Index>(size_P + i)) = uv(1);
   }
-  for (int n = 0; n < size_T; ++n) {
+  for (int n = 0; n < std::ssize(mesh.T); ++n) {
     femib::types::dvec<float, 2> c =
         femib::finite_element::find_center_of<float, 2>(mesh[n]);
     femib::types::dvec<float, 2> uv = u_exact(c(0), c(1));
@@ -57,9 +55,7 @@ TEST_CASE("spread_force conserves total force") {
 
   femib::finite_element::finite_element<float, 2, 2> fe =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space V = {.finite_element = fe,
-                                                         .mesh = mesh};
-  V.nodes = fe.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space V(fe, mesh);
 
   std::vector<femib::types::dvec<float, 2>> points = {
       {0.31f, 0.42f}, {0.55f, 0.11f}, {0.72f, 0.83f}};
@@ -100,9 +96,7 @@ TEST_CASE("testing force spreading of a given elastic ring") {
 
   femib::finite_element::finite_element<float, 2, 2> fe =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space V = {.finite_element = fe,
-                                                         .mesh = mesh};
-  V.nodes = fe.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space V(fe, mesh);
 
   femib::types::dvec<float, 2> center(0.5f, 0.5f);
   femib::ib::ring<float, 2> r =
@@ -128,7 +122,7 @@ TEST_CASE("testing force spreading of a given elastic ring") {
     total_x += spread_forces(static_cast<Eigen::Index>(i));
     total_y += spread_forces(static_cast<Eigen::Index>(size_P + i));
   }
-  for (int n = 0; n < size_T; ++n) {
+  for (int n = 0; n < std::ssize(mesh.T); ++n) {
     total_x += spread_forces(static_cast<Eigen::Index>(2 * size_P + n));
     total_y +=
         spread_forces(static_cast<Eigen::Index>(2 * size_P + size_T + n));

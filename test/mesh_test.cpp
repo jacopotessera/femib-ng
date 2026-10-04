@@ -19,7 +19,7 @@ TEST_CASE("testing mesh") {
 
   {
     std::function<float(femib::types::dvec<float, 2>)> f =
-        [](femib::types::dvec<float, 2> x) { return 1; };
+        [](femib::types::dvec<float, 2>) { return 1; };
     float area = femib::mesh::integrate<float, 2>(rule, f, mesh);
     CHECK_LE(std::fabs(area - 1.0), EPSILON);
   }
@@ -49,8 +49,8 @@ TEST_CASE("testing mesh") {
 }
 
 TEST_CASE("testing find_box") {
-  femib::types::mesh<float, 2> mesh;
-  mesh.P = {{1.0, 5.0}, {-2.0, 3.0}, {4.0, -1.0}, {0.0, 0.0}};
+  femib::types::mesh<float, 2> mesh(
+      {{1.0, 5.0}, {-2.0, 3.0}, {4.0, -1.0}, {0.0, 0.0}}, {});
   femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
   CHECK_EQ(box.bottom(0), doctest::Approx(-2.0));
   CHECK_EQ(box.bottom(1), doctest::Approx(-1.0));
@@ -59,7 +59,7 @@ TEST_CASE("testing find_box") {
 }
 
 TEST_CASE("testing find_box: empty mesh") {
-  femib::types::mesh<float, 2> empty_mesh;
+  femib::types::mesh<float, 2> empty_mesh({}, {});
   CHECK_THROWS(femib::mesh::find_box<float, 2>(empty_mesh));
 }
 

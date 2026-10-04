@@ -27,7 +27,7 @@ finite_element<T, d, e> create_finite_element_P0_2d1d() {
   P0_2d1d.size = 1;
   P0_2d1d.build_nodes = [](const femib::types::mesh<T, d> &mesh) {
     femib::types::nodes<T, d> nodes;
-    for (int n = 0; n < mesh.T.size(); ++n) {
+    for (int n = 0; n < std::ssize(mesh.T); ++n) {
       std::vector<int> row;
       nodes.T.push_back(row);
       nodes.P.push_back(find_center_of<T, d>(mesh, n));
@@ -44,7 +44,7 @@ finite_element<T, d, e> create_finite_element_P0_2d1d() {
       return (dvec<T, e>){0.0};
   };
 
-  f.dx = [](const dvec<T, d> &x) { return (rmat<T, d, e>){{0, 0}}; };
+  f.dx = [](const dvec<T, d> &) { return (rmat<T, d, e>){{0, 0}}; };
 
   P0_2d1d.base_functions.push_back(f);
 

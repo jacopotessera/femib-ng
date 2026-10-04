@@ -47,9 +47,9 @@ std::vector<int> find_points(const femib::types::mesh<T, d> &mesh,
   std::vector<int> NNN;
   NNN.reserve(points.size());
 
-  for (int i = 0; i < points.size(); ++i) {
+  for (size_t i = 0; i < points.size(); ++i) {
     int found = -1;
-    for (int n = 0; n < meshSize; ++n) {
+    for (int n = 0; n < std::ssize(mesh.N); ++n) {
       if (NN[i * meshSize + n]) {
         found = n;
         break;

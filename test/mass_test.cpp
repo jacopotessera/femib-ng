@@ -18,9 +18,7 @@ TEST_CASE("testing mass_matrix") {
 
   femib::finite_element::finite_element<float, 2, 2> fe =
       femib::finite_element::create_finite_element_P1_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space V = {.finite_element = fe,
-                                                         .mesh = mesh};
-  V.nodes = fe.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space V(fe, mesh);
 
   femib::gauss::rule<float, 2> rule =
       femib::gauss::create_gauss_2_2d<float, 2>();

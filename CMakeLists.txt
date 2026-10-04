@@ -57,7 +57,6 @@ setup_target_for_coverage_gcovr_html(NAME coverage COMMAND check DEPENDENCIES ch
 
 enable_testing ()
 add_subdirectory(test)
-add_subdirectory(bench)
 
 add_subdirectory(${SRC_DIR}/cuda)
 add_subdirectory(${SRC_DIR}/read)

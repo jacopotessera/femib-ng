@@ -30,16 +30,14 @@ TEST_CASE("testing femib stokes") {
   // V
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space<float, 2, 2> v = {f_p1_2d2d,
-                                                                      mesh};
-  v.nodes = f_p1_2d2d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 2> v(f_p1_2d2d,
+                                                                   mesh);
 
   // Q
   femib::finite_element::finite_element<float, 2, 1> f_p0_2d1d =
       femib::finite_element::create_finite_element_P0_2d1d<float, 2, 1>();
-  femib::finite_element_space::finite_element_space<float, 2, 1> q = {f_p0_2d1d,
-                                                                      mesh};
-  q.nodes = f_p0_2d1d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 1> q(f_p0_2d1d,
+                                                                   mesh);
 
   // STOKES
   femib::stokes_steady::stokes<float, 2> stokes(
@@ -129,15 +127,13 @@ TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
 
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space<float, 2, 2> v = {f_p1_2d2d,
-                                                                      mesh};
-  v.nodes = f_p1_2d2d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 2> v(f_p1_2d2d,
+                                                                   mesh);
 
   femib::finite_element::finite_element<float, 2, 1> f_p1_2d1d =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
-  femib::finite_element_space::finite_element_space<float, 2, 1> q = {f_p1_2d1d,
-                                                                      mesh};
-  q.nodes = f_p1_2d1d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 1> q(f_p1_2d1d,
+                                                                   mesh);
 
   femib::stokes_steady::stokes<float, 2> stokes(
       v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f,

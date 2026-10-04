@@ -36,16 +36,14 @@ template <typename T, int d, int e> struct poisson {
 
   std::function<std::function<T(femib::types::dvec<T, d>)>(
       femib::types::F<T, d, e>)>
-      force = default_force<T, d, e>();
+      force;
 
-  std::unique_ptr<femib::util::sparse_solver<T>> solver =
-      femib::util::default_solver_factory<T>();
+  std::unique_ptr<femib::util::sparse_solver<T>> solver;
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> edge_values;
   Eigen::SparseMatrix<T> stiffness_matrix;
   Eigen::Matrix<T, Eigen::Dynamic, 1> load_vector;
 
-  poisson() = default;
   poisson(femib::finite_element_space::finite_element_space<T, d, e> v,
           const femib::gauss::rule<T, d> &integration_rule,
           std::function<T(femib::types::dvec<T, d>)> boundary =

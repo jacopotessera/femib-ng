@@ -13,8 +13,8 @@ template <typename T, int d>
 dvec<T, d> find_center_of(const femib::types::dtrian<T, d> &t) {
   dvec<T, d> c = {0.0, 0.0};
   double k = 1.0 / t.size();
-  for (int j = 0; j < t.size(); ++j) {
-    c = c + k * t[j];
+  for (const auto &vertex : t) {
+    c = c + k * vertex;
   }
   return c;
 }
@@ -35,18 +35,18 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
       nodes.P.push_back(p);
     }
 
-    for (int n = 0; n < mesh.T.size(); ++n) {
+    for (int n = 0; n < std::ssize(mesh.T); ++n) {
       femib::types::dtrian<T, d> t = mesh[n];
       nodes.P.push_back(find_center_of(t));
     }
-    for (int n = 0; n < mesh.T.size(); ++n) {
+    for (int n = 0; n < std::ssize(mesh.T); ++n) {
       femib::types::dtrian<T, d> t = mesh[n];
       nodes.P.push_back(find_center_of(t));
     }
 
     int size_P = mesh.P.size();
     int size_T = mesh.T.size();
-    for (int n = 0; n < mesh.T.size(); ++n) {
+    for (int n = 0; n < std::ssize(mesh.T); ++n) {
       std::vector<int> row;
       nodes.T.push_back(row);
       for (int i = 0; i < mesh.T[n].size(); ++i) {
@@ -60,8 +60,8 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
     }
 
     nodes.E = mesh.E;
-    for (int i = 0; i < mesh.E.size(); ++i) {
-      nodes.E.push_back(mesh.E[i] + size_P);
+    for (const int boundary_node : mesh.E) {
+      nodes.E.push_back(boundary_node + size_P);
     }
     return nodes;
   };

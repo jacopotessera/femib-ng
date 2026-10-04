@@ -9,6 +9,8 @@
 
 #include <cmath>
 #include <limits>
+#include <stdexcept>
+#include <string>
 
 void femib::cuda::printSize() {
   SPDLOG_INFO("[CUDA stack size] found to be {}", getStackSize());
@@ -36,14 +38,14 @@ void femib::cuda::setHeapSize(const size_t heapSize) {
   cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapSize * sizeof(double));
 }
 
-template <typename T> T *femib::cuda::copyToDevice(T *x, const int size) {
+template <typename T> T *femib::cuda::copyToDevice(T *x, const size_t size) {
   T *X;
   HANDLE_ERROR(cudaMalloc((void **)&X, sizeof(T) * size));
   HANDLE_ERROR(cudaMemcpy(X, x, sizeof(T) * size, cudaMemcpyHostToDevice));
   return X;
 }
 
-template <typename T> T *femib::cuda::copyToHost(T *X, const int size) {
+template <typename T> T *femib::cuda::copyToHost(T *X, const size_t size) {
   T *x = new T[size];
   HANDLE_ERROR(cudaMemcpy(x, X, sizeof(T) * size, cudaMemcpyDeviceToHost));
   return x;
@@ -53,7 +55,7 @@ template <typename T> void femib::cuda::freeDevice(T *X) {
   HANDLE_ERROR(cudaFree(X));
 }
 
-template <typename T> T *femib::cuda::allocDevice(const int size) {
+template <typename T> T *femib::cuda::allocDevice(const size_t size) {
   T *X;
   HANDLE_ERROR(cudaMalloc((void **)&X, sizeof(T) * size));
   return X;
@@ -194,11 +196,11 @@ __device__ static bool accurate_(const femib::types::dvec<f, d> &x,
 
 template <typename f, int d>
 __host__ void femib::cuda::serial_accurate(femib::types::dvec<f, d> *X,
-                                           const int size_X,
+                                           const size_t size_X,
                                            femib::types::dtrian<f, d> *T,
-                                           const int size_T, bool *N) {
-  for (int j = 0; j < size_X; ++j) {
-    for (int i = 0; i < size_T; ++i) {
+                                           const size_t size_T, bool *N) {
+  for (size_t j = 0; j < size_X; ++j) {
+    for (size_t i = 0; i < size_T; ++i) {
       femib::types::dtrian<f, d> t = T[i];
       femib::types::dvec<f, d> p = X[j];
       N[j * size_T + i] = femib::cuda::accurate(p, t);
@@ -208,10 +210,10 @@ __host__ void femib::cuda::serial_accurate(femib::types::dvec<f, d> *X,
 
 template <typename f, int d>
 __global__ static void
-parallel_accurate_kernel(femib::types::dtrian_<f, d> *T, const int size_T,
+parallel_accurate_kernel(femib::types::dtrian_<f, d> *T, const size_t size_T,
                          femib::types::dvec<f, d> *X, bool *N) {
-  unsigned int point_idx = blockIdx.x;
-  unsigned int tri_idx = blockIdx.y * blockDim.x + threadIdx.x;
+  const size_t point_idx = blockIdx.x;
+  const size_t tri_idx = size_t{blockIdx.y} * blockDim.x + threadIdx.x;
   if (tri_idx >= size_T) {
     return;
   }
@@ -222,30 +224,58 @@ parallel_accurate_kernel(femib::types::dtrian_<f, d> *T, const int size_T,
 
 template <typename f, int d>
 __host__ void femib::cuda::parallel_accurate(femib::types::dvec<f, d> *X,
-                                             const int size_X,
+                                             const size_t size_X,
                                              femib::types::dtrian_<f, d> *T,
-                                             const int size_T, bool *N) {
-  constexpr int threads_per_block = 256; //  hardware limit = 1024
-  const int blocks_per_point =
+                                             const size_t size_T, bool *N) {
+  constexpr unsigned int threads_per_block = 256; //  hardware limit = 1024
+  const size_t blocks_per_point =
       (size_T + threads_per_block - 1) / threads_per_block;
-  dim3 grid(size_X, blocks_per_point);
+
+  int device;
+  HANDLE_ERROR(cudaGetDevice(&device));
+  int max_grid_x;
+  int max_grid_y;
+  HANDLE_ERROR(
+      cudaDeviceGetAttribute(&max_grid_x, cudaDevAttrMaxGridDimX, device));
+  HANDLE_ERROR(
+      cudaDeviceGetAttribute(&max_grid_y, cudaDevAttrMaxGridDimY, device));
+  if (size_X > static_cast<size_t>(max_grid_x)) {
+    throw std::invalid_argument(
+        "femib::cuda::parallel_accurate: " + std::to_string(size_X) +
+        " points exceed the device's grid limit of " +
+        std::to_string(max_grid_x));
+  }
+  if (blocks_per_point > static_cast<size_t>(max_grid_y)) {
+    throw std::invalid_argument(
+        "femib::cuda::parallel_accurate: " + std::to_string(size_T) +
+        " triangles exceed the device's grid limit of " +
+        std::to_string(static_cast<size_t>(max_grid_y) * threads_per_block));
+  }
+  if (size_X == 0 || size_T == 0) {
+    return;
+  }
+
+  // both fit in unsigned int after the checks above
+  const dim3 grid(static_cast<unsigned int>(size_X),
+                  static_cast<unsigned int>(blocks_per_point));
   parallel_accurate_kernel<f, d><<<grid, threads_per_block>>>(T, size_T, X, N);
 }
 
 /******************************************************************************/
 
-template double *femib::cuda::copyToDevice<double>(double *x, int size);
-template double *femib::cuda::copyToHost<double>(double *x, int size);
+template double *femib::cuda::copyToDevice<double>(double *x, size_t size);
+template double *femib::cuda::copyToHost<double>(double *x, size_t size);
+template void femib::cuda::freeDevice<double>(double *x);
 
 template femib::types::dvec<float, 2> *
 femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(
-    femib::types::dvec<float, 2> *x, int size);
+    femib::types::dvec<float, 2> *x, size_t size);
 template femib::types::dtrian_<float, 2> *
 femib::cuda::copyToDevice<femib::types::dtrian_<float, 2>>(
-    femib::types::dtrian_<float, 2> *x, int size);
-template bool *femib::cuda::copyToDevice<bool>(bool *x, int size);
-template bool *femib::cuda::copyToHost<bool>(bool *x, int size);
-template bool *femib::cuda::allocDevice<bool>(int size);
+    femib::types::dtrian_<float, 2> *x, size_t size);
+template bool *femib::cuda::copyToDevice<bool>(bool *x, size_t size);
+template bool *femib::cuda::copyToHost<bool>(bool *x, size_t size);
+template bool *femib::cuda::allocDevice<bool>(size_t size);
 
 template void femib::cuda::freeDevice<femib::types::dvec<float, 2>>(
     femib::types::dvec<float, 2> *x);
@@ -267,20 +297,20 @@ template __host__ bool
 femib::cuda::accurate<float, 2>(const femib::types::dvec<float, 2> &P,
                                 const femib::types::dtrian<float, 2> &T);
 template __host__ void femib::cuda::serial_accurate<float, 2>(
-    femib::types::dvec<float, 2> *X, int size_X,
-    femib::types::dtrian<float, 2> *T, int size_T, bool *N);
+    femib::types::dvec<float, 2> *X, size_t size_X,
+    femib::types::dtrian<float, 2> *T, size_t size_T, bool *N);
 template __host__ void femib::cuda::parallel_accurate<float, 2>(
-    femib::types::dvec<float, 2> *X, int size_X,
-    femib::types::dtrian_<float, 2> *T, int size_T, bool *N);
+    femib::types::dvec<float, 2> *X, size_t size_X,
+    femib::types::dtrian_<float, 2> *T, size_t size_T, bool *N);
 
 /******************************************************************************/
 
 template femib::types::dvec<double, 2> *
 femib::cuda::copyToDevice<femib::types::dvec<double, 2>>(
-    femib::types::dvec<double, 2> *x, int size);
+    femib::types::dvec<double, 2> *x, size_t size);
 template femib::types::dtrian_<double, 2> *
 femib::cuda::copyToDevice<femib::types::dtrian_<double, 2>>(
-    femib::types::dtrian_<double, 2> *x, int size);
+    femib::types::dtrian_<double, 2> *x, size_t size);
 template void femib::cuda::freeDevice<femib::types::dvec<double, 2>>(
     femib::types::dvec<double, 2> *x);
 template void femib::cuda::freeDevice<femib::types::dtrian_<double, 2>>(
@@ -298,10 +328,10 @@ template __host__ bool
 femib::cuda::accurate<double, 2>(const femib::types::dvec<double, 2> &P,
                                  const femib::types::dtrian<double, 2> &T);
 template __host__ void femib::cuda::serial_accurate<double, 2>(
-    femib::types::dvec<double, 2> *X, int size_X,
-    femib::types::dtrian<double, 2> *T, int size_T, bool *N);
+    femib::types::dvec<double, 2> *X, size_t size_X,
+    femib::types::dtrian<double, 2> *T, size_t size_T, bool *N);
 template __host__ void femib::cuda::parallel_accurate<double, 2>(
-    femib::types::dvec<double, 2> *X, int size_X,
-    femib::types::dtrian_<double, 2> *T, int size_T, bool *N);
+    femib::types::dvec<double, 2> *X, size_t size_X,
+    femib::types::dtrian_<double, 2> *T, size_t size_T, bool *N);
 
 /******************************************************************************/

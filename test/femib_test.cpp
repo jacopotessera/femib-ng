@@ -28,9 +28,7 @@ TEST_CASE("testing femib poisson") {
   femib::finite_element::finite_element<float, 2, 1> f =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
 
-  femib::finite_element_space::finite_element_space<float, 2, 1> s = {
-      .finite_element = f, .mesh = mesh};
-  s.nodes = f.build_nodes(mesh); // TODO do this in constructor?
+  femib::finite_element_space::finite_element_space<float, 2, 1> s(f, mesh);
 
   femib::poisson::poisson<float, 2, 1> poisson(s, rule);
 
@@ -52,8 +50,7 @@ TEST_CASE("testing build_not_edges") {
   femib::finite_element::finite_element<float, 2, 1> f =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
 
-  femib::finite_element_space::finite_element_space<float, 2, 1> s = {f, mesh};
-  s.nodes = f.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 1> s(f, mesh);
 
   std::vector<int> not_edges = femib::util::build_not_edges<float, 2, 1>(s);
   CHECK_EQ(not_edges.size() + s.nodes.E.size(), s.nodes.P.size());
@@ -143,40 +140,23 @@ TEST_CASE("poisson::solve matches sin(pi x)sin(pi y) manufactured solution") {
   femib::finite_element::finite_element<float, 2, 1> fe =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
 
-  femib::finite_element_space::finite_element_space<float, 2, 1> s = {fe, mesh};
-  s.nodes = fe.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 1> s(fe, mesh);
 
-  // poisson's default force is an implicit constant unit forcing, with no
-  // hook to inject an independent source field -- so this test builds the
-  // system by hand instead of via the poisson(V, rule) constructor, scaling
-  // the default force's per-basis-function projection (a.x(x)(0), since e=1)
-  // by the manufactured `forcing` field.
+  // the manufactured forcing tested against each basis function (e=1)
   auto ggg = [forcing](femib::types::F<float, 2, 1> a) {
     return [a, forcing](const femib::types::dvec<float, 2> &x) {
       return forcing(x) * a.x(x)(0);
     };
   };
 
-  std::function<float(femib::types::dvec<float, 2>)> zero_boundary =
-      [](const femib::types::dvec<float, 2> &) { return 0.0f; };
-  std::vector<Eigen::Triplet<float>> B =
-      femib::util::build_edges<float, 2, 1>(s, zero_boundary);
-  std::vector<int> not_edges = femib::util::build_not_edges<float, 2, 1>(s);
-
-  femib::poisson::poisson<float, 2, 1> problem;
-  problem.V = s;
-  problem.edge_values = femib::util::triplets2dense<float>(
-      B, s.nodes.P.size(), 1); // s.nodes.P.size() ?
-  problem.stiffness_matrix =
-      femib::util::build_stiffness_matrix<float, 2, 1>(s, rule);
-  problem.load_vector =
-      femib::util::build_load_vector<float, 2, 1>(s, rule, ggg);
+  femib::poisson::poisson<float, 2, 1> problem(
+      s, rule, femib::poisson::default_boundary<float, 2>(), ggg);
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::poisson::solve<float, 2, 1>(problem);
 
   float max_error = 0.0f;
-  for (int i = 0; i < s.nodes.P.size(); ++i) {
+  for (int i = 0; i < std::ssize(s.nodes.P); ++i) {
     float exact = u_exact(s.nodes.P[i]);
     float error = std::abs(xx(i, 0) - exact);
     max_error = std::max(max_error, error);

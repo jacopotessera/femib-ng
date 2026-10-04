@@ -24,7 +24,6 @@
 #include "utils.hpp"
 
 femib::stokes::stokes<float, 2> make_stokes_t_fixture(
-    femib::types::mesh<float, 2> &mesh_out,
     std::function<Eigen::Matrix<float, 2, 1>(femib::types::dvec<float, 2>,
                                              float)> &external_force) {
   femib::gauss::rule<float, 2> rule =
@@ -36,33 +35,25 @@ femib::stokes::stokes<float, 2> make_stokes_t_fixture(
   // V
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P2_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space v = {
-      .finite_element = f_p1_2d2d, .mesh = mesh};
-  v.nodes = f_p1_2d2d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space v(f_p1_2d2d, mesh);
 
   // Q
   femib::finite_element::finite_element<float, 2, 1> f_p1_2d1d =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
-  femib::finite_element_space::finite_element_space q = {
-      .finite_element = f_p1_2d1d, .mesh = mesh};
-  q.nodes = f_p1_2d1d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space q(f_p1_2d1d, mesh);
 
   femib::stokes::stokes<float, 2> s(v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f,
                                     /*deltat=*/0.1f, external_force);
-
-  mesh_out = mesh;
   return s;
 }
 
 TEST_CASE("testing femib stokes_t pipeline with HDF5 persistence") {
-  femib::types::mesh<float, 2> mesh;
   std::function<Eigen::Matrix<float, 2, 1>(femib::types::dvec<float, 2>, float)>
       ones_force = [](femib::types::dvec<float, 2>,
                       float) -> Eigen::Matrix<float, 2, 1> {
     return Eigen::Matrix<float, 2, 1>::Ones();
   };
-  femib::stokes::stokes<float, 2> stokes =
-      make_stokes_t_fixture(mesh, ones_force);
+  femib::stokes::stokes<float, 2> stokes = make_stokes_t_fixture(ones_force);
 
   std::string id = get_time();
 
@@ -90,13 +81,12 @@ TEST_CASE("testing femib stokes_t pipeline with HDF5 persistence") {
 }
 
 TEST_CASE("testing advance") {
-  femib::types::mesh<float, 2> mesh;
   std::function<Eigen::Matrix<float, 2, 1>(femib::types::dvec<float, 2>, float)>
       ones_force = [](femib::types::dvec<float, 2>,
                       float) -> Eigen::Matrix<float, 2, 1> {
     return Eigen::Matrix<float, 2, 1>::Ones();
   };
-  femib::stokes::stokes<float, 2> s = make_stokes_t_fixture(mesh, ones_force);
+  femib::stokes::stokes<float, 2> s = make_stokes_t_fixture(ones_force);
   femib::stokes::advance<float, 2>(s);
   CHECK_NOTHROW(femib::stokes::advance<float, 2>(s));
 
@@ -105,13 +95,12 @@ TEST_CASE("testing advance") {
 }
 
 TEST_CASE("testing advance over several timesteps") {
-  femib::types::mesh<float, 2> mesh;
   std::function<Eigen::Matrix<float, 2, 1>(femib::types::dvec<float, 2>, float)>
       ones_force = [](femib::types::dvec<float, 2>,
                       float) -> Eigen::Matrix<float, 2, 1> {
     return Eigen::Matrix<float, 2, 1>::Ones();
   };
-  femib::stokes::stokes<float, 2> s = make_stokes_t_fixture(mesh, ones_force);
+  femib::stokes::stokes<float, 2> s = make_stokes_t_fixture(ones_force);
 
   int rowsV = s.V.nodes.P.size();
   const int n_steps = 8;
@@ -186,15 +175,13 @@ TEST_CASE("test stokes::advance with a non-stationary known problem") {
 
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space<float, 2, 2> v = {f_p1_2d2d,
-                                                                      mesh};
-  v.nodes = f_p1_2d2d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 2> v(f_p1_2d2d,
+                                                                   mesh);
 
   femib::finite_element::finite_element<float, 2, 1> f_p1_2d1d =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
-  femib::finite_element_space::finite_element_space<float, 2, 1> q = {f_p1_2d1d,
-                                                                      mesh};
-  q.nodes = f_p1_2d1d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 1> q(f_p1_2d1d,
+                                                                   mesh);
 
   femib::stokes::stokes<float, 2> s(
       v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.02f,
@@ -309,15 +296,13 @@ TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
 
   femib::finite_element::finite_element<float, 2, 2> f_p1_2d2d =
       femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space<float, 2, 2> v = {f_p1_2d2d,
-                                                                      mesh};
-  v.nodes = f_p1_2d2d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 2> v(f_p1_2d2d,
+                                                                   mesh);
 
   femib::finite_element::finite_element<float, 2, 1> f_p1_2d1d =
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
-  femib::finite_element_space::finite_element_space<float, 2, 1> q = {f_p1_2d1d,
-                                                                      mesh};
-  q.nodes = f_p1_2d1d.build_nodes(mesh);
+  femib::finite_element_space::finite_element_space<float, 2, 1> q(f_p1_2d1d,
+                                                                   mesh);
 
   // Time-independent forcing, the solution converges to this.
   femib::stokes::stokes<float, 2> s(
@@ -410,11 +395,8 @@ TEST_CASE("testing advance() with an extra_velocity_rhs") {
     return Eigen::Matrix<float, 2, 1>::Ones();
   };
 
-  femib::types::mesh<float, 2> mesh;
-  femib::stokes::stokes<float, 2> s_plain =
-      make_stokes_t_fixture(mesh, ones_force);
-  femib::stokes::stokes<float, 2> s_extra =
-      make_stokes_t_fixture(mesh, ones_force);
+  femib::stokes::stokes<float, 2> s_plain = make_stokes_t_fixture(ones_force);
+  femib::stokes::stokes<float, 2> s_extra = make_stokes_t_fixture(ones_force);
 
   int rowsV = s_plain.V.nodes.P.size();
   Eigen::Matrix<float, Eigen::Dynamic, 1> extra =
@@ -428,11 +410,9 @@ TEST_CASE("testing advance() with an extra_velocity_rhs") {
   float diff = (s_plain.solution.back() - s_extra.solution.back()).norm();
   CHECK_GT(diff, 1e-4f);
 
-  femib::stokes::stokes<float, 2> s_null =
-      make_stokes_t_fixture(mesh, ones_force);
+  femib::stokes::stokes<float, 2> s_null = make_stokes_t_fixture(ones_force);
   femib::stokes::advance<float, 2>(s_null);
-  femib::stokes::stokes<float, 2> s_default =
-      make_stokes_t_fixture(mesh, ones_force);
+  femib::stokes::stokes<float, 2> s_default = make_stokes_t_fixture(ones_force);
   femib::stokes::advance<float, 2>(s_default);
   CHECK_LT((s_null.solution.back() - s_default.solution.back()).norm(), 1e-8f);
 }
