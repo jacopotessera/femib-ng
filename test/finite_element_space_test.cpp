@@ -158,3 +158,35 @@ TEST_CASE("plot() does not read out of bounds on a non-rectangular mesh") {
 
   CHECK_NOTHROW(s.plot(xx, 0.01));
 }
+
+TEST_CASE("interpolate is exact for a linear field at points rounding-close "
+          "to mesh edges") {
+  using vec = femib::types::dvec<double, 2>;
+  // two triangles sharing the diagonal x + y = 1; points just across it, in
+  // the second one, are close enough for find_points to give the first
+  femib::types::mesh<double, 2> mesh(
+      {vec(0, 0), vec(1, 0), vec(0, 1), vec(1, 1)},
+      {femib::types::ditrian<2>(0, 1, 2), femib::types::ditrian<2>(1, 3, 2)});
+  femib::finite_element::finite_element<double, 2, 1> f =
+      femib::finite_element::create_finite_element_P1_2d1d<double, 2, 1>();
+  femib::finite_element_space::finite_element_space<double, 2, 1> s(f, mesh);
+
+  auto linear = [](const vec &p) { return 1 + p(0) + 2 * p(1); };
+  Eigen::Matrix<double, Eigen::Dynamic, 1> u(s.size());
+  for (int i = 0; i < s.size(); ++i) {
+    u(i) = linear(s.nodes.P[i]);
+  }
+
+  std::vector<vec> points;
+  for (double t : {0.1, 0.3, 0.5, 0.7, 0.9}) {
+    points.push_back(vec(t, 1 - t) + 1e-12 * vec(1, 1));
+  }
+  std::vector<int> located = femib::mesh::find_points<double, 2>(mesh, points);
+  std::vector<femib::types::dvec<double, 1>> values = s.interpolate(u, points);
+
+  for (size_t k = 0; k < points.size(); ++k) {
+    CAPTURE(k);
+    CHECK_GE(located[k], 0);
+    CHECK(values[k](0) == doctest::Approx(linear(points[k])).epsilon(1e-9));
+  }
+}

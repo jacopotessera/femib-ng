@@ -4,8 +4,12 @@
 #include "cuda.h"
 #include "name_reporter.h"
 #include "spdlog/spdlog.h"
+#include <algorithm>
+#include <cmath>
 #include <doctest/doctest.h>
 #include <iostream>
+#include <memory>
+#include <numbers>
 #include <stdexcept>
 #include <vector>
 
@@ -261,4 +265,60 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
   Npar = NULL;
   delete[] T;
   T = NULL;
+}
+TEST_CASE("points lying exactly on a mesh's boundary are located") {
+  using vec = femib::types::dvec<double, 2>;
+  // [0,2]x[0,1] in 40x20 squares split in two; then the same, turned by 30
+  // degrees so that its boundary edges aren't axis-aligned
+  const int nx = 40, ny = 20;
+  auto idx = [](int i, int j) { return i * (ny + 1) + j; };
+  std::vector<femib::types::ditrian<2>> triangles;
+  for (int i = 0; i < nx; ++i) {
+    for (int j = 0; j < ny; ++j) {
+      triangles.emplace_back(idx(i, j), idx(i + 1, j), idx(i + 1, j + 1));
+      triangles.emplace_back(idx(i, j), idx(i + 1, j + 1), idx(i, j + 1));
+    }
+  }
+  const double angle = std::numbers::pi / 6;
+  for (double turn : {0.0, angle}) {
+    auto place = [turn](double x, double y) {
+      return vec(std::cos(turn) * x - std::sin(turn) * y,
+                 std::sin(turn) * x + std::cos(turn) * y);
+    };
+    std::vector<vec> nodes;
+    for (int i = 0; i <= nx; ++i) {
+      for (int j = 0; j <= ny; ++j) {
+        nodes.push_back(place(2.0 * i / nx, 1.0 * j / ny));
+      }
+    }
+    femib::types::mesh<double, 2> rectangle(nodes, triangles);
+
+    const std::vector<vec> corners = {place(0, 0), place(2, 0), place(2, 1),
+                                      place(0, 1)};
+    std::vector<vec> points;
+    const int n = 250;
+    for (int c = 0; c < 4; ++c) {
+      for (int k = 0; k < n; ++k) {
+        double s = static_cast<double>(k) / n;
+        points.push_back((1 - s) * corners[c] + s * corners[(c + 1) % 4]);
+      }
+    }
+    CAPTURE(turn);
+
+    std::vector<int> located =
+        femib::mesh::find_points<double, 2>(rectangle, points);
+    CHECK_EQ(std::ranges::count(located, -1), 0);
+
+    const size_t size_T = rectangle.N.size();
+    auto N = std::make_unique<bool[]>(points.size() * size_T);
+    femib::cuda::serial_accurate<double, 2>(
+        points.data(), points.size(), rectangle.N.data(), size_T, N.get());
+    int cpu_missed = 0;
+    for (size_t i = 0; i < points.size(); ++i) {
+      cpu_missed +=
+          std::none_of(N.get() + i * size_T, N.get() + (i + 1) * size_T,
+                       [](bool found) { return found; });
+    }
+    CHECK_EQ(cpu_missed, 0);
+  }
 }

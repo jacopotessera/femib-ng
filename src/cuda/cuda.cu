@@ -70,31 +70,24 @@ template <typename T> void femib::cuda::freeDeviceQuiet(T *X) {
 
 /******************************************************************************/
 
-template <typename f, int d>
-__host__ bool femib::cuda::in_box(const femib::types::dvec<f, d> &P,
-                                  const femib::types::dtrian<f, d> &T) {
-  f EPSILON = std::numeric_limits<f>::epsilon();
-  femib::types::box<f, d> box = femib::mesh::find_box<f, d>(T);
-  bool e = true;
-  for (int i = 0; e && i < P.size(); ++i) {
-    e = e && P(i) > (box.bottom(i) - EPSILON) && P(i) < (box.top(i) + EPSILON);
-  }
-  return e;
+template <typename f> __host__ __device__ static f location_tolerance() {
+  return std::sqrt(std::numeric_limits<f>::epsilon()) / 4;
 }
 
 template <typename f, int d>
-__device__ static bool in_box_(const femib::types::dvec<f, d> &P,
-                               femib::types::dvec<f, d> *T) {
-  f EPSILON = std::numeric_limits<f>::epsilon();
+__host__ __device__ static bool in_box_(const femib::types::dvec<f, d> &P,
+                                        const femib::types::dvec<f, d> *T) {
   for (int i = 0; i < d; ++i) {
     f min = T[0](i), max = T[0](i);
-    for (int k = 1; k < d + 1; ++k) { // TODO d+1?
+    for (int k = 1; k < d + 1; ++k) {
       if (T[k](i) < min)
         min = T[k](i);
       if (T[k](i) > max)
         max = T[k](i);
     }
-    if (!(P(i) > min - EPSILON && P(i) < max + EPSILON)) {
+    // wide enough for every point accurate_ accepts
+    const f slack = 2 * location_tolerance<f>() * (max - min);
+    if (!(P(i) >= min - slack && P(i) <= max + slack)) {
       return false;
     }
   }
@@ -102,71 +95,8 @@ __device__ static bool in_box_(const femib::types::dvec<f, d> &P,
 }
 
 template <typename f, int d>
-__host__ bool femib::cuda::in_triangle(const femib::types::dvec<f, d> &P,
-                                       const femib::types::dtrian<f, d> &T) {
-  femib::types::dvec<f, d> x = femib::affine::affine_inv<f, d>(T, P);
-  return (x(0) >= 0) && (x(1) >= 0) && (x(0) + x(1) <= 1);
-}
-
-template <typename f, int d>
-__host__ static f distance_point_segment(const femib::types::dvec<f, d> &P,
-                                         const femib::types::dtrian<f, d> &T) {
-  femib::types::dvec<f, d> D = T[1] - T[0];
-  femib::types::dvec<f, d> E = P - T[0];
-  femib::types::dvec<f, d> F = P - T[1];
-  f P1P2 = (D.transpose() * D);
-  f PP = (E.transpose() * D);
-  f dd = PP / P1P2;
-  if (dd < 0) {
-    return (E.transpose() * E);
-  } else if (dd >= 0 && dd <= 1) {
-    return ((-E).transpose() * (-E)) - dd * dd * P1P2;
-  } else {
-    return F.transpose() * F;
-  }
-}
-
-template <typename f, int d>
-__device__ static f distance_point_segment_(const femib::types::dvec<f, d> &P,
-                                            const femib::types::dvec<f, d> &A,
-                                            const femib::types::dvec<f, d> &B) {
-  femib::types::dvec<f, d> D = B - A;
-  femib::types::dvec<f, d> E = P - A;
-  f P1P2 = D.dot(D);
-  f dd = E.dot(D) / P1P2;
-  if (dd < 0) {
-    return E.dot(E);
-  } else if (dd <= 1) {
-    return E.dot(E) - dd * dd * P1P2;
-  } else {
-    femib::types::dvec<f, d> F = P - B;
-    return F.dot(F);
-  }
-}
-
-// TODO what algoritm is this? source?
-template <typename f, int d>
-__host__ bool femib::cuda::accurate(const femib::types::dvec<f, d> &P,
-                                    const femib::types::dtrian<f, d> &T) {
-  f EPSILON = std::numeric_limits<f>::epsilon();
-  if (not femib::cuda::in_box(P, T)) {
-    return false;
-  }
-  if (femib::cuda::in_triangle(P, T)) {
-    return true;
-  }
-
-  if ((distance_point_segment(P, {T[0], T[1]}) <= EPSILON * EPSILON) ||
-      (distance_point_segment(P, {T[1], T[2]}) <= EPSILON * EPSILON) ||
-      (distance_point_segment(P, {T[2], T[0]}) <= EPSILON * EPSILON)) {
-    return true;
-  }
-  return false;
-}
-
-template <typename f, int d>
-__device__ static bool accurate_(const femib::types::dvec<f, d> &x,
-                                 femib::types::dvec<f, d> *t) {
+__host__ __device__ static bool accurate_(const femib::types::dvec<f, d> &x,
+                                          const femib::types::dvec<f, d> *t) {
   if (!in_box_<f, d>(x, t)) {
     return false;
   }
@@ -179,20 +109,28 @@ __device__ static bool accurate_(const femib::types::dvec<f, d> &x,
   f det = 1 / (a * dd_ - b * c);
   f x_ = det * (dd_ * X - b * Y);
   f y_ = det * (-c * X + a * Y);
-  if (x_ >= 0 && y_ >= 0 && x_ + y_ <= 1) {
-    return true;
-  }
-  f EPSILON = std::numeric_limits<f>::epsilon();
-  if (distance_point_segment_<f, d>(x, t[0], t[1]) <= EPSILON * EPSILON)
-    return true;
-  if (distance_point_segment_<f, d>(x, t[1], t[2]) <= EPSILON * EPSILON)
-    return true;
-  if (distance_point_segment_<f, d>(x, t[2], t[0]) <= EPSILON * EPSILON)
-    return true;
-  return false;
+  const f tol = location_tolerance<f>();
+  return x_ >= -tol && y_ >= -tol && x_ + y_ <= 1 + tol;
 }
 
-/******************************************************************************/
+template <typename f, int d>
+__host__ bool femib::cuda::in_box(const femib::types::dvec<f, d> &P,
+                                  const femib::types::dtrian<f, d> &T) {
+  return in_box_<f, d>(P, T.data());
+}
+
+template <typename f, int d>
+__host__ bool femib::cuda::in_triangle(const femib::types::dvec<f, d> &P,
+                                       const femib::types::dtrian<f, d> &T) {
+  femib::types::dvec<f, d> x = femib::affine::affine_inv<f, d>(T, P);
+  return (x(0) >= 0) && (x(1) >= 0) && (x(0) + x(1) <= 1);
+}
+
+template <typename f, int d>
+__host__ bool femib::cuda::accurate(const femib::types::dvec<f, d> &P,
+                                    const femib::types::dtrian<f, d> &T) {
+  return accurate_<f, d>(P, T.data());
+}
 
 template <typename f, int d>
 __host__ void femib::cuda::serial_accurate(femib::types::dvec<f, d> *X,

@@ -2,6 +2,8 @@
 #define FINITE_ELEMENT_HPP_INCLUDED_
 
 #include "../types/types.hpp"
+#include <cmath>
+#include <limits>
 #include <vector>
 
 namespace femib::finite_element {
@@ -24,14 +26,17 @@ template <typename T, int d, int e> struct finite_element { // TODO constructor?
   int dim2 = e;
 };
 
+// with a rounding tolerance: find_points also accepts points rounding-close
+// to a triangle's edges, and its basis functions mustn't vanish there
 template <typename T, int d> bool in_std(const dvec<T, d> &P) {
+  const T tol = std::sqrt(std::numeric_limits<T>::epsilon());
   bool e = true;
   T q = 0;
   for (T p : P) {
-    e = e && p >= 0;
+    e = e && p >= -tol;
     q += p;
   }
-  return e && q <= 1;
+  return e && q <= 1 + tol;
 };
 
 } // namespace femib::finite_element
