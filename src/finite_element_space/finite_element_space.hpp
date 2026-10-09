@@ -14,9 +14,10 @@ template <typename T, int d, int e> struct finite_element_space {
   femib::types::mesh<T, d> mesh;
   femib::types::nodes<T, d> nodes;
 
-  finite_element_space(femib::finite_element::finite_element<T, d, e> element,
-                       femib::types::mesh<T, d> domain)
-      : finite_element(std::move(element)), mesh(std::move(domain)),
+  finite_element_space(
+      femib::finite_element::finite_element<T, d, e> finite_element_,
+      femib::types::mesh<T, d> mesh_)
+      : finite_element(std::move(finite_element_)), mesh(std::move(mesh_)),
         nodes(finite_element.build_nodes(mesh)) {}
 
   [[nodiscard]] int size() const { return static_cast<int>(nodes.P.size()); }

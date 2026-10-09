@@ -20,40 +20,44 @@ namespace femib::navier_stokes {
 
 template <typename T, int d>
 struct navier_stokes : public femib::stokes::stokes<T, d> {
-  std::unique_ptr<femib::util::nonlinear_solver<T>> solver;
+  std::unique_ptr<femib::util::nonlinear_solver<T>> nonlinear_solver;
 
   navier_stokes(
-      femib::finite_element_space::finite_element_space<T, d, d> v,
-      femib::finite_element_space::finite_element_space<T, d, 1> q,
-      femib::gauss::rule<T, d> rule, T rho = 1.0, T mu = 1.0, T deltat = 0.1,
+      femib::finite_element_space::finite_element_space<T, d, d>
+          velocity_space_,
+      femib::finite_element_space::finite_element_space<T, d, 1>
+          pressure_space_,
+      femib::gauss::rule<T, d> quadrature_, T density_ = 1.0,
+      T viscosity_ = 1.0, T time_step_ = 0.1,
       std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
-          force = femib::stokes_steady::default_force<T, d>(),
-      std::unique_ptr<femib::util::nonlinear_solver<T>> solver =
+          body_force_ = femib::stokes_steady::default_force<T, d>(),
+      std::unique_ptr<femib::util::nonlinear_solver<T>> nonlinear_solver_ =
           femib::util::default_nonlinear_solver_factory<T>(),
-      std::unique_ptr<femib::util::sparse_solver<T>> linear_solver =
+      std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver_ =
           femib::util::default_solver_factory<T>())
-      : femib::stokes::stokes<T, d>(std::move(v), std::move(q), std::move(rule),
-                                    rho, mu, deltat, std::move(force),
-                                    std::move(linear_solver)),
-        solver(std::move(solver)) {}
+      : femib::stokes::stokes<T, d>(
+            std::move(velocity_space_), std::move(pressure_space_),
+            std::move(quadrature_), density_, viscosity_, time_step_,
+            std::move(body_force_), std::move(sparse_solver_)),
+        nonlinear_solver(std::move(nonlinear_solver_)) {}
 };
 
 // backward-Euler timestep of the time-dependent Navier-Stokes system,
-// with the convection term handled by s.solver
+// with the convection term handled by s.nonlinear_solver
 template <typename T, int d>
 void advance(navier_stokes<T, d> &s,
              std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
                  extra_velocity_rhs = std::nullopt) {
   using vector_t = Eigen::Matrix<T, Eigen::Dynamic, 1>;
-  s.time += s.deltat;
+  s.time += s.time_step;
 
   vector_t u_1;
   if (s.solutions.size() == 0)
     u_1 = vector_t::Zero(s.velocity_space.size(), 1);
   else
     u_1 = s.solutions[s.solutions.size() - 1].topRows(s.velocity_space.size());
-  Eigen::SparseMatrix<T> DD = (1 / s.deltat) * s.M;
-  vector_t dd = (1 / s.deltat) * (s.M * u_1);
+  Eigen::SparseMatrix<T> DD = (1 / s.time_step) * s.M;
+  vector_t dd = (1 / s.time_step) * (s.M * u_1);
   Eigen::SparseMatrix<T> A_base = s.stiffness_block + DD;
 
   // the load vector can't change within a timestep
@@ -61,8 +65,9 @@ void advance(navier_stokes<T, d> &s,
 
   auto step = [&s, &A_base](const vector_t &picard_velocity_dofs) -> vector_t {
     Eigen::SparseMatrix<T> top_left =
-        A_base + femib::navier_stokes_common::assemble_convection<T, d>(
-                     s.velocity_space, s.rule, picard_velocity_dofs, s.rho);
+        A_base +
+        femib::navier_stokes_common::assemble_convection<T, d>(
+            s.velocity_space, s.quadrature, picard_velocity_dofs, s.density);
     s.saddle_point_matrix =
         femib::stokes_steady::assemble_saddle_point_matrix<T>(
             top_left, s.divergence_block, s.velocity_space.size(),
@@ -74,7 +79,7 @@ void advance(navier_stokes<T, d> &s,
     return full.topRows(s.velocity_space.size());
   };
 
-  s.solutions.emplace_back(s.solver->solve(u_1, step, velocity));
+  s.solutions.emplace_back(s.nonlinear_solver->solve(u_1, step, velocity));
 }
 
 } // namespace femib::navier_stokes

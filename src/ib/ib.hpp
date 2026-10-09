@@ -20,17 +20,22 @@ template <typename T, int d> struct ib_problem {
   ring<T, d> structure;
 
   ib_problem(
-      femib::finite_element_space::finite_element_space<T, d, d> v,
-      femib::finite_element_space::finite_element_space<T, d, 1> q,
-      femib::gauss::rule<T, d> rule, T rho = 1.0, T mu = 1.0, T deltat = 0.1,
+      femib::finite_element_space::finite_element_space<T, d, d>
+          velocity_space_,
+      femib::finite_element_space::finite_element_space<T, d, 1>
+          pressure_space_,
+      femib::gauss::rule<T, d> quadrature_, T density_ = 1.0,
+      T viscosity_ = 1.0, T time_step_ = 0.1,
       std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
-          force = femib::stokes_steady::default_force<T, d>(),
-      std::unique_ptr<femib::util::nonlinear_solver<T>> solver =
+          body_force_ = femib::stokes_steady::default_force<T, d>(),
+      std::unique_ptr<femib::util::nonlinear_solver<T>> nonlinear_solver_ =
           femib::util::default_nonlinear_solver_factory<T>(),
-      std::unique_ptr<femib::util::sparse_solver<T>> linear_solver =
+      std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver_ =
           femib::util::default_solver_factory<T>())
-      : fluid(std::move(v), std::move(q), std::move(rule), rho, mu, deltat,
-              std::move(force), std::move(solver), std::move(linear_solver)) {}
+      : fluid(std::move(velocity_space_), std::move(pressure_space_),
+              std::move(quadrature_), density_, viscosity_, time_step_,
+              std::move(body_force_), std::move(nonlinear_solver_),
+              std::move(sparse_solver_)) {}
 };
 
 template <typename T, int d>
@@ -59,7 +64,7 @@ void advance_common(
   std::vector<femib::types::dvec<T, d>> U = interpolate_velocity<T, d>(
       p.fluid.velocity_space, p.fluid.solutions.back(), X);
 
-  advance_ring(p.structure, p.fluid.deltat, U);
+  advance_ring(p.structure, p.fluid.time_step, U);
 }
 
 // TODO eh

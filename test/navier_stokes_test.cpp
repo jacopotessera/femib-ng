@@ -359,9 +359,9 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // is rebuilt fresh from scratch each call via assemble_saddle_point_matrix
   // (not mutated in-place) and is not touched again once the Picard loop
   // finishes, so reading s.stiffness_block here is exactly the A_base advance()
-  // itself computes internally for step 2 below. s.deltat is fixed.
+  // itself computes internally for step 2 below. s.time_step is fixed.
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> A_base_expected =
-      s.stiffness_block + (1.0f / s.deltat) * s.M;
+      s.stiffness_block + (1.0f / s.time_step) * s.M;
 
   // Step 2 is the call under test. The injected picard_solver's single
   // iteration must linearize convection around w_dofs_expected (step 1's
@@ -370,7 +370,7 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
 
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> conv_expected =
       femib::navier_stokes_common::assemble_convection<float, 2>(
-          s.velocity_space, rule, w_dofs_expected, s.rho);
+          s.velocity_space, rule, w_dofs_expected, s.density);
   // Sanity: the expected convection contribution must clear this test's
   // own wiring-check tolerance (below) with comfortable margin -- otherwise
   // this check could not tell correct wiring apart from broken/missing

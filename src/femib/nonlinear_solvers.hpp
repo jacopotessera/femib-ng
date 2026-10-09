@@ -24,8 +24,8 @@ template <typename T> struct picard_solver : nonlinear_solver<T> {
   int max_iters;
   T tol;
 
-  explicit picard_solver(int max_iters = 20, T tol = T(1e-6))
-      : max_iters(max_iters), tol(tol) {}
+  explicit picard_solver(int max_iters_ = 20, T tol_ = T(1e-6))
+      : max_iters(max_iters_), tol(tol_) {}
 
   vector_t
   solve(const vector_t &initial_guess,

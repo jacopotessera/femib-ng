@@ -17,22 +17,26 @@ namespace femib::navier_stokes_steady {
 
 template <typename T, int d>
 struct navier_stokes : public femib::stokes_steady::stokes<T, d> {
-  std::unique_ptr<femib::util::nonlinear_solver<T>> solver;
+  std::unique_ptr<femib::util::nonlinear_solver<T>> nonlinear_solver;
 
   navier_stokes(
-      femib::finite_element_space::finite_element_space<T, d, d> v,
-      femib::finite_element_space::finite_element_space<T, d, 1> q,
-      const femib::gauss::rule<T, d> &rule, T rho = 1.0, T mu = 1.0,
+      femib::finite_element_space::finite_element_space<T, d, d>
+          velocity_space_,
+      femib::finite_element_space::finite_element_space<T, d, 1>
+          pressure_space_,
+      const femib::gauss::rule<T, d> &quadrature_, T density_ = 1.0,
+      T viscosity_ = 1.0,
       std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
-          force = femib::stokes_steady::default_force<T, d>(),
-      std::unique_ptr<femib::util::nonlinear_solver<T>> solver =
+          body_force_ = femib::stokes_steady::default_force<T, d>(),
+      std::unique_ptr<femib::util::nonlinear_solver<T>> nonlinear_solver_ =
           femib::util::default_nonlinear_solver_factory<T>(),
-      std::unique_ptr<femib::util::sparse_solver<T>> linear_solver =
+      std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver_ =
           femib::util::default_solver_factory<T>())
-      : femib::stokes_steady::stokes<T, d>(std::move(v), std::move(q), rule,
-                                           rho, mu, std::move(force),
-                                           std::move(linear_solver)),
-        solver(std::move(solver)) {}
+      : femib::stokes_steady::stokes<T, d>(
+            std::move(velocity_space_), std::move(pressure_space_), quadrature_,
+            density_, viscosity_, std::move(body_force_),
+            std::move(sparse_solver_)),
+        nonlinear_solver(std::move(nonlinear_solver_)) {}
 };
 
 template <typename T, int d>
@@ -45,7 +49,7 @@ solve(navier_stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
     Eigen::SparseMatrix<T> top_left =
         s.stiffness_block +
         femib::navier_stokes_common::assemble_convection<T, d>(
-            s.velocity_space, rule, picard_velocity_dofs, s.rho);
+            s.velocity_space, rule, picard_velocity_dofs, s.density);
     s.saddle_point_matrix =
         femib::stokes_steady::assemble_saddle_point_matrix<T>(
             top_left, s.divergence_block, s.velocity_space.size(),
@@ -57,7 +61,8 @@ solve(navier_stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
     return full.topRows(s.velocity_space.size());
   };
 
-  vector_t xx = s.solver->solve(velocity(stokes_solution), step, velocity);
+  vector_t xx =
+      s.nonlinear_solver->solve(velocity(stokes_solution), step, velocity);
   s.solutions = {xx};
   return xx;
 }

@@ -105,9 +105,10 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> build_pressure_constraint_vector(
 template <typename T, int d> struct stokes {
   femib::finite_element_space::finite_element_space<T, d, d> velocity_space;
   femib::finite_element_space::finite_element_space<T, d, 1> pressure_space;
-  T rho; // TODO density
-  T mu;  // TODO viscosity
-  std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)> force;
+  T density;
+  T viscosity;
+  std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
+      body_force;
 
   Eigen::SparseMatrix<T> stiffness_block;
   Eigen::SparseMatrix<T> divergence_block;
@@ -118,17 +119,19 @@ template <typename T, int d> struct stokes {
   Eigen::SparseMatrix<T> saddle_point_matrix;
   Eigen::Matrix<T, Eigen::Dynamic, 1> rhs_vector;
   femib::util::sparse_linear_system<T> reduced_system;
-  std::unique_ptr<femib::util::sparse_solver<T>> linear_solver;
+  std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver;
 
   std::vector<Eigen::Matrix<T, Eigen::Dynamic, 1>> solutions;
 
-  stokes(femib::finite_element_space::finite_element_space<T, d, d> v,
-         femib::finite_element_space::finite_element_space<T, d, 1> q,
-         const femib::gauss::rule<T, d> &integration_rule, T rho = 1.0,
-         T mu = 1.0,
+  stokes(femib::finite_element_space::finite_element_space<T, d, d>
+             velocity_space_,
+         femib::finite_element_space::finite_element_space<T, d, 1>
+             pressure_space_,
+         const femib::gauss::rule<T, d> &integration_rule, T density_ = 1.0,
+         T viscosity_ = 1.0,
          std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
-             force = default_force<T, d>(),
-         std::unique_ptr<femib::util::sparse_solver<T>> linear_solver =
+             body_force_ = default_force<T, d>(),
+         std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver_ =
              femib::util::default_solver_factory<T>());
 
   std::vector<std::pair<types::dvec<T, d>, types::dvec<T, d>>>
@@ -213,7 +216,7 @@ template <typename T, int d, int e>
 Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &s) {
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> x =
-      s.linear_solver->solve(s.reduced_system.A, s.reduced_system.b);
+      s.sparse_solver->solve(s.reduced_system.A, s.reduced_system.b);
 
   // drop the last row, constraint on pressure
   Eigen::Matrix<T, Eigen::Dynamic, 1> x_no_lambda = x.topRows(x.rows() - 1);
@@ -226,20 +229,20 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &s) {
 
 template <typename T, int d>
 stokes<T, d>::stokes(
-    femib::finite_element_space::finite_element_space<T, d, d> v,
-    femib::finite_element_space::finite_element_space<T, d, 1> q,
-    const femib::gauss::rule<T, d> &integration_rule, T rho, T mu,
-    std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)> force,
-    std::unique_ptr<femib::util::sparse_solver<T>> linear_solver)
-    : velocity_space(std::move(v)), pressure_space(std::move(q)), rho(rho),
-      mu(mu), force(std::move(force)), linear_solver(std::move(linear_solver)) {
-  // TODO
-  //  the parameters rho, mu, force shadow the members (force is moved from)
-  const T viscosity = this->mu;
+    femib::finite_element_space::finite_element_space<T, d, d> velocity_space_,
+    femib::finite_element_space::finite_element_space<T, d, 1> pressure_space_,
+    const femib::gauss::rule<T, d> &integration_rule, T density_, T viscosity_,
+    std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
+        body_force_,
+    std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver_)
+    : velocity_space(std::move(velocity_space_)),
+      pressure_space(std::move(pressure_space_)), density(density_),
+      viscosity(viscosity_), body_force(std::move(body_force_)),
+      sparse_solver(std::move(sparse_solver_)) {
   stiffness_block = femib::util::triplets2sparse(
       femib::util::build_diagonal_block<T, d, d>(
           velocity_space, integration_rule,
-          [viscosity](femib::types::F<T, d, d> u, femib::types::F<T, d, d> w) {
+          [this](femib::types::F<T, d, d> u, femib::types::F<T, d, d> w) {
             return viscous_form<T, d>(u, w, viscosity);
           }),
       velocity_space.size(), velocity_space.size());
@@ -250,7 +253,7 @@ stokes<T, d>::stokes(
       velocity_space.size(), pressure_space.size());
 
   std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)> force_at_0 =
-      [f = this->force](const femib::types::dvec<T, d> &x) {
+      [f = this->body_force](const femib::types::dvec<T, d> &x) {
         return f(x, T(0));
       };
   rhs_vector = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(
