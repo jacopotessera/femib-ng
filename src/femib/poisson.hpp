@@ -55,7 +55,7 @@ template <typename T, int d, int e> struct poisson {
               femib::util::default_solver_factory<T>())
       : V(std::move(v)), force(std::move(force)), solver(std::move(solver)) {
     std::vector<Eigen::Triplet<T>> edge_values_triplets =
-        femib::util::build_edges<T, d, e>(V, boundary);
+        femib::util::build_boundary_values_on_nodes<T, d, e>(V, boundary);
 
     edge_values = femib::util::triplets2dense<T>(
         edge_values_triplets, V.nodes.P.size(), 1); // TODO V.nodes.P.size() ?
@@ -68,19 +68,20 @@ template <typename T, int d, int e> struct poisson {
 template <typename T, int d, int e>
 Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const poisson<T, d, e> &poisson) {
 
-  std::vector<int> not_edges = femib::util::build_not_edges<T, d, e>(poisson.V);
+  std::vector<int> not_edge_nodes =
+      femib::util::find_not_edge_nodes<T, d, e>(poisson.V);
 
-  femib::util::sparse_solvable_equations<T> solvable_equations =
-      femib::util::remove_edges<T>(poisson.stiffness_matrix,
-                                   poisson.load_vector, poisson.edge_values,
-                                   not_edges);
+  femib::util::sparse_linear_system<T> reduced_system =
+      femib::util::build_reduced_system<T>(poisson.stiffness_matrix,
+                                           poisson.load_vector,
+                                           poisson.edge_values, not_edge_nodes);
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> x =
-      poisson.solver->solve(solvable_equations.A, solvable_equations.b);
+      poisson.solver->solve(reduced_system.A, reduced_system.b);
 
-  return femib::util::add_edges<T>(x, poisson.edge_values,
-                                   poisson.V.nodes.P.size(), not_edges,
-                                   poisson.V.nodes.E);
+  return femib::util::build_full_solution<T>(x, poisson.edge_values,
+                                             poisson.V.nodes.P.size(),
+                                             not_edge_nodes, poisson.V.nodes.E);
 }
 
 } // namespace femib::poisson

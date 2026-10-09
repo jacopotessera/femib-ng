@@ -73,8 +73,8 @@ TEST_CASE("testing femib stokes_t pipeline with HDF5 persistence") {
     femib::write::save_plot_data(path, p);
   }
 
-  CHECK_EQ(stokes.solution.size(), (size_t)TMAX);
-  CHECK_UNARY(stokes.solution.back().allFinite());
+  CHECK_EQ(stokes.solutions.size(), (size_t)TMAX);
+  CHECK_UNARY(stokes.solutions.back().allFinite());
 
   // TODO
   // std::remove(path.c_str());
@@ -90,8 +90,10 @@ TEST_CASE("testing advance") {
   femib::stokes::advance<float, 2>(s);
   CHECK_NOTHROW(femib::stokes::advance<float, 2>(s));
 
-  CHECK_EQ(s.solution.back().rows(), s.V.nodes.P.size() + s.Q.nodes.P.size());
-  CHECK_UNARY(s.solution.back().topRows(s.V.nodes.P.size()).allFinite());
+  CHECK_EQ(s.solutions.back().rows(),
+           s.velocity_space.nodes.P.size() + s.pressure_space.nodes.P.size());
+  CHECK_UNARY(
+      s.solutions.back().topRows(s.velocity_space.nodes.P.size()).allFinite());
 }
 
 TEST_CASE("testing advance over several timesteps") {
@@ -102,7 +104,7 @@ TEST_CASE("testing advance over several timesteps") {
   };
   femib::stokes::stokes<float, 2> s = make_stokes_t_fixture(ones_force);
 
-  int rowsV = s.V.nodes.P.size();
+  int rowsV = s.velocity_space.nodes.P.size();
   const int n_steps = 8;
   std::vector<float> velocity_norm;
   std::vector<float> step_diff_norm;
@@ -111,7 +113,7 @@ TEST_CASE("testing advance over several timesteps") {
   for (int step = 0; step < n_steps; ++step) {
     femib::stokes::advance<float, 2>(s);
     Eigen::Matrix<float, Eigen::Dynamic, 1> v =
-        s.solution.back().topRows(rowsV);
+        s.solutions.back().topRows(rowsV);
     CHECK_UNARY(v.allFinite());
     velocity_norm.push_back(v.norm());
     if (step > 0) {
@@ -129,7 +131,7 @@ TEST_CASE("testing advance over several timesteps") {
   CHECK_LT(step_diff_norm.back(), 1.1f * step_diff_norm.front());
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> p =
-      s.solution.back().bottomRows(s.Q.nodes.P.size());
+      s.solutions.back().bottomRows(s.pressure_space.nodes.P.size());
   CHECK_LT(std::abs(s.pressure_constraint_vector.dot(p)), 1e-4f);
 }
 
@@ -196,8 +198,8 @@ TEST_CASE("test stokes::advance with a non-stationary known problem") {
 
   int size_P = mesh.P.size();
   int size_T = mesh.T.size();
-  int rows_v = s.V.nodes.P.size();
-  int n_p = s.Q.nodes.P.size();
+  int rows_v = s.velocity_space.nodes.P.size();
+  int n_p = s.pressure_space.nodes.P.size();
 
   auto velocity_error = [&](const Eigen::Matrix<float, Eigen::Dynamic, 1> &xx,
                             float g) {
@@ -226,15 +228,17 @@ TEST_CASE("test stokes::advance with a non-stationary known problem") {
     float mean_computed = 0.0f, mean_exact = 0.0f;
     for (int n_ = 0; n_ < n_p; ++n_) {
       mean_computed += xx(rows_v + n_, 0);
-      mean_exact += g * p_exact(s.Q.nodes.P[n_](0), s.Q.nodes.P[n_](1));
+      mean_exact += g * p_exact(s.pressure_space.nodes.P[n_](0),
+                                s.pressure_space.nodes.P[n_](1));
     }
     mean_computed /= n_p;
     mean_exact /= n_p;
     float max_error = 0.0f;
     for (int n_ = 0; n_ < n_p; ++n_) {
       float computed = xx(rows_v + n_, 0) - mean_computed;
-      float exact =
-          g * p_exact(s.Q.nodes.P[n_](0), s.Q.nodes.P[n_](1)) - mean_exact;
+      float exact = g * p_exact(s.pressure_space.nodes.P[n_](0),
+                                s.pressure_space.nodes.P[n_](1)) -
+                    mean_exact;
       max_error = std::max(max_error, std::abs(computed - exact));
     }
     return max_error;
@@ -245,8 +249,8 @@ TEST_CASE("test stokes::advance with a non-stationary known problem") {
   for (int step = 0; step < n_steps; ++step) {
     femib::stokes::advance<float, 2>(s);
     float g = 1.0f - std::cos(s.time);
-    velocity_errors.push_back(velocity_error(s.solution.back(), g));
-    pressure_errors.push_back(pressure_error(s.solution.back(), g));
+    velocity_errors.push_back(velocity_error(s.solutions.back(), g));
+    pressure_errors.push_back(pressure_error(s.solutions.back(), g));
     g_values.push_back(g);
   }
 
@@ -318,8 +322,8 @@ TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
 
   int size_P = mesh.P.size();
   int size_T = mesh.T.size();
-  int rows_v = s.V.nodes.P.size();
-  int n_p = s.Q.nodes.P.size();
+  int rows_v = s.velocity_space.nodes.P.size();
+  int n_p = s.pressure_space.nodes.P.size();
 
   auto velocity_error = [&](const Eigen::Matrix<float, Eigen::Dynamic, 1> &xx) {
     float max_error = 0.0f;
@@ -346,15 +350,17 @@ TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
     float mean_computed = 0.0f, mean_exact = 0.0f;
     for (int n_ = 0; n_ < n_p; ++n_) {
       mean_computed += xx(rows_v + n_, 0);
-      mean_exact += p_exact(s.Q.nodes.P[n_](0), s.Q.nodes.P[n_](1));
+      mean_exact += p_exact(s.pressure_space.nodes.P[n_](0),
+                            s.pressure_space.nodes.P[n_](1));
     }
     mean_computed /= n_p;
     mean_exact /= n_p;
     float max_error = 0.0f;
     for (int n_ = 0; n_ < n_p; ++n_) {
       float computed = xx(rows_v + n_, 0) - mean_computed;
-      float exact =
-          p_exact(s.Q.nodes.P[n_](0), s.Q.nodes.P[n_](1)) - mean_exact;
+      float exact = p_exact(s.pressure_space.nodes.P[n_](0),
+                            s.pressure_space.nodes.P[n_](1)) -
+                    mean_exact;
       max_error = std::max(max_error, std::abs(computed - exact));
     }
     return max_error;
@@ -366,9 +372,9 @@ TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
   for (int step = 0; step < n_steps; ++step) {
     femib::stokes::advance<float, 2>(s);
     if (step > 0) {
-      last_step_diff = (s.solution.back() - prev).norm();
+      last_step_diff = (s.solutions.back() - prev).norm();
     }
-    prev = s.solution.back();
+    prev = s.solutions.back();
 
     femib::write::plot_data<float, 2> p;
     p.time = step;
@@ -381,8 +387,8 @@ TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
 
   CHECK_LT(last_step_diff, 0.1f);
 
-  float final_velocity_error = velocity_error(s.solution.back());
-  float final_pressure_error = pressure_error(s.solution.back());
+  float final_velocity_error = velocity_error(s.solutions.back());
+  float final_pressure_error = pressure_error(s.solutions.back());
 
   CHECK_LT(final_velocity_error, 1.0f);
   CHECK_LT(final_pressure_error, 10.0f);
@@ -398,7 +404,7 @@ TEST_CASE("testing advance() with an extra_velocity_rhs") {
   femib::stokes::stokes<float, 2> s_plain = make_stokes_t_fixture(ones_force);
   femib::stokes::stokes<float, 2> s_extra = make_stokes_t_fixture(ones_force);
 
-  int rowsV = s_plain.V.nodes.P.size();
+  int rowsV = s_plain.velocity_space.nodes.P.size();
   Eigen::Matrix<float, Eigen::Dynamic, 1> extra =
       Eigen::Matrix<float, Eigen::Dynamic, 1>::Zero(rowsV);
   // index 12 is an interior node
@@ -407,12 +413,13 @@ TEST_CASE("testing advance() with an extra_velocity_rhs") {
   femib::stokes::advance<float, 2>(s_plain);
   femib::stokes::advance<float, 2>(s_extra, extra);
 
-  float diff = (s_plain.solution.back() - s_extra.solution.back()).norm();
+  float diff = (s_plain.solutions.back() - s_extra.solutions.back()).norm();
   CHECK_GT(diff, 1e-4f);
 
   femib::stokes::stokes<float, 2> s_null = make_stokes_t_fixture(ones_force);
   femib::stokes::advance<float, 2>(s_null);
   femib::stokes::stokes<float, 2> s_default = make_stokes_t_fixture(ones_force);
   femib::stokes::advance<float, 2>(s_default);
-  CHECK_LT((s_null.solution.back() - s_default.solution.back()).norm(), 1e-8f);
+  CHECK_LT((s_null.solutions.back() - s_default.solutions.back()).norm(),
+           1e-8f);
 }

@@ -40,7 +40,7 @@ TEST_CASE("testing femib poisson") {
   //  below. is this test still needed?
 }
 
-TEST_CASE("testing build_not_edges") {
+TEST_CASE("testing find_not_edge_nodes") {
   // 4-triangle square mesh: 4 boundary corner nodes (0,1,2,3) plus one
   // interior center node (4).
   femib::types::mesh<float, 2> mesh(
@@ -52,9 +52,10 @@ TEST_CASE("testing build_not_edges") {
 
   femib::finite_element_space::finite_element_space<float, 2, 1> s(f, mesh);
 
-  std::vector<int> not_edges = femib::util::build_not_edges<float, 2, 1>(s);
-  CHECK_EQ(not_edges.size() + s.nodes.E.size(), s.nodes.P.size());
-  for (int i : not_edges) {
+  std::vector<int> not_edge_nodes =
+      femib::util::find_not_edge_nodes<float, 2, 1>(s);
+  CHECK_EQ(not_edge_nodes.size() + s.nodes.E.size(), s.nodes.P.size());
+  for (int i : not_edge_nodes) {
     CHECK_EQ(std::find(s.nodes.E.begin(), s.nodes.E.end(), i), s.nodes.E.end());
   }
 }

@@ -67,56 +67,54 @@ femib::types::F<T, d, e> base_function2real_function(
   return a;
 }
 
-// TODO name?
 // A x = b
-template <typename T> struct sparse_solvable_equations {
+template <typename T> struct sparse_linear_system {
   Eigen::SparseMatrix<T> A;
   Eigen::Matrix<T, Eigen::Dynamic, 1> b;
 };
 
-// TODO name?
 // reduces A x = f (with Dirichlet values boundary_values on the E nodes) to a
-// smaller system over just not_edges
+// smaller system over just not_edge_nodes
 template <typename T>
-sparse_solvable_equations<T>
-remove_edges(const Eigen::SparseMatrix<T> &A,
-             const Eigen::Matrix<T, Eigen::Dynamic, 1> &b,
-             const Eigen::Matrix<T, Eigen::Dynamic, 1> &boundary_values,
-             const std::vector<int> &not_edges) {
+sparse_linear_system<T>
+build_reduced_system(const Eigen::SparseMatrix<T> &A,
+                     const Eigen::Matrix<T, Eigen::Dynamic, 1> &b,
+                     const Eigen::Matrix<T, Eigen::Dynamic, 1> &boundary_values,
+                     const std::vector<int> &not_edge_nodes) {
 
   // TODO explanation of how this work (it's simple but...)
   Eigen::Matrix<T, Eigen::Dynamic, 1> ss = A * boundary_values;
 
-  int n = static_cast<int>(not_edges.size());
+  int n = static_cast<int>(not_edge_nodes.size());
   Eigen::Matrix<T, Eigen::Dynamic, 1> smaller_b(n);
   for (int i = 0; i < n; ++i) {
-    smaller_b(i) = b(not_edges[i]) - ss(not_edges[i]);
+    smaller_b(i) = b(not_edge_nodes[i]) - ss(not_edge_nodes[i]);
   }
 
-  Eigen::SparseMatrix<T> P = selection_matrix<T>(not_edges, A.rows());
+  Eigen::SparseMatrix<T> P = selection_matrix<T>(not_edge_nodes, A.rows());
   Eigen::SparseMatrix<T> smaller_A = P * A * P.transpose();
 
   return {smaller_A, smaller_b};
 }
 
-// TODO name?
-// TODO inverse of remove_edges, rebuild the full solution
+// inverse of build_reduced_system: rebuilds the full solution
 template <typename T>
 Eigen::Matrix<T, Eigen::Dynamic, 1>
-add_edges(const Eigen::Matrix<T, Eigen::Dynamic, 1> &reduced_solution,
-          const Eigen::Matrix<T, Eigen::Dynamic, 1> &boundary_values,
-          int full_size, const std::vector<int> &not_edges,
-          const std::vector<int> &edges) {
+build_full_solution(const Eigen::Matrix<T, Eigen::Dynamic, 1> &reduced_solution,
+                    const Eigen::Matrix<T, Eigen::Dynamic, 1> &boundary_values,
+                    int full_size, const std::vector<int> &not_edge_nodes,
+                    const std::vector<int> &edge_nodes) {
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> full_solution;
   full_solution.resize(full_size, 1);
 
   for (int i = 0; i < full_size; i++) {
     full_solution(i, 0) = 0.0;
-    if (auto k = std::ranges::find(not_edges, i); k != not_edges.end()) {
-      full_solution(i, 0) = reduced_solution(k - not_edges.begin(), 0);
+    if (auto k = std::ranges::find(not_edge_nodes, i);
+        k != not_edge_nodes.end()) {
+      full_solution(i, 0) = reduced_solution(k - not_edge_nodes.begin(), 0);
     }
-    if (auto k = std::ranges::find(edges, i); k != edges.end()) {
+    if (auto k = std::ranges::find(edge_nodes, i); k != edge_nodes.end()) {
       full_solution(i, 0) = boundary_values(i, 0);
     }
   }
@@ -124,9 +122,8 @@ add_edges(const Eigen::Matrix<T, Eigen::Dynamic, 1> &reduced_solution,
   return full_solution;
 }
 
-// TODO diagonal block
 template <typename T, int d, int e>
-std::vector<Eigen::Triplet<T>> build_diagonal_matrix(
+std::vector<Eigen::Triplet<T>> build_diagonal_block(
     const femib::finite_element_space::finite_element_space<T, d, e> &v,
     const femib::gauss::rule<T, d> &integration_rule,
     const std::function<std::function<T(femib::types::dvec<T, d>)>(
@@ -175,7 +172,7 @@ Eigen::SparseMatrix<T> build_stiffness_matrix(
     const femib::finite_element_space::finite_element_space<T, d, e> &v,
     const femib::gauss::rule<T, d> &integration_rule) {
   return triplets2sparse(
-      build_diagonal_matrix(v, integration_rule, ddot<T, d, e>), v.size(),
+      build_diagonal_block(v, integration_rule, ddot<T, d, e>), v.size(),
       v.size());
 }
 
@@ -184,7 +181,7 @@ Eigen::SparseMatrix<T> build_mass_matrix(
     const femib::finite_element_space::finite_element_space<T, d, e> &v,
     const femib::gauss::rule<T, d> &integration_rule) {
   return triplets2sparse(
-      build_diagonal_matrix(v, integration_rule, mass<T, d, e>), v.size(),
+      build_diagonal_block(v, integration_rule, mass<T, d, e>), v.size(),
       v.size());
 }
 
@@ -226,9 +223,8 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> build_load_vector(
       triplets2dense(load_vector, v.size(), 1));
 }
 
-// TODO off diagonal block
 template <typename T, int d>
-std::vector<Eigen::Triplet<T>> build_off_diagonal_matrix(
+std::vector<Eigen::Triplet<T>> build_off_diagonal_block(
     const femib::finite_element_space::finite_element_space<T, d, d> &v,
     const femib::finite_element_space::finite_element_space<T, d, 1> &q,
     const femib::gauss::rule<T, d> &rule,
@@ -255,11 +251,10 @@ std::vector<Eigen::Triplet<T>> build_off_diagonal_matrix(
   return BB;
 }
 
-// TODO name?
 template <typename T, int d, int e>
-std::vector<Eigen::Triplet<T>>
-build_edges(const femib::finite_element_space::finite_element_space<T, d, e> &s,
-            const std::function<T(femib::types::dvec<T, d>)> &b) {
+std::vector<Eigen::Triplet<T>> build_boundary_values_on_nodes(
+    const femib::finite_element_space::finite_element_space<T, d, e> &s,
+    const std::function<T(femib::types::dvec<T, d>)> &b) {
   std::vector<Eigen::Triplet<T>> B;
   for (int i : s.nodes.E) {
     B.push_back(Eigen::Triplet<T>(i, 0, b(s.nodes.P[i])));
@@ -267,22 +262,21 @@ build_edges(const femib::finite_element_space::finite_element_space<T, d, e> &s,
   return B;
 }
 
-// TODO name?
 template <typename T, int d, int e>
-std::vector<int> build_not_edges(
+std::vector<int> find_not_edge_nodes(
     const femib::finite_element_space::finite_element_space<T, d, e> &s) {
   std::vector<bool> is_edge(s.size(), false);
   for (int i : s.nodes.E) {
     is_edge[i] = true;
   }
-  std::vector<int> not_edges;
-  not_edges.reserve(s.size());
+  std::vector<int> not_edge_nodes;
+  not_edge_nodes.reserve(s.size());
   for (int i = 0; i < s.size(); i++) {
     if (!is_edge[i]) {
-      not_edges.push_back(i);
+      not_edge_nodes.push_back(i);
     }
   }
-  return not_edges;
+  return not_edge_nodes;
 }
 
 } // namespace femib::util

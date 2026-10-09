@@ -52,12 +52,12 @@ void advance_common(
     f /= p.structure.dS;
   }
   Eigen::Matrix<T, Eigen::Dynamic, 1> extra_rhs =
-      spread_force<T, d>(p.fluid.V, X, F, p.structure.dS);
+      spread_force<T, d>(p.fluid.velocity_space, X, F, p.structure.dS);
 
   fluid_step(extra_rhs);
 
-  std::vector<femib::types::dvec<T, d>> U =
-      interpolate_velocity<T, d>(p.fluid.V, p.fluid.solution.back(), X);
+  std::vector<femib::types::dvec<T, d>> U = interpolate_velocity<T, d>(
+      p.fluid.velocity_space, p.fluid.solutions.back(), X);
 
   advance_ring(p.structure, p.fluid.deltat, U);
 }

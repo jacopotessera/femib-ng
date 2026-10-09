@@ -48,15 +48,14 @@ TEST_CASE("testing femib stokes") {
       });
 
   {
-    std::vector<int> not_edges =
-        femib::util::build_not_edges<float, 2, 2>(stokes.V);
-    int rowsV_free = static_cast<int>(not_edges.size());
-    int rowsQ = static_cast<int>(stokes.Q.nodes.P.size());
+    std::vector<int> not_edge_nodes =
+        femib::util::find_not_edge_nodes<float, 2, 2>(stokes.velocity_space);
+    int rowsV_free = static_cast<int>(not_edge_nodes.size());
+    int rowsQ = static_cast<int>(stokes.pressure_space.nodes.P.size());
     int expected_n = rowsV_free + rowsQ + 1;
 
-    const Eigen::SparseMatrix<float> &A = stokes.solvable_equations.A;
-    const Eigen::Matrix<float, Eigen::Dynamic, 1> &b =
-        stokes.solvable_equations.b;
+    const Eigen::SparseMatrix<float> &A = stokes.reduced_system.A;
+    const Eigen::Matrix<float, Eigen::Dynamic, 1> &b = stokes.reduced_system.b;
 
     // Expected size: (rowsV_free + rowsQ + 1) -- one Lagrange-multiplier
     // row/column on top of the velocity-reduced, fully-free-pressure system.
@@ -83,7 +82,7 @@ TEST_CASE("testing femib stokes") {
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::stokes_steady::solve<float, 2, 1>(stokes);
   CHECK_UNARY(xx.allFinite());
-  CHECK_GT(xx.topRows(stokes.V.size()).norm(), 0.0f);
+  CHECK_GT(xx.topRows(stokes.velocity_space.size()).norm(), 0.0f);
 }
 
 TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
@@ -178,7 +177,8 @@ TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
   // Stokes pressure is only defined up to an additive constant for
   // pure-Dirichlet-velocity boundary conditions, so subtract the mean from
   // both the computed and the exact pressure before comparing.
-  int rows_v = stokes.V.nodes.P.size(); // combined velocity DOF count
+  int rows_v =
+      stokes.velocity_space.nodes.P.size(); // combined velocity DOF count
   int n_p = q.nodes.P.size();
   float mean_computed_p = 0.0f;
   float mean_exact_p = 0.0f;

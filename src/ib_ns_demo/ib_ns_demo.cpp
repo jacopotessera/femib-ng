@@ -219,7 +219,7 @@ int main(int argc, char **argv) {
   auto dump_step = [&](int step) {
     femib::write::plot_data<double, 2> data;
     data.time = step;
-    if (!p.fluid.solution.empty()) {
+    if (!p.fluid.solutions.empty()) {
       for (const auto &[position, velocity] : p.fluid.plot_velocity(0.04)) {
         data.x.push_back(position);
         data.u.push_back(velocity);

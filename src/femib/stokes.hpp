@@ -34,8 +34,8 @@ struct stokes : public femib::stokes_steady::stokes<T, d> {
                                            rho, mu, std::move(force),
                                            std::move(linear_solver)),
         rule(std::move(rule)), deltat(deltat) {
-    M = this->rho *
-        femib::util::build_mass_matrix<T, d, d>(this->V, this->rule);
+    M = this->rho * femib::util::build_mass_matrix<T, d, d>(
+                        this->velocity_space, this->rule);
   }
 };
 
@@ -56,13 +56,14 @@ void rebuild_rhs(
     return femib::stokes_steady::external_force<T, d>(a, force_n1);
   };
   Eigen::Matrix<T, Eigen::Dynamic, 1> velocity_rhs =
-      femib::util::build_load_vector<T, d, d>(s.V, s.rule, ggg) + dd;
+      femib::util::build_load_vector<T, d, d>(s.velocity_space, s.rule, ggg) +
+      dd;
 
   if (extra_velocity_rhs.has_value()) {
     velocity_rhs += extra_velocity_rhs.value();
   }
 
-  s.ff.block(0, 0, s.V.size(), 1) = velocity_rhs;
+  s.rhs_vector.block(0, 0, s.velocity_space.size(), 1) = velocity_rhs;
 }
 
 template <typename T, int d>
@@ -71,20 +72,20 @@ void advance(stokes<T, d> &s, std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
   s.time += s.deltat;
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> u_1;
-  if (s.solution.size() == 0)
-    u_1 = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(s.V.size(), 1);
+  if (s.solutions.size() == 0)
+    u_1 = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(s.velocity_space.size(), 1);
   else
     // last timestep velocity
-    u_1 = s.solution[s.solution.size() - 1].topRows(s.V.size());
+    u_1 = s.solutions[s.solutions.size() - 1].topRows(s.velocity_space.size());
 
   Eigen::SparseMatrix<T> DD = (1 / s.deltat) * s.M;
   Eigen::Matrix<T, Eigen::Dynamic, 1> dd = (1 / s.deltat) * (s.M * u_1);
 
-  const int nV = s.V.size();
-  const int nQ = s.Q.size();
-  Eigen::SparseMatrix<T> top_left = s.A + DD;
-  s.AA = femib::stokes_steady::assemble_saddle_point_matrix<T>(top_left, s.B,
-                                                               nV, nQ);
+  const int nV = s.velocity_space.size();
+  const int nQ = s.pressure_space.size();
+  Eigen::SparseMatrix<T> top_left = s.stiffness_block + DD;
+  s.saddle_point_matrix = femib::stokes_steady::assemble_saddle_point_matrix<T>(
+      top_left, s.divergence_block, nV, nQ);
 
   femib::stokes::rebuild_rhs<T, d>(s, dd, extra_velocity_rhs);
   femib::stokes_steady::rebuild_system<T, d>(s);
@@ -92,7 +93,7 @@ void advance(stokes<T, d> &s, std::optional<Eigen::Matrix<T, Eigen::Dynamic, 1>>
   Eigen::Matrix<T, Eigen::Dynamic, 1> xx =
       femib::stokes_steady::solve<T, d, 1>(s);
 
-  s.solution.emplace_back(xx);
+  s.solutions.emplace_back(xx);
 }
 
 } // namespace femib::stokes

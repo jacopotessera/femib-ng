@@ -48,13 +48,13 @@ void advance(navier_stokes<T, d> &s,
   s.time += s.deltat;
 
   vector_t u_1;
-  if (s.solution.size() == 0)
-    u_1 = vector_t::Zero(s.V.size(), 1);
+  if (s.solutions.size() == 0)
+    u_1 = vector_t::Zero(s.velocity_space.size(), 1);
   else
-    u_1 = s.solution[s.solution.size() - 1].topRows(s.V.size());
+    u_1 = s.solutions[s.solutions.size() - 1].topRows(s.velocity_space.size());
   Eigen::SparseMatrix<T> DD = (1 / s.deltat) * s.M;
   vector_t dd = (1 / s.deltat) * (s.M * u_1);
-  Eigen::SparseMatrix<T> A_base = s.A + DD;
+  Eigen::SparseMatrix<T> A_base = s.stiffness_block + DD;
 
   // the load vector can't change within a timestep
   femib::stokes::rebuild_rhs<T, d>(s, dd, extra_velocity_rhs);
@@ -62,17 +62,19 @@ void advance(navier_stokes<T, d> &s,
   auto step = [&s, &A_base](const vector_t &picard_velocity_dofs) -> vector_t {
     Eigen::SparseMatrix<T> top_left =
         A_base + femib::navier_stokes_common::assemble_convection<T, d>(
-                     s.V, s.rule, picard_velocity_dofs, s.rho);
-    s.AA = femib::stokes_steady::assemble_saddle_point_matrix<T>(
-        top_left, s.B, s.V.size(), s.Q.size());
+                     s.velocity_space, s.rule, picard_velocity_dofs, s.rho);
+    s.saddle_point_matrix =
+        femib::stokes_steady::assemble_saddle_point_matrix<T>(
+            top_left, s.divergence_block, s.velocity_space.size(),
+            s.pressure_space.size());
     femib::stokes_steady::rebuild_system<T, d>(s);
     return femib::stokes_steady::solve<T, d, 1>(s);
   };
   auto velocity = [&s](const vector_t &full) -> vector_t {
-    return full.topRows(s.V.size());
+    return full.topRows(s.velocity_space.size());
   };
 
-  s.solution.emplace_back(s.solver->solve(u_1, step, velocity));
+  s.solutions.emplace_back(s.solver->solve(u_1, step, velocity));
 }
 
 } // namespace femib::navier_stokes

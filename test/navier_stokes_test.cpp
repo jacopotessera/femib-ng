@@ -101,14 +101,14 @@ TEST_CASE("solve steady Navier-Stokes") {
         return femib::types::dvec<float, 2>(f1(x(0), x(1)), f2(x(0), x(1)));
       },
       std::make_unique<femib::util::picard_solver<float>>(30, 1e-5f));
-  const Eigen::SparseMatrix<float> A_before = s.A;
+  const Eigen::SparseMatrix<float> A_before = s.stiffness_block;
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::navier_stokes_steady::solve<float, 2>(s, rule);
 
-  CHECK_EQ((s.A - A_before).norm(), 0.0f);
-  REQUIRE_EQ(s.solution.size(), 1);
-  CHECK_EQ((s.solution.back() - xx).norm(), 0.0f);
+  CHECK_EQ((s.stiffness_block - A_before).norm(), 0.0f);
+  REQUIRE_EQ(s.solutions.size(), 1);
+  CHECK_EQ((s.solutions.back() - xx).norm(), 0.0f);
   CHECK_FALSE(s.plot_velocity(0.1f).empty());
 
   const Eigen::Index size_P = std::ssize(mesh.P);
@@ -285,7 +285,7 @@ TEST_CASE("testing time-dependent Navier-Stokes") {
   float max_velocity_error_last = -1.0f;
   for (int step = 0; step < n_steps; ++step) {
     femib::navier_stokes::advance<float, 2>(s);
-    float e = velocity_error(s.solution.back());
+    float e = velocity_error(s.solutions.back());
     if (step == 0)
       max_velocity_error_first = e;
     max_velocity_error_last = e;
@@ -297,16 +297,17 @@ TEST_CASE("testing time-dependent Navier-Stokes") {
 
 // TODO uh?
 TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
-          "contribution into the Picard-updated velocity block of s.AA") {
+          "contribution into the Picard-updated velocity block of "
+          "s.saddle_point_matrix") {
   // The relaxation test above cannot discriminate correct convection wiring
   // from convection being silently dropped or subtly miswired: for that
   // eps=0.05 manufactured flow, assemble_convection's own contribution is
   // ~5 orders of magnitude smaller than the linear Stokes operator, so that
   // test's outcome is essentially insensitive to whether advance()'s
-  // Picard loop actually adds assemble_convection's output into s.AA
-  // before each solve. This test targets exactly that composition/wiring
-  // question directly -- distinct from assemble_convection's own internal
-  // row/column/indexing correctness, which the closed-form
+  // Picard loop actually adds assemble_convection's output into
+  // s.saddle_point_matrix before each solve. This test targets exactly that
+  // composition/wiring question directly -- distinct from assemble_convection's
+  // own internal row/column/indexing correctness, which the closed-form
   // reference-triangle test above already proves in isolation.
   //
   // Small mesh (n=6) and a large constant forcing -- this test only needs
@@ -336,7 +337,7 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
       },
       std::make_unique<femib::util::picard_solver<float>>(1, 1e-5f));
 
-  size_t rowsV = s.V.nodes.P.size();
+  size_t rowsV = s.velocity_space.nodes.P.size();
 
   // Step 1: establishes a nonzero previous-timestep velocity, starting from
   // rest -- its own convection input (u_1=0) never matters here, only its
@@ -346,21 +347,21 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // field advance() actually convected against is exactly known to this
   // test, not merely assumed.
   femib::navier_stokes::advance<float, 2>(s);
-  REQUIRE_EQ(s.solution.size(), 1);
+  REQUIRE_EQ(s.solutions.size(), 1);
   Eigen::Matrix<float, Eigen::Dynamic, 1> w_dofs_expected =
-      s.solution.back().topRows(rowsV);
+      s.solutions.back().topRows(rowsV);
   // Sanity: step 1's output velocity must be genuinely nonzero, otherwise
   // step 2's convection contribution would be trivially zero regardless of
   // whether the wiring is correct, making this test vacuous.
   REQUIRE_GT(w_dofs_expected.norm(), 1e-6f);
 
-  // s.A is never modified by advance(), and s.AA is rebuilt fresh from
-  // scratch each call via assemble_saddle_point_matrix (not mutated
-  // in-place) and is not touched again once the Picard loop finishes, so
-  // reading s.A here is exactly the A_base advance() itself computes
-  // internally for step 2 below. s.deltat is fixed.
+  // s.stiffness_block is never modified by advance(), and s.saddle_point_matrix
+  // is rebuilt fresh from scratch each call via assemble_saddle_point_matrix
+  // (not mutated in-place) and is not touched again once the Picard loop
+  // finishes, so reading s.stiffness_block here is exactly the A_base advance()
+  // itself computes internally for step 2 below. s.deltat is fixed.
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> A_base_expected =
-      s.A + (1.0f / s.deltat) * s.M;
+      s.stiffness_block + (1.0f / s.deltat) * s.M;
 
   // Step 2 is the call under test. The injected picard_solver's single
   // iteration must linearize convection around w_dofs_expected (step 1's
@@ -369,19 +370,20 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
 
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> conv_expected =
       femib::navier_stokes_common::assemble_convection<float, 2>(
-          s.V, rule, w_dofs_expected, s.rho);
+          s.velocity_space, rule, w_dofs_expected, s.rho);
   // Sanity: the expected convection contribution must clear this test's
   // own wiring-check tolerance (below) with comfortable margin -- otherwise
   // this check could not tell correct wiring apart from broken/missing
   // wiring either.
   REQUIRE_GT(conv_expected.norm(), 0.02f);
 
-  // s.AA is not touched again after advance()'s Picard loop finishes, so
-  // its velocity block still holds exactly what the loop's one iteration
-  // computed: this is the actual assertion under test.
+  // s.saddle_point_matrix is not touched again after advance()'s Picard loop
+  // finishes, so its velocity block still holds exactly what the loop's one
+  // iteration computed: this is the actual assertion under test.
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> AA_velocity_block =
-      Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(s.AA).block(
-          0, 0, rowsV, rowsV);
+      Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>(
+          s.saddle_point_matrix)
+          .block(0, 0, rowsV, rowsV);
   CHECK_LT((AA_velocity_block - (A_base_expected + conv_expected)).norm(),
            1e-2f);
 }

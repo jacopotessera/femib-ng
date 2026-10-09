@@ -43,19 +43,22 @@ solve(navier_stokes<T, d> &s, const femib::gauss::rule<T, d> &rule) {
 
   auto step = [&s, &rule](const vector_t &picard_velocity_dofs) -> vector_t {
     Eigen::SparseMatrix<T> top_left =
-        s.A + femib::navier_stokes_common::assemble_convection<T, d>(
-                  s.V, rule, picard_velocity_dofs, s.rho);
-    s.AA = femib::stokes_steady::assemble_saddle_point_matrix<T>(
-        top_left, s.B, s.V.size(), s.Q.size());
+        s.stiffness_block +
+        femib::navier_stokes_common::assemble_convection<T, d>(
+            s.velocity_space, rule, picard_velocity_dofs, s.rho);
+    s.saddle_point_matrix =
+        femib::stokes_steady::assemble_saddle_point_matrix<T>(
+            top_left, s.divergence_block, s.velocity_space.size(),
+            s.pressure_space.size());
     femib::stokes_steady::rebuild_system<T, d>(s);
     return femib::stokes_steady::solve<T, d, 1>(s);
   };
   auto velocity = [&s](const vector_t &full) -> vector_t {
-    return full.topRows(s.V.size());
+    return full.topRows(s.velocity_space.size());
   };
 
   vector_t xx = s.solver->solve(velocity(stokes_solution), step, velocity);
-  s.solution = {xx};
+  s.solutions = {xx};
   return xx;
 }
 

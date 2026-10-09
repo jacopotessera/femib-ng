@@ -76,10 +76,10 @@ TEST_CASE("testing finite_element_space") {
     B.emplace_back(e, 0, b(s.nodes.P[e]));
   }
 
-  std::vector<int> not_edges;
+  std::vector<int> not_edge_nodes;
   for (int i = 0; i < std::ssize(s.nodes.P); i++) {
     if (std::find(s.nodes.E.begin(), s.nodes.E.end(), i) == s.nodes.E.end()) {
-      not_edges.push_back(i);
+      not_edge_nodes.push_back(i);
     }
   }
 
@@ -97,10 +97,10 @@ TEST_CASE("testing finite_element_space") {
   Eigen::Matrix<float, Eigen::Dynamic, 1> mf;
   mf.resize(s.nodes.P.size(), 1);
   for (int i = 0; i < std::ssize(s.nodes.P); i++) {
-    auto k = std::find(not_edges.begin(), not_edges.end(), i);
+    auto k = std::find(not_edge_nodes.begin(), not_edge_nodes.end(), i);
     mf(i, 0) = 0.0;
-    if (k != not_edges.end()) {
-      mf(i, 0) = ss(k - not_edges.begin(), 0);
+    if (k != not_edge_nodes.end()) {
+      mf(i, 0) = ss(k - not_edge_nodes.begin(), 0);
     }
   }
 
@@ -109,9 +109,9 @@ TEST_CASE("testing finite_element_space") {
   sF.setFromTriplets(F.begin(), F.end());
   Eigen::Matrix<float, Eigen::Dynamic, 1> dF =
       Eigen::Matrix<float, Eigen::Dynamic, 1>(sF);
-  Eigen::Matrix<float, Eigen::Dynamic, 1> bbb = (dF - ss)(not_edges, 0);
+  Eigen::Matrix<float, Eigen::Dynamic, 1> bbb = (dF - ss)(not_edge_nodes, 0);
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> AAA =
-      (dM)(not_edges, not_edges);
+      (dM)(not_edge_nodes, not_edge_nodes);
   Eigen::Matrix<float, Eigen::Dynamic, 1> xxx =
       AAA.colPivHouseholderQr().solve(bbb);
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx;
@@ -119,9 +119,9 @@ TEST_CASE("testing finite_element_space") {
 
   for (int i = 0; i < std::ssize(s.nodes.P); i++) {
     xx(i, 0) = 0.0;
-    auto k = std::find(not_edges.begin(), not_edges.end(), i);
-    if (k != not_edges.end()) {
-      xx(i, 0) = xxx(k - not_edges.begin(), 0);
+    auto k = std::find(not_edge_nodes.begin(), not_edge_nodes.end(), i);
+    if (k != not_edge_nodes.end()) {
+      xx(i, 0) = xxx(k - not_edge_nodes.begin(), 0);
     }
     auto kk = std::find(s.nodes.E.begin(), s.nodes.E.end(), i);
     if (kk != s.nodes.E.end()) {
