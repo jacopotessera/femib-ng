@@ -127,8 +127,8 @@ template <typename T, int d> struct stokes {
              velocity_space_,
          femib::finite_element_space::finite_element_space<T, d, 1>
              pressure_space_,
-         const femib::gauss::rule<T, d> &integration_rule, T density_ = 1.0,
-         T viscosity_ = 1.0,
+         const femib::gauss::rule<T, d> &integration_rule, T density_,
+         T viscosity_,
          std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
              body_force_ = default_force<T, d>(),
          std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver_ =
