@@ -24,8 +24,8 @@ template <typename T, int d> struct ib_problem {
           velocity_space_,
       femib::finite_element_space::finite_element_space<T, d, 1>
           pressure_space_,
-      femib::gauss::rule<T, d> quadrature_, T density_ = 1.0,
-      T viscosity_ = 1.0, T time_step_ = 0.1,
+      femib::gauss::rule<T, d> quadrature_, T density_, T viscosity_,
+      T time_step_,
       std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
           body_force_ = femib::stokes_steady::default_force<T, d>(),
       std::unique_ptr<femib::util::nonlinear_solver<T>> nonlinear_solver_ =

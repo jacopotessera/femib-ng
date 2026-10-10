@@ -41,7 +41,7 @@ TEST_CASE("testing femib stokes") {
 
   // STOKES
   femib::stokes_steady::stokes<float, 2> stokes(
-      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f,
+      v, q, rule, /*density=*/1.0f, /*viscosity=*/1.0f,
       [](const femib::types::dvec<float, 2> &,
          float) -> femib::types::dvec<float, 2> {
         return femib::types::dvec<float, 2>(1.0f, 1.0f);
@@ -135,7 +135,7 @@ TEST_CASE("stokes::solve matches curl(sin^2(pi x)sin^2(pi y)) manufactured "
                                                                    mesh);
 
   femib::stokes_steady::stokes<float, 2> stokes(
-      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f,
+      v, q, rule, /*density=*/1.0f, /*viscosity=*/1.0f,
       [f1, f2](const femib::types::dvec<float, 2> &x,
                float) -> femib::types::dvec<float, 2> {
         return femib::types::dvec<float, 2>(f1(x(0), x(1)), f2(x(0), x(1)));

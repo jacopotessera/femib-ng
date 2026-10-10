@@ -95,7 +95,7 @@ TEST_CASE("solve steady Navier-Stokes") {
   femib::finite_element_space::finite_element_space q(f_p1_2d1d, mesh);
 
   femib::navier_stokes_steady::navier_stokes<float, 2> s(
-      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f,
+      v, q, rule, /*density=*/1.0f, /*viscosity=*/1.0f,
       [f1, f2](const femib::types::dvec<float, 2> &x,
                float) -> femib::types::dvec<float, 2> {
         return femib::types::dvec<float, 2>(f1(x(0), x(1)), f2(x(0), x(1)));
@@ -155,9 +155,9 @@ TEST_CASE("assemble_convection matches by-hand-derived closed-form integrals "
   w_dofs << 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f;
 
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> M =
-      femib::navier_stokes_common::assemble_convection<float, 2>(v, rule,
-                                                                 w_dofs,
-                                                                 /*rho=*/1.0f);
+      femib::navier_stokes_common::assemble_convection<float, 2>(
+          v, rule, w_dofs,
+          /*density=*/1.0f);
 
   REQUIRE_EQ(M.rows(), 6);
   REQUIRE_EQ(M.cols(), 6);
@@ -199,9 +199,9 @@ TEST_CASE("assemble_convection matches by-hand-derived closed-form integrals "
   }
   // rho scaling.
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> M_double_rho =
-      femib::navier_stokes_common::assemble_convection<float, 2>(v, rule,
-                                                                 w_dofs,
-                                                                 /*rho=*/2.0f);
+      femib::navier_stokes_common::assemble_convection<float, 2>(
+          v, rule, w_dofs,
+          /*density=*/2.0f);
   CHECK_LT((M_double_rho - 2.0f * M).norm(), tol);
 }
 
@@ -252,7 +252,7 @@ TEST_CASE("testing time-dependent Navier-Stokes") {
                                                                    mesh);
 
   femib::navier_stokes::navier_stokes<float, 2> s(
-      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.02f,
+      v, q, rule, /*density=*/1.0f, /*viscosity=*/1.0f, /*time_step=*/0.02f,
       [f1, f2](const femib::types::dvec<float, 2> &x,
                float) -> femib::types::dvec<float, 2> {
         return femib::types::dvec<float, 2>(f1(x(0), x(1)), f2(x(0), x(1)));
@@ -330,7 +330,7 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
 
   // a large constant forcing
   femib::navier_stokes::navier_stokes<float, 2> s(
-      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.02f,
+      v, q, rule, /*density=*/1.0f, /*viscosity=*/1.0f, /*time_step=*/0.02f,
       [](const femib::types::dvec<float, 2> &,
          float) -> femib::types::dvec<float, 2> {
         return femib::types::dvec<float, 2>(5000.0f, 5000.0f);
@@ -361,7 +361,7 @@ TEST_CASE("femib::navier_stokes::advance wires assemble_convection's "
   // finishes, so reading s.stiffness_block here is exactly the A_base advance()
   // itself computes internally for step 2 below. s.time_step is fixed.
   Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> A_base_expected =
-      s.stiffness_block + (1.0f / s.time_step) * s.M;
+      s.stiffness_block + (1.0f / s.time_step) * s.mass_matrix;
 
   // Step 2 is the call under test. The injected picard_solver's single
   // iteration must linearize convection around w_dofs_expected (step 1's

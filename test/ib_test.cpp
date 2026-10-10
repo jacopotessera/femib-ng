@@ -29,7 +29,7 @@ make_ib_fixture(int n_mesh, int n_ring, float radius, float k_spring = 2.618f) {
   femib::finite_element_space::finite_element_space q(f_p0_2d1d, mesh);
 
   femib::ib::ib_problem<float, 2> p(
-      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.001f,
+      v, q, rule, /*density=*/1.0f, /*viscosity=*/1.0f, /*time_step=*/0.001f,
       [](const femib::types::dvec<float, 2> &,
          float) -> femib::types::dvec<float, 2> {
         return femib::types::dvec<float, 2>::Zero(); // no separate body force

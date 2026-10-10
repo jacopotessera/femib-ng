@@ -27,8 +27,8 @@ struct navier_stokes : public femib::stokes::stokes<T, d> {
           velocity_space_,
       femib::finite_element_space::finite_element_space<T, d, 1>
           pressure_space_,
-      femib::gauss::rule<T, d> quadrature_, T density_ = 1.0,
-      T viscosity_ = 1.0, T time_step_ = 0.1,
+      femib::gauss::rule<T, d> quadrature_, T density_, T viscosity_,
+      T time_step_,
       std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
           body_force_ = femib::stokes_steady::default_force<T, d>(),
       std::unique_ptr<femib::util::nonlinear_solver<T>> nonlinear_solver_ =
@@ -51,26 +51,30 @@ void advance(navier_stokes<T, d> &s,
   using vector_t = Eigen::Matrix<T, Eigen::Dynamic, 1>;
   s.time += s.time_step;
 
-  vector_t u_1;
+  vector_t previous_step_velocity;
   if (s.solutions.size() == 0)
-    u_1 = vector_t::Zero(s.velocity_space.size(), 1);
+    previous_step_velocity = vector_t::Zero(s.velocity_space.size(), 1);
   else
-    u_1 = s.solutions[s.solutions.size() - 1].topRows(s.velocity_space.size());
-  Eigen::SparseMatrix<T> DD = (1 / s.time_step) * s.M;
-  vector_t dd = (1 / s.time_step) * (s.M * u_1);
-  Eigen::SparseMatrix<T> A_base = s.stiffness_block + DD;
+    previous_step_velocity =
+        s.solutions[s.solutions.size() - 1].topRows(s.velocity_space.size());
+  vector_t previous_step_inertia =
+      (1 / s.time_step) * (s.mass_matrix * previous_step_velocity);
+  Eigen::SparseMatrix<T> velocity_block_without_convection =
+      s.stiffness_block + (1 / s.time_step) * s.mass_matrix;
 
   // the load vector can't change within a timestep
-  femib::stokes::rebuild_rhs<T, d>(s, dd, extra_velocity_rhs);
+  femib::stokes::rebuild_velocity_part_rhs<T, d>(s, previous_step_inertia,
+                                                 extra_velocity_rhs);
 
-  auto step = [&s, &A_base](const vector_t &picard_velocity_dofs) -> vector_t {
-    Eigen::SparseMatrix<T> top_left =
-        A_base +
-        femib::navier_stokes_common::assemble_convection<T, d>(
-            s.velocity_space, s.quadrature, picard_velocity_dofs, s.density);
+  auto step = [&s, &velocity_block_without_convection](
+                  const vector_t &picard_velocity_dofs) -> vector_t {
     s.saddle_point_matrix =
         femib::stokes_steady::assemble_saddle_point_matrix<T>(
-            top_left, s.divergence_block, s.velocity_space.size(),
+            velocity_block_without_convection +
+                femib::navier_stokes_common::assemble_convection<T, d>(
+                    s.velocity_space, s.quadrature, picard_velocity_dofs,
+                    s.density),
+            s.divergence_block, s.velocity_space.size(),
             s.pressure_space.size());
     femib::stokes_steady::rebuild_system<T, d>(s);
     return femib::stokes_steady::solve<T, d, 1>(s);
@@ -79,7 +83,8 @@ void advance(navier_stokes<T, d> &s,
     return full.topRows(s.velocity_space.size());
   };
 
-  s.solutions.emplace_back(s.nonlinear_solver->solve(u_1, step, velocity));
+  s.solutions.emplace_back(
+      s.nonlinear_solver->solve(previous_step_velocity, step, velocity));
 }
 
 } // namespace femib::navier_stokes

@@ -42,8 +42,9 @@ femib::stokes::stokes<float, 2> make_stokes_t_fixture(
       femib::finite_element::create_finite_element_P1_2d1d<float, 2, 1>();
   femib::finite_element_space::finite_element_space q(f_p1_2d1d, mesh);
 
-  femib::stokes::stokes<float, 2> s(v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f,
-                                    /*deltat=*/0.1f, external_force);
+  femib::stokes::stokes<float, 2> s(v, q, rule, /*density=*/1.0f,
+                                    /*viscosity=*/1.0f,
+                                    /*time_step=*/0.1f, external_force);
   return s;
 }
 
@@ -186,7 +187,7 @@ TEST_CASE("test stokes::advance with a non-stationary known problem") {
                                                                    mesh);
 
   femib::stokes::stokes<float, 2> s(
-      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.02f,
+      v, q, rule, /*density=*/1.0f, /*viscosity=*/1.0f, /*time_step=*/0.02f,
       [u1_exact, u2_exact, f1, f2](const femib::types::dvec<float, 2> &x,
                                    float t) -> femib::types::dvec<float, 2> {
         float g_dot = std::sin(t);
@@ -310,7 +311,7 @@ TEST_CASE("Test #3 from The MINI mixed finite element for the Stokes problem: "
 
   // Time-independent forcing, the solution converges to this.
   femib::stokes::stokes<float, 2> s(
-      v, q, rule, /*rho=*/1.0f, /*mu=*/1.0f, /*deltat=*/0.1f,
+      v, q, rule, /*density=*/1.0f, /*viscosity=*/1.0f, /*time_step=*/0.1f,
       [f1, f2](const femib::types::dvec<float, 2> &x,
                float) -> femib::types::dvec<float, 2> {
         return femib::types::dvec<float, 2>(f1(x(0), x(1)), f2(x(0), x(1)));
