@@ -45,7 +45,8 @@ Eigen::SparseMatrix<T> assemble_convection(
                       n_q, femib::types::dvec<T, d>::Zero());
 
                   for (int q = 0; q < n_q; ++q) {
-                    const femib::types::dvec<T, d> &x_ref = rule.nodes[q].node;
+                    const femib::types::dvec<T, d> &x_ref =
+                        rule.nodes[q].quadrature_point;
                     for (int k = 0; k < basis_count; ++k) {
                       size_t idx = static_cast<size_t>(k) * n_q + q;
                       phi[idx] = V.finite_element.base_functions[k].x(x_ref);

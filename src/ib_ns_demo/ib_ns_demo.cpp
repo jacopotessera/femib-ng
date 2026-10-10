@@ -10,7 +10,7 @@
 #include "../femib/stokes.hpp"
 #include "../finite_element/P0_2d1d.hpp"
 #include "../finite_element/P1+B_2d2d.hpp"
-#include "../gauss/gauss_lagrange_2_2d.hpp"
+#include "../gauss/gauss_2_2d.hpp"
 #include "../ib/ib.hpp"
 #include "../write/write.hpp"
 

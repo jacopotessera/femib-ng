@@ -1,6 +1,5 @@
-#ifndef GAUSS_LAGRANGE_2_2D_HPP_INCLUDED_
-#define GAUSS_LAGRANGE_2_2D_HPP_INCLUDED_
-// TODO lagrange? legendre?
+#ifndef GAUSS_2_2D_HPP_INCLUDED_
+#define GAUSS_2_2D_HPP_INCLUDED_
 #include "gauss.hpp"
 
 namespace femib::gauss {

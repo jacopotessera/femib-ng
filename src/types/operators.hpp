@@ -1,6 +1,5 @@
-#ifndef DIFFERENTIAL_OPERATION_HPP_INCLUDED_
-#define DIFFERENTIAL_OPERATION_HPP_INCLUDED_
-// TODO rename to operators?
+#ifndef OPERATORS_HPP_INCLUDED_
+#define OPERATORS_HPP_INCLUDED_
 #include "types.hpp"
 
 template <typename T, int d>

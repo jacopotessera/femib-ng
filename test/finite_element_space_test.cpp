@@ -8,7 +8,7 @@
 #include <doctest/doctest.h>
 #include <iostream>
 
-#include "gauss_lagrange_2_2d.hpp"
+#include "gauss_2_2d.hpp"
 
 int get_index(const femib::types::nodes<float, 2> &nodes, int i, int n) {
   return nodes.T[n][i];

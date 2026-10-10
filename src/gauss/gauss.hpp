@@ -11,7 +11,7 @@ namespace femib::gauss {
 
 template <typename T, int d> struct node {
   T weight;
-  femib::types::dvec<T, d> node; // TODO rename
+  femib::types::dvec<T, d> quadrature_point;
 };
 
 template <typename T, int d> struct rule {
@@ -22,7 +22,7 @@ template <typename T, int d>
 T integrate(const femib::gauss::rule<T, d> &rule,
             const std::function<T(femib::types::dvec<T, d>)> &f) {
   auto unary_op = [&f](const femib::gauss::node<T, d> &node) {
-    return node.weight * f(node.node);
+    return node.weight * f(node.quadrature_point);
   };
   return std::transform_reduce(std::execution::par_unseq, rule.nodes.begin(),
                                rule.nodes.end(), T(0.0), std::plus<>(),

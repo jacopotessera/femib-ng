@@ -1,5 +1,5 @@
-#ifndef GAUSS_LAGRANGE_5_2D_HPP_INCLUDED_
-#define GAUSS_LAGRANGE_5_2D_HPP_INCLUDED_
+#ifndef GAUSS_5_2D_HPP_INCLUDED_
+#define GAUSS_5_2D_HPP_INCLUDED_
 
 #include "gauss.hpp"
 

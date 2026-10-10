@@ -1,6 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "../src/gauss/gauss.hpp"
-#include "../src/gauss/gauss_lagrange_2_2d.hpp"
+#include "../src/gauss/gauss_2_2d.hpp"
 #include "../src/mesh/mesh.hpp"
 #include "../src/types/types.hpp"
 #include "name_reporter.h"

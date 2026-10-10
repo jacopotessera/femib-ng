@@ -3,7 +3,7 @@
 #include "../src/finite_element/P1_2d2d.hpp"
 #include "../src/finite_element_space/finite_element_space.hpp"
 #include "../src/gauss/gauss.hpp"
-#include "../src/gauss/gauss_lagrange_2_2d.hpp"
+#include "../src/gauss/gauss_2_2d.hpp"
 #include "../src/mesh/mesh.hpp"
 #include <doctest/doctest.h>
 

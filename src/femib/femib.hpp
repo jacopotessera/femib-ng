@@ -12,7 +12,7 @@
 #include "../finite_element_space/finite_element_space.hpp"
 #include "../gauss/gauss.hpp"
 #include "../mesh/mesh.hpp"
-#include "../types/differential_operation.hpp"
+#include "../types/operators.hpp"
 #include "../types/types.hpp"
 
 namespace femib::util {
