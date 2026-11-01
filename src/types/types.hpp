@@ -35,7 +35,7 @@ template <typename f, int d> struct nodes {
   std::vector<std::vector<int>> T;
   std::vector<int> E;
 
-  [[nodiscard]] int get_index(const int i, const int n) const {
+  [[nodiscard]] int global_index(const int i, const int n) const {
     return T[n][i];
   }
 };

@@ -10,7 +10,7 @@
 
 #include "gauss_2_2d.hpp"
 
-int get_index(const femib::types::nodes<float, 2> &nodes, int i, int n) {
+int global_index(const femib::types::nodes<float, 2> &nodes, int i, int n) {
   return nodes.T[n][i];
 }
 
@@ -38,11 +38,11 @@ TEST_CASE("testing finite_element_space") {
         femib::types::dmat<float, 2> Binv = femib::affine::affineBinv(t);
         femib::types::dvec<float, 2> bb = femib::affine::affineb(t);
         femib::types::F<float, 2, 1> a =
-            femib::util::base_function2real_function<float, 2, 1>(s, i, Binv,
-                                                                  bb);
+            femib::util::reference_to_physical_function<float, 2, 1>(s, i, Binv,
+                                                                     bb);
         femib::types::F<float, 2, 1> b =
-            femib::util::base_function2real_function<float, 2, 1>(s, j, Binv,
-                                                                  bb);
+            femib::util::reference_to_physical_function<float, 2, 1>(s, j, Binv,
+                                                                     bb);
 
         float m = femib::mesh::integrate<float, 2>(
             rule,
@@ -62,8 +62,9 @@ TEST_CASE("testing finite_element_space") {
               return a_0;
             },
             t);
-        M.emplace_back(get_index(s.nodes, i, n), get_index(s.nodes, j, n), m);
-        F.emplace_back(get_index(s.nodes, i, n), 0, f_);
+        M.emplace_back(global_index(s.nodes, i, n), global_index(s.nodes, j, n),
+                       m);
+        F.emplace_back(global_index(s.nodes, i, n), 0, f_);
       }
     }
   }

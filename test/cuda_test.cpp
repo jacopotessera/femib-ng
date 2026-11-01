@@ -37,20 +37,20 @@ femib::types::box<float, 2> box = femib::mesh::find_box<float, 2>(mesh);
 float delta = 0.019;
 
 TEST_CASE("testing cuda size") {
-  femib::cuda::setStackSize(FEMIB_CUDA_STACK_SIZE);
-  femib::cuda::setHeapSize(FEMIB_CUDA_HEAP_SIZE);
-  femib::cuda::printSize();
-  CHECK_EQ(femib::cuda::getStackSize(), FEMIB_CUDA_STACK_SIZE);
+  femib::cuda::set_stack_size(FEMIB_CUDA_STACK_SIZE);
+  femib::cuda::set_heap_size(FEMIB_CUDA_HEAP_SIZE);
+  femib::cuda::print_size();
+  CHECK_EQ(femib::cuda::get_stack_size(), FEMIB_CUDA_STACK_SIZE);
   // the CUDA driver rounds up to its own alignment
-  CHECK_GE(femib::cuda::getHeapSize(), FEMIB_CUDA_HEAP_SIZE * sizeof(double));
+  CHECK_GE(femib::cuda::get_heap_size(), FEMIB_CUDA_HEAP_SIZE * sizeof(double));
 }
 
 TEST_CASE("testing cuda copy") {
   double x = 10;
-  double *X = femib::cuda::copyToDevice<double>(&x, 1);
-  double *y = femib::cuda::copyToHost<double>(X, 1);
+  double *X = femib::cuda::copy_to_device<double>(&x, 1);
+  double *y = femib::cuda::copy_to_host<double>(X, 1);
   CHECK_EQ(x, *y);
-  femib::cuda::freeDevice<double>(X);
+  femib::cuda::free_device<double>(X);
   delete[] y;
 }
 
@@ -117,16 +117,17 @@ TEST_CASE("testing cuda parallel_accurate") {
       femib::types::vector_dtrian2pointer_dtrian_<float, 2>(mesh.N);
 
   femib::types::dtrian_<float, 2> *devT =
-      femib::cuda::copyToDevice<femib::types::dtrian_<float, 2>>(T,
-                                                                 mesh.N.size());
+      femib::cuda::copy_to_device<femib::types::dtrian_<float, 2>>(
+          T, mesh.N.size());
   femib::types::dvec<float, 2> *devX =
-      femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(grid.data(),
-                                                              grid.size());
-  bool *devN = femib::cuda::copyToDevice<bool>(N, grid.size() * mesh.N.size());
+      femib::cuda::copy_to_device<femib::types::dvec<float, 2>>(grid.data(),
+                                                                grid.size());
+  bool *devN =
+      femib::cuda::copy_to_device<bool>(N, grid.size() * mesh.N.size());
   femib::cuda::parallel_accurate<float, 2>(devX, grid.size(), devT,
                                            mesh.N.size(), devN);
   bool *NN;
-  NN = femib::cuda::copyToHost<bool>(devN, grid.size() * mesh.N.size());
+  NN = femib::cuda::copy_to_host<bool>(devN, grid.size() * mesh.N.size());
 
   std::vector<int> NNN;
 
@@ -141,9 +142,9 @@ TEST_CASE("testing cuda parallel_accurate") {
 
   // TODO add a better interface in cuda, that copies and then deletes and just
   //  gives the result
-  femib::cuda::freeDevice<femib::types::dtrian_<float, 2>>(devT);
-  femib::cuda::freeDevice<femib::types::dvec<float, 2>>(devX);
-  femib::cuda::freeDevice<bool>(devN);
+  femib::cuda::free_device<femib::types::dtrian_<float, 2>>(devT);
+  femib::cuda::free_device<femib::types::dvec<float, 2>>(devX);
+  femib::cuda::free_device<bool>(devN);
   delete[] NN;
   NN = NULL;
   delete[] T;
@@ -191,15 +192,16 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
   femib::types::dtrian_<float, 2> *T =
       femib::types::vector_dtrian2pointer_dtrian_<float, 2>(mesh.N);
   femib::types::dtrian_<float, 2> *devT =
-      femib::cuda::copyToDevice<femib::types::dtrian_<float, 2>>(T, size_T);
+      femib::cuda::copy_to_device<femib::types::dtrian_<float, 2>>(T, size_T);
   femib::types::dvec<float, 2> *devX =
-      femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(grid.data(),
-                                                              grid.size());
+      femib::cuda::copy_to_device<femib::types::dvec<float, 2>>(grid.data(),
+                                                                grid.size());
   bool Npar_init[grid.size() * size_T];
-  bool *devN = femib::cuda::copyToDevice<bool>(Npar_init, grid.size() * size_T);
+  bool *devN =
+      femib::cuda::copy_to_device<bool>(Npar_init, grid.size() * size_T);
   femib::cuda::parallel_accurate<float, 2>(devX, grid.size(), devT, size_T,
                                            devN);
-  bool *Npar = femib::cuda::copyToHost<bool>(devN, grid.size() * size_T);
+  bool *Npar = femib::cuda::copy_to_host<bool>(devN, grid.size() * size_T);
 
   auto shared_vertices = [&](int n1, int n2) {
     int count = 0;
@@ -258,9 +260,9 @@ TEST_CASE("testing serial_accurate(CPU) vs parallel_accurate(GPU)") {
   CHECK_EQ(cpu_only_true_gpu_lost, 0);
   CHECK_EQ(cpu_only_true_gpu_elsewhere, 0);
 
-  femib::cuda::freeDevice<femib::types::dtrian_<float, 2>>(devT);
-  femib::cuda::freeDevice<femib::types::dvec<float, 2>>(devX);
-  femib::cuda::freeDevice<bool>(devN);
+  femib::cuda::free_device<femib::types::dtrian_<float, 2>>(devT);
+  femib::cuda::free_device<femib::types::dvec<float, 2>>(devX);
+  femib::cuda::free_device<bool>(devN);
   delete[] Npar;
   Npar = NULL;
   delete[] T;

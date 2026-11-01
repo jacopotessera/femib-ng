@@ -12,56 +12,56 @@
 #include <stdexcept>
 #include <string>
 
-void femib::cuda::printSize() {
-  SPDLOG_INFO("[CUDA stack size] found to be {}", getStackSize());
-  SPDLOG_INFO("[CUDA heap  size] found to be {}", getHeapSize());
+void femib::cuda::print_size() {
+  SPDLOG_INFO("[CUDA stack size] found to be {}", get_stack_size());
+  SPDLOG_INFO("[CUDA heap  size] found to be {}", get_heap_size());
 }
 
-size_t femib::cuda::getStackSize() {
+size_t femib::cuda::get_stack_size() {
   size_t size_stack;
   cudaDeviceGetLimit(&size_stack, cudaLimitStackSize);
   return size_stack;
 }
 
-size_t femib::cuda::getHeapSize() {
+size_t femib::cuda::get_heap_size() {
   size_t size_heap;
   cudaDeviceGetLimit(&size_heap, cudaLimitMallocHeapSize);
   return size_heap;
 }
 
-void femib::cuda::setStackSize(const size_t stackSize) {
-  cudaDeviceSetLimit(cudaLimitStackSize, stackSize);
+void femib::cuda::set_stack_size(const size_t stack_size) {
+  cudaDeviceSetLimit(cudaLimitStackSize, stack_size);
 }
 
 // TODO why mess with this?
-void femib::cuda::setHeapSize(const size_t heapSize) {
-  cudaDeviceSetLimit(cudaLimitMallocHeapSize, heapSize * sizeof(double));
+void femib::cuda::set_heap_size(const size_t heap_size) {
+  cudaDeviceSetLimit(cudaLimitMallocHeapSize, heap_size * sizeof(double));
 }
 
-template <typename T> T *femib::cuda::copyToDevice(T *x, const size_t size) {
+template <typename T> T *femib::cuda::copy_to_device(T *x, const size_t size) {
   T *X;
   HANDLE_ERROR(cudaMalloc((void **)&X, sizeof(T) * size));
   HANDLE_ERROR(cudaMemcpy(X, x, sizeof(T) * size, cudaMemcpyHostToDevice));
   return X;
 }
 
-template <typename T> T *femib::cuda::copyToHost(T *X, const size_t size) {
+template <typename T> T *femib::cuda::copy_to_host(T *X, const size_t size) {
   T *x = new T[size];
   HANDLE_ERROR(cudaMemcpy(x, X, sizeof(T) * size, cudaMemcpyDeviceToHost));
   return x;
 }
 
-template <typename T> void femib::cuda::freeDevice(T *X) {
+template <typename T> void femib::cuda::free_device(T *X) {
   HANDLE_ERROR(cudaFree(X));
 }
 
-template <typename T> T *femib::cuda::allocDevice(const size_t size) {
+template <typename T> T *femib::cuda::alloc_device(const size_t size) {
   T *X;
   HANDLE_ERROR(cudaMalloc((void **)&X, sizeof(T) * size));
   return X;
 }
 
-template <typename T> void femib::cuda::freeDeviceQuiet(T *X) {
+template <typename T> void femib::cuda::free_device_quiet(T *X) {
   if (const cudaError_t err = cudaFree(X);
       err != cudaSuccess && err != cudaErrorCudartUnloading) {
     HandleError(err, __FILE__, __LINE__);
@@ -201,26 +201,26 @@ __host__ void femib::cuda::parallel_accurate(femib::types::dvec<f, d> *X,
 
 /******************************************************************************/
 
-template double *femib::cuda::copyToDevice<double>(double *x, size_t size);
-template double *femib::cuda::copyToHost<double>(double *x, size_t size);
-template void femib::cuda::freeDevice<double>(double *x);
+template double *femib::cuda::copy_to_device<double>(double *x, size_t size);
+template double *femib::cuda::copy_to_host<double>(double *x, size_t size);
+template void femib::cuda::free_device<double>(double *x);
 
 template femib::types::dvec<float, 2> *
-femib::cuda::copyToDevice<femib::types::dvec<float, 2>>(
+femib::cuda::copy_to_device<femib::types::dvec<float, 2>>(
     femib::types::dvec<float, 2> *x, size_t size);
 template femib::types::dtrian_<float, 2> *
-femib::cuda::copyToDevice<femib::types::dtrian_<float, 2>>(
+femib::cuda::copy_to_device<femib::types::dtrian_<float, 2>>(
     femib::types::dtrian_<float, 2> *x, size_t size);
-template bool *femib::cuda::copyToDevice<bool>(bool *x, size_t size);
-template bool *femib::cuda::copyToHost<bool>(bool *x, size_t size);
-template bool *femib::cuda::allocDevice<bool>(size_t size);
+template bool *femib::cuda::copy_to_device<bool>(bool *x, size_t size);
+template bool *femib::cuda::copy_to_host<bool>(bool *x, size_t size);
+template bool *femib::cuda::alloc_device<bool>(size_t size);
 
-template void femib::cuda::freeDevice<femib::types::dvec<float, 2>>(
+template void femib::cuda::free_device<femib::types::dvec<float, 2>>(
     femib::types::dvec<float, 2> *x);
-template void femib::cuda::freeDevice<femib::types::dtrian_<float, 2>>(
+template void femib::cuda::free_device<femib::types::dtrian_<float, 2>>(
     femib::types::dtrian_<float, 2> *x);
-template void femib::cuda::freeDevice<bool>(bool *x);
-template void femib::cuda::freeDeviceQuiet<femib::types::dtrian_<float, 2>>(
+template void femib::cuda::free_device<bool>(bool *x);
+template void femib::cuda::free_device_quiet<femib::types::dtrian_<float, 2>>(
     femib::types::dtrian_<float, 2> *x);
 
 /******************************************************************************/
@@ -244,16 +244,16 @@ template __host__ void femib::cuda::parallel_accurate<float, 2>(
 /******************************************************************************/
 
 template femib::types::dvec<double, 2> *
-femib::cuda::copyToDevice<femib::types::dvec<double, 2>>(
+femib::cuda::copy_to_device<femib::types::dvec<double, 2>>(
     femib::types::dvec<double, 2> *x, size_t size);
 template femib::types::dtrian_<double, 2> *
-femib::cuda::copyToDevice<femib::types::dtrian_<double, 2>>(
+femib::cuda::copy_to_device<femib::types::dtrian_<double, 2>>(
     femib::types::dtrian_<double, 2> *x, size_t size);
-template void femib::cuda::freeDevice<femib::types::dvec<double, 2>>(
+template void femib::cuda::free_device<femib::types::dvec<double, 2>>(
     femib::types::dvec<double, 2> *x);
-template void femib::cuda::freeDevice<femib::types::dtrian_<double, 2>>(
+template void femib::cuda::free_device<femib::types::dtrian_<double, 2>>(
     femib::types::dtrian_<double, 2> *x);
-template void femib::cuda::freeDeviceQuiet<femib::types::dtrian_<double, 2>>(
+template void femib::cuda::free_device_quiet<femib::types::dtrian_<double, 2>>(
     femib::types::dtrian_<double, 2> *x);
 
 template __host__ bool

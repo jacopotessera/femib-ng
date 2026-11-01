@@ -53,7 +53,7 @@ template <typename T, int d, int e> struct poisson {
               femib::types::F<T, d, e>)>
               body_force_ = default_force<T, d, e>(),
           std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver_ =
-              femib::util::default_solver_factory<T>())
+              femib::util::default_sparse_solver_factory<T>())
       : solution_space(std::move(solution_space_)),
         body_force(std::move(body_force_)),
         sparse_solver(std::move(sparse_solver_)) {

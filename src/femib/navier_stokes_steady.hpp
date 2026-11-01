@@ -31,7 +31,7 @@ struct navier_stokes : public femib::stokes_steady::stokes<T, d> {
       std::unique_ptr<femib::util::nonlinear_solver<T>> nonlinear_solver_ =
           femib::util::default_nonlinear_solver_factory<T>(),
       std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver_ =
-          femib::util::default_solver_factory<T>())
+          femib::util::default_sparse_solver_factory<T>())
       : femib::stokes_steady::stokes<T, d>(
             std::move(velocity_space_), std::move(pressure_space_),
             integration_rule, density_, viscosity_, std::move(body_force_),

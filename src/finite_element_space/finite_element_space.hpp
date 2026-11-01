@@ -39,7 +39,7 @@ template <typename T, int d, int e> struct finite_element_space {
           femib::affine::affine_inv<T, d>(t, points[k]);
       for (int j = 0; j < std::ssize(finite_element.base_functions); ++j) {
         const femib::types::F<T, d, e> &phi = finite_element.base_functions[j];
-        result[k] += u(nodes.get_index(j, points_positions[k])) * phi.x(ref);
+        result[k] += u(nodes.global_index(j, points_positions[k])) * phi.x(ref);
       }
     }
     return result;

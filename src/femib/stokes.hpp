@@ -31,7 +31,7 @@ struct stokes : public femib::stokes_steady::stokes<T, d> {
          std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
              body_force_ = femib::stokes_steady::default_force<T, d>(),
          std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver_ =
-             femib::util::default_solver_factory<T>())
+             femib::util::default_sparse_solver_factory<T>())
       : femib::stokes_steady::stokes<T, d>(
             std::move(velocity_space_), std::move(pressure_space_), quadrature_,
             density_, viscosity_, std::move(body_force_),

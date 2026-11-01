@@ -38,7 +38,7 @@ finite_element<T, d, e> create_finite_element_P0_2d1d() {
   };
 
   f.x = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return (dvec<T, e>){1.0};
     else
       return (dvec<T, e>){0.0};

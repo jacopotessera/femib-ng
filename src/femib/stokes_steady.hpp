@@ -132,7 +132,7 @@ template <typename T, int d> struct stokes {
          std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>, T)>
              body_force_ = default_force<T, d>(),
          std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver_ =
-             femib::util::default_solver_factory<T>());
+             femib::util::default_sparse_solver_factory<T>());
 
   std::vector<std::pair<types::dvec<T, d>, types::dvec<T, d>>>
   plot_velocity(T delta) {

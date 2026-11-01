@@ -42,7 +42,7 @@ template <typename T> struct bicgstab_ilut_solver : sparse_solver<T> {
 };
 
 template <typename T>
-std::unique_ptr<sparse_solver<T>> default_solver_factory() {
+std::unique_ptr<sparse_solver<T>> default_sparse_solver_factory() {
   return std::make_unique<bicgstab_ilut_solver<T>>();
 }
 

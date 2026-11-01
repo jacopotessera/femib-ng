@@ -10,17 +10,17 @@ constexpr int FEMIB_CUDA_STACK_SIZE = 12928;
 constexpr int FEMIB_CUDA_HEAP_SIZE = 20000000;
 
 namespace femib::cuda {
-void printSize();
-size_t getStackSize();
-size_t getHeapSize();
-void setStackSize(size_t stackSize);
-void setHeapSize(size_t heapSize);
+void print_size();
+size_t get_stack_size();
+size_t get_heap_size();
+void set_stack_size(size_t stack_size);
+void set_heap_size(size_t heap_size);
 
-template <typename T> T *copyToDevice(T *x, size_t size);
-template <typename T> T *copyToHost(T *X, size_t size);
-template <typename T> void freeDevice(T *X);
-template <typename T> T *allocDevice(size_t size);
-template <typename T> void freeDeviceQuiet(T *X);
+template <typename T> T *copy_to_device(T *x, size_t size);
+template <typename T> T *copy_to_host(T *X, size_t size);
+template <typename T> void free_device(T *X);
+template <typename T> T *alloc_device(size_t size);
+template <typename T> void free_device_quiet(T *X);
 
 template <typename f, int d>
 bool in_box(const femib::types::dvec<f, d> &P,

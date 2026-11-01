@@ -28,7 +28,8 @@ template <typename T, int d, int e> struct finite_element { // TODO constructor?
 
 // with a rounding tolerance: find_points also accepts points rounding-close
 // to a triangle's edges, and its basis functions mustn't vanish there
-template <typename T, int d> bool in_std(const dvec<T, d> &P) {
+template <typename T, int d>
+bool is_point_in_reference_triangle(const dvec<T, d> &P) {
   const T tol = std::sqrt(std::numeric_limits<T>::epsilon());
   bool e = true;
   T q = 0;

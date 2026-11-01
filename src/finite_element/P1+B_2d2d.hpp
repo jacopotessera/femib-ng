@@ -67,7 +67,7 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   };
 
   f.x = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dvec<T, d>({9 * x(0) * x(0) * x(1) + 9 * x(0) * x(1) * x(1) -
                              9 * x(0) * x(1) - x(0) - x(1) + 1,
                          0});
@@ -76,7 +76,7 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   };
 
   f.dx = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dmat<T, d>(
           {{18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1) - 1, 0},
            {9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0) - 1, 0}});
@@ -87,7 +87,7 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   P1_2d2d.base_functions.push_back(f);
 
   f.x = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dvec<T, d>({9 * x(0) * x(0) * x(1) + 9 * x(0) * x(1) * x(1) -
                              9 * x(0) * x(1) + x(0),
                          0});
@@ -96,7 +96,7 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   };
 
   f.dx = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dmat<T, d>({{18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1) + 1, 0},
                          {9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0), 0}});
     else
@@ -106,7 +106,7 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   P1_2d2d.base_functions.push_back(f);
 
   f.x = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dvec<T, d>({9 * x(0) * x(0) * x(1) + 9 * x(0) * x(1) * x(1) -
                              9 * x(0) * x(1) + x(1),
                          0});
@@ -115,7 +115,7 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   };
 
   f.dx = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dmat<T, d>(
           {{18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1), 0},
            {9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0) + 1, 0}});
@@ -126,7 +126,7 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   P1_2d2d.base_functions.push_back(f);
 
   f.x = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dvec<T, d>({0, 9 * x(0) * x(0) * x(1) + 9 * x(0) * x(1) * x(1) -
                                 9 * x(0) * x(1) - x(0) - x(1) + 1});
     else
@@ -134,7 +134,7 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   };
 
   f.dx = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dmat<T, d>(
           {{0, 18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1) - 1},
            {0, 9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0) - 1}});
@@ -145,7 +145,7 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   P1_2d2d.base_functions.push_back(f);
 
   f.x = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dvec<T, d>({0, 9 * x(0) * x(0) * x(1) + 9 * x(0) * x(1) * x(1) -
                                 9 * x(0) * x(1) + x(0)});
     else
@@ -153,7 +153,7 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   };
 
   f.dx = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dmat<T, d>({{0, 18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1) + 1},
                          {0, 9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0)}});
     else
@@ -163,7 +163,7 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   P1_2d2d.base_functions.push_back(f);
 
   f.x = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dvec<T, d>({0, 9 * x(0) * x(0) * x(1) + 9 * x(0) * x(1) * x(1) -
                                 9 * x(0) * x(1) + x(1)});
     else
@@ -171,7 +171,7 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   };
 
   f.dx = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dmat<T, d>(
           {{0, 18 * x(0) * x(1) + 9 * x(1) * x(1) - 9 * x(1)},
            {0, 9 * x(0) * x(0) + 18 * x(0) * x(1) - 9 * x(0) + 1}});
@@ -182,14 +182,14 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   P1_2d2d.base_functions.push_back(f);
 
   f.x = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dvec<T, d>({27 * x(0) * x(1) * (1 - x(0) - x(1)), 0});
     else
       return dvec<T, d>({0, 0});
   };
 
   f.dx = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dmat<T, d>(
           {{-54 * x(0) * x(1) - 27 * x(1) * x(1) + 27 * x(1), 0},
            {-27 * x(0) * x(0) - 54 * x(0) * x(1) + 27 * x(0), 0}});
@@ -200,14 +200,14 @@ finite_element<T, d, e> create_finite_element_P1_B_2d2d() {
   P1_2d2d.base_functions.push_back(f);
 
   f.x = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dvec<T, d>({0, 27 * x(0) * x(1) * (1 - x(0) - x(1))});
     else
       return dvec<T, d>({0, 0});
   };
 
   f.dx = [](const dvec<T, d> &x) {
-    if (in_std(x))
+    if (is_point_in_reference_triangle(x))
       return dmat<T, d>(
           {{0, -54 * x(0) * x(1) - 27 * x(1) * x(1) + 27 * x(1)},
            {0, -27 * x(0) * x(0) - 54 * x(0) * x(1) + 27 * x(0)}});

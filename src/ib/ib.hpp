@@ -31,7 +31,7 @@ template <typename T, int d> struct ib_problem {
       std::unique_ptr<femib::util::nonlinear_solver<T>> nonlinear_solver_ =
           femib::util::default_nonlinear_solver_factory<T>(),
       std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver_ =
-          femib::util::default_solver_factory<T>())
+          femib::util::default_sparse_solver_factory<T>())
       : fluid(std::move(velocity_space_), std::move(pressure_space_),
               std::move(quadrature_), density_, viscosity_, time_step_,
               std::move(body_force_), std::move(nonlinear_solver_),
