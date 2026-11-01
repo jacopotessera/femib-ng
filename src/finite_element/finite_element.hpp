@@ -11,11 +11,12 @@ namespace femib::finite_element {
 template <typename T, int d> using dvec = femib::types::dvec<T, d>;
 template <typename T, int d> using dmat = femib::types::dmat<T, d>;
 template <typename T, int d, int e> using rmat = femib::types::rmat<T, d, e>;
-template <typename T, int d, int e> using F = femib::types::F<T, d, e>;
+template <typename T, int d, int e>
+using function_with_gradient = femib::types::function_with_gradient<T, d, e>;
 template <typename T, int d> using mesh_ = femib::types::mesh<T, d>;
 
 template <typename T, int d, int e> struct finite_element { // TODO constructor?
-  std::vector<F<T, d, e>> base_functions;
+  std::vector<function_with_gradient<T, d, e>> base_functions;
   std::vector<dvec<T, d>> base_nodes;
   femib::types::nodes<T, d> nodes;
   std::function<femib::types::nodes<T, d>(const femib::types::mesh<T, d>)>

@@ -12,8 +12,9 @@ operator*(const std::function<T(femib::types::dvec<T, d>)> &a,
 // divergence
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
-div(const femib::types::F<T, d, d> &a) {
-  return [=](const femib::types::dvec<T, d> &x) { return a.dx(x).trace(); };
+div(const femib::types::function_with_gradient<T, d, d> &a) {
+  return
+      [=](const femib::types::dvec<T, d> &x) { return a.gradient(x).trace(); };
 }
 
 template <typename T, int d, int e>
@@ -25,9 +26,9 @@ std::function<T(femib::types::dvec<T, d>)> project(
 
 template <typename T, int d>
 std::function<femib::types::dmat<T, d>(femib::types::dvec<T, d>)>
-symm(const femib::types::F<T, d, d> &a) {
+symm(const femib::types::function_with_gradient<T, d, d> &a) {
   return ([=](const femib::types::dvec<T, d> &x) -> femib::types::dmat<T, d> {
-    return T(0.5) * (a.dx(x) + a.dx(x).transpose());
+    return T(0.5) * (a.gradient(x) + a.gradient(x).transpose());
   });
 }
 
@@ -39,7 +40,8 @@ T dpi(const femib::types::dmat<T, d> &A, const femib::types::dmat<T, d> &B) {
 
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
-dpi(const femib::types::F<T, d, d> &a, const femib::types::F<T, d, d> &b) {
+dpi(const femib::types::function_with_gradient<T, d, d> &a,
+    const femib::types::function_with_gradient<T, d, d> &b) {
   return ([=](const femib::types::dvec<T, d> &x) {
     return dpi(symm(a)(x), symm(b)(x));
   });
@@ -47,33 +49,37 @@ dpi(const femib::types::F<T, d, d> &a, const femib::types::F<T, d, d> &b) {
 
 template <typename T, int d>
 std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)>
-convection(const femib::types::F<T, d, d> &w,
-           const femib::types::F<T, d, d> &u) {
+convection(const femib::types::function_with_gradient<T, d, d> &w,
+           const femib::types::function_with_gradient<T, d, d> &u) {
   return [=](const femib::types::dvec<T, d> &x) -> femib::types::dvec<T, d> {
-    // ((w . grad) u) (x) =  u.dx(x).transpose() * w.x(x)
-    return u.dx(x).transpose() * w.x(x);
+    // ((w . grad) u) (x) =  u.gradient(x).transpose() * w.value(x)
+    return u.gradient(x).transpose() * w.value(x);
   };
 }
 
 template <typename T, int d, int e>
-std::function<T(femib::types::dvec<T, d>)> mass(femib::types::F<T, d, e> a,
-                                                femib::types::F<T, d, e> b) {
-  return
-      [a, b](const femib::types::dvec<T, d> &x) { return a.x(x).dot(b.x(x)); };
+std::function<T(femib::types::dvec<T, d>)>
+mass(femib::types::function_with_gradient<T, d, e> a,
+     femib::types::function_with_gradient<T, d, e> b) {
+  return [a, b](const femib::types::dvec<T, d> &x) {
+    return a.value(x).dot(b.value(x));
+  };
 }
 
 template <typename T, int d>
-std::function<T(femib::types::dvec<T, d>)> zero(femib::types::F<T, d, d>) {
+std::function<T(femib::types::dvec<T, d>)>
+zero(femib::types::function_with_gradient<T, d, d>) {
   return [](const femib::types::dvec<T, d> &) { return T(0); };
 }
 
 template <typename T, int d, int e>
-std::function<T(femib::types::dvec<T, d>)> ddot(femib::types::F<T, d, e> a,
-                                                femib::types::F<T, d, e> b) {
+std::function<T(femib::types::dvec<T, d>)>
+ddot(femib::types::function_with_gradient<T, d, e> a,
+     femib::types::function_with_gradient<T, d, e> b) {
   return [a, b](femib::types::dvec<T, d> x) {
     T val = T(0.0);
     for (int i = 0; i < d; ++i) {
-      val += a.dx(x)[i] * b.dx(x)[i];
+      val += a.gradient(x)[i] * b.gradient(x)[i];
     }
     return val;
   };

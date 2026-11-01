@@ -50,9 +50,9 @@ Eigen::SparseMatrix<T> assemble_convection(
               rule.nodes[q].quadrature_point;
           for (int k = 0; k < basis_count; ++k) {
             size_t idx = static_cast<size_t>(k) * n_q + q;
-            phi[idx] = V.finite_element.base_functions[k].x(x_ref);
-            dphi[idx] =
-                Binv.transpose() * V.finite_element.base_functions[k].dx(x_ref);
+            phi[idx] = V.finite_element.base_functions[k].value(x_ref);
+            dphi[idx] = Binv.transpose() *
+                        V.finite_element.base_functions[k].gradient(x_ref);
             int global_k = V.nodes.global_index(k, n);
             w_at_q[q] += picard_velocity_dofs(global_k) * phi[idx];
           }

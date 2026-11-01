@@ -38,8 +38,10 @@ template <typename T, int d, int e> struct finite_element_space {
       femib::types::dvec<T, d> ref =
           femib::affine::affine_inv<T, d>(t, points[k]);
       for (int j = 0; j < std::ssize(finite_element.base_functions); ++j) {
-        const femib::types::F<T, d, e> &phi = finite_element.base_functions[j];
-        result[k] += u(nodes.global_index(j, points_positions[k])) * phi.x(ref);
+        const femib::types::function_with_gradient<T, d, e> &phi =
+            finite_element.base_functions[j];
+        result[k] +=
+            u(nodes.global_index(j, points_positions[k])) * phi.value(ref);
       }
     }
     return result;

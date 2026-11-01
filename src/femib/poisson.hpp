@@ -17,10 +17,10 @@
 namespace femib::poisson {
 
 template <typename T, int d, int e>
-std::function<
-    std::function<T(femib::types::dvec<T, d>)>(femib::types::F<T, d, e>)>
+std::function<std::function<T(femib::types::dvec<T, d>)>(
+    femib::types::function_with_gradient<T, d, e>)>
 default_force() {
-  return [](femib::types::F<T, d, e>) {
+  return [](femib::types::function_with_gradient<T, d, e>) {
     return [](femib::types::dvec<T, d>) { return T(0); };
   };
 }
@@ -35,7 +35,7 @@ template <typename T, int d, int e> struct poisson {
   femib::finite_element_space::finite_element_space<T, d, e> solution_space;
 
   std::function<std::function<T(femib::types::dvec<T, d>)>(
-      femib::types::F<T, d, e>)>
+      femib::types::function_with_gradient<T, d, e>)>
       body_force;
 
   std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver;
@@ -50,7 +50,7 @@ template <typename T, int d, int e> struct poisson {
           std::function<T(femib::types::dvec<T, d>)> boundary =
               default_boundary<T, d>(),
           std::function<std::function<T(femib::types::dvec<T, d>)>(
-              femib::types::F<T, d, e>)>
+              femib::types::function_with_gradient<T, d, e>)>
               body_force_ = default_force<T, d, e>(),
           std::unique_ptr<femib::util::sparse_solver<T>> sparse_solver_ =
               femib::util::default_sparse_solver_factory<T>())

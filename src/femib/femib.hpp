@@ -51,18 +51,19 @@ Eigen::SparseMatrix<T> selection_matrix(const std::vector<int> &rows,
 }
 
 template <typename T, int d, int e>
-femib::types::F<T, d, e> reference_to_physical_function(
+femib::types::function_with_gradient<T, d, e> reference_to_physical_function(
     const femib::finite_element_space::finite_element_space<T, d, e> &v, int i,
     const femib::types::dmat<T, d> &Binv, const femib::types::dvec<T, d> &b) {
-  femib::types::F<T, d, e> a;
-  a.x =
+  femib::types::function_with_gradient<T, d, e> a;
+  a.value =
       [&v, i, Binv, b](const femib::types::dvec<T, d> &x) {
-        return (v.finite_element.base_functions[i].x(Binv * (x - b)));
+        return (v.finite_element.base_functions[i].value(Binv * (x - b)));
       },
-  a.dx = [&v, i, Binv,
-          b](const femib::types::dvec<T, d> &x) -> femib::types::rmat<T, d, e> {
+  a.gradient =
+      [&v, i, Binv,
+       b](const femib::types::dvec<T, d> &x) -> femib::types::rmat<T, d, e> {
     return (Binv.transpose() *
-            v.finite_element.base_functions[i].dx(Binv * (x - b)));
+            v.finite_element.base_functions[i].gradient(Binv * (x - b)));
   };
   return a;
 }
@@ -127,7 +128,8 @@ std::vector<Eigen::Triplet<T>> build_diagonal_block(
     const femib::finite_element_space::finite_element_space<T, d, e> &v,
     const femib::gauss::rule<T, d> &integration_rule,
     const std::function<std::function<T(femib::types::dvec<T, d>)>(
-        femib::types::F<T, d, e>, femib::types::F<T, d, e>)> &bilinear_form) {
+        femib::types::function_with_gradient<T, d, e>,
+        femib::types::function_with_gradient<T, d, e>)> &bilinear_form) {
   const int basis_count =
       static_cast<int>(v.finite_element.base_functions.size());
   const int n_tri = static_cast<int>(v.mesh.T.size());
@@ -146,11 +148,11 @@ std::vector<Eigen::Triplet<T>> build_diagonal_block(
             femib::affine::affineBinv(triangle);
         femib::types::dvec<T, d> affine_b = femib::affine::affineb(triangle);
         for (int i = 0; i < basis_count; ++i) {
-          femib::types::F<T, d, e> real_function_i =
+          femib::types::function_with_gradient<T, d, e> real_function_i =
               femib::util::reference_to_physical_function<T, d, e>(
                   v, i, affine_Binv, affine_b);
           for (int j = 0; j < basis_count; ++j) {
-            femib::types::F<T, d, e> real_function_j =
+            femib::types::function_with_gradient<T, d, e> real_function_j =
                 femib::util::reference_to_physical_function<T, d, e>(
                     v, j, affine_Binv, affine_b);
             T val = femib::mesh::integrate<T, d>( // TODO mesh integrate? can
@@ -190,7 +192,7 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> build_load_vector(
     const femib::finite_element_space::finite_element_space<T, d, e> &v,
     const femib::gauss::rule<T, d> &quadrature_rule,
     const std::function<std::function<T(femib::types::dvec<T, d>)>(
-        femib::types::F<T, d, e>)> &load) {
+        femib::types::function_with_gradient<T, d, e>)> &load) {
   const int basis_count =
       static_cast<int>(v.finite_element.base_functions.size());
   const int n_tri = static_cast<int>(v.mesh.T.size());
@@ -209,7 +211,7 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> build_load_vector(
             femib::affine::affineBinv(triangle);
         femib::types::dvec<T, d> affine_b = femib::affine::affineb(triangle);
         for (int i = 0; i < basis_count; ++i) {
-          femib::types::F<T, d, e> real_function =
+          femib::types::function_with_gradient<T, d, e> real_function =
               femib::util::reference_to_physical_function<T, d, e>(
                   v, i, affine_Binv, affine_b);
           T val = femib::mesh::integrate<T, d>(
@@ -230,17 +232,18 @@ std::vector<Eigen::Triplet<T>> build_off_diagonal_block(
     const femib::finite_element_space::finite_element_space<T, d, 1> &q,
     const femib::gauss::rule<T, d> &rule,
     const std::function<std::function<T(femib::types::dvec<T, d>)>(
-        femib::types::F<T, d, d>, femib::types::F<T, d, 1>)> &bilinear_form) {
+        femib::types::function_with_gradient<T, d, d>,
+        femib::types::function_with_gradient<T, d, 1>)> &bilinear_form) {
   std::vector<Eigen::Triplet<T>> BB;
   for (int n = 0; n < std::ssize(v.mesh.T); ++n) {
     femib::types::dtrian<T, d> t = v.mesh[n];
     femib::types::dmat<T, d> Binv = femib::affine::affineBinv(t);
     femib::types::dvec<T, d> bb = femib::affine::affineb(t);
     for (int i = 0; i < std::ssize(v.finite_element.base_functions); ++i) {
-      femib::types::F<T, d, d> a =
+      femib::types::function_with_gradient<T, d, d> a =
           femib::util::reference_to_physical_function<T, d, d>(v, i, Binv, bb);
       for (int j = 0; j < std::ssize(q.finite_element.base_functions); ++j) {
-        femib::types::F<T, d, 1> b =
+        femib::types::function_with_gradient<T, d, 1> b =
             femib::util::reference_to_physical_function<T, d, 1>(q, j, Binv,
                                                                  bb);
         T m = femib::mesh::integrate<T, d>(

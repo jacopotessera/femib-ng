@@ -26,7 +26,8 @@ default_force() {
 
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
-viscous_form(femib::types::F<T, d, d> u, femib::types::F<T, d, d> v, T mu) {
+viscous_form(femib::types::function_with_gradient<T, d, d> u,
+             femib::types::function_with_gradient<T, d, d> v, T mu) {
   return [u, v, mu](const femib::types::dvec<T, d> &x) {
     return T(2.0) * mu * dpi(u, v)(x);
   };
@@ -34,23 +35,24 @@ viscous_form(femib::types::F<T, d, d> u, femib::types::F<T, d, d> v, T mu) {
 
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
-divergence_form(femib::types::F<T, d, d> u, femib::types::F<T, d, 1> q) {
+divergence_form(femib::types::function_with_gradient<T, d, d> u,
+                femib::types::function_with_gradient<T, d, 1> q) {
   return [u, q](const femib::types::dvec<T, d> &x) {
-    return T(-1.0) * div(u)(x) * q.x(x)(0);
+    return T(-1.0) * div(u)(x) * q.value(x)(0);
   };
 }
 
 // force at time t tested against the base function a
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)> external_force(
-    femib::types::F<T, d, d> a,
+    femib::types::function_with_gradient<T, d, d> a,
     const std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)>
         &force_at_t) {
   return [a, force_at_t](const femib::types::dvec<T, d> &x) {
     femib::types::dvec<T, d> fx = force_at_t(x);
     T sum = 0;
     for (int k = 0; k < d; ++k) {
-      sum += fx(k) * a.x(x)(k); // TODO ?
+      sum += fx(k) * a.value(x)(k); // TODO ?
     }
     return sum;
   };
@@ -97,8 +99,8 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> build_pressure_constraint_vector(
         &v, // TODO no need to pass finite_element_space, it's the pressure one
     const femib::gauss::rule<T, d> &rule) {
   return femib::util::build_load_vector<T, d, 1>(
-      v, rule, [](femib::types::F<T, d, 1> a) {
-        return [a](const femib::types::dvec<T, d> &x) { return a.x(x)(0); };
+      v, rule, [](femib::types::function_with_gradient<T, d, 1> a) {
+        return [a](const femib::types::dvec<T, d> &x) { return a.value(x)(0); };
       });
 }
 
@@ -242,7 +244,8 @@ stokes<T, d>::stokes(
   stiffness_block = femib::util::triplets2sparse(
       femib::util::build_diagonal_block<T, d, d>(
           velocity_space, integration_rule,
-          [this](femib::types::F<T, d, d> u, femib::types::F<T, d, d> w) {
+          [this](femib::types::function_with_gradient<T, d, d> u,
+                 femib::types::function_with_gradient<T, d, d> w) {
             return viscous_form<T, d>(u, w, viscosity);
           }),
       velocity_space.size(), velocity_space.size());
@@ -261,7 +264,7 @@ stokes<T, d>::stokes(
   rhs_vector.block(0, 0, velocity_space.size(), 1) =
       femib::util::build_load_vector<T, d, d>(
           velocity_space, integration_rule,
-          [force_at_0](femib::types::F<T, d, d> a) {
+          [force_at_0](femib::types::function_with_gradient<T, d, d> a) {
             return external_force<T, d>(a, force_at_0);
           });
 

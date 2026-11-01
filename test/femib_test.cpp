@@ -144,9 +144,9 @@ TEST_CASE("poisson::solve matches sin(pi x)sin(pi y) manufactured solution") {
   femib::finite_element_space::finite_element_space<float, 2, 1> s(fe, mesh);
 
   // the manufactured forcing tested against each basis function (e=1)
-  auto ggg = [forcing](femib::types::F<float, 2, 1> a) {
+  auto ggg = [forcing](femib::types::function_with_gradient<float, 2, 1> a) {
     return [a, forcing](const femib::types::dvec<float, 2> &x) {
-      return forcing(x) * a.x(x)(0);
+      return forcing(x) * a.value(x)(0);
     };
   };
 

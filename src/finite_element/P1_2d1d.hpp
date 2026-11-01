@@ -9,7 +9,7 @@ namespace femib::finite_element {
 
 template <typename T, int d, int e>
 finite_element<T, d, e> create_finite_element_P1_2d1d() {
-  F<T, d, e> f;
+  function_with_gradient<T, d, e> f;
   finite_element<T, d, e> P1_2d1d;
 
   P1_2d1d.base_nodes = {{0.0, 0.0}, {1.0, 0.0}, {0.0, 1.0}};
@@ -28,14 +28,14 @@ finite_element<T, d, e> create_finite_element_P1_2d1d() {
     return nodes;
   };
 
-  f.x = [](const dvec<T, d> &x) {
+  f.value = [](const dvec<T, d> &x) {
     if (is_point_in_reference_triangle(x))
       return (dvec<T, e>){1 - x(0) - x(1)};
     else
       return (dvec<T, e>){0.0};
   };
 
-  f.dx = [](const dvec<T, d> &x) {
+  f.gradient = [](const dvec<T, d> &x) {
     if (is_point_in_reference_triangle(x))
       return (rmat<T, d, e>){{-1, -1}};
     else
@@ -44,14 +44,14 @@ finite_element<T, d, e> create_finite_element_P1_2d1d() {
 
   P1_2d1d.base_functions.push_back(f);
 
-  f.x = [](const dvec<T, d> &x) {
+  f.value = [](const dvec<T, d> &x) {
     if (is_point_in_reference_triangle(x))
       return (dvec<T, e>){x(0)};
     else
       return (dvec<T, e>){0.0};
   };
 
-  f.dx = [](const dvec<T, d> &x) {
+  f.gradient = [](const dvec<T, d> &x) {
     if (is_point_in_reference_triangle(x))
       return (rmat<T, d, e>){{1, 0}};
     else
@@ -60,14 +60,14 @@ finite_element<T, d, e> create_finite_element_P1_2d1d() {
 
   P1_2d1d.base_functions.push_back(f);
 
-  f.x = [](const dvec<T, d> &x) {
+  f.value = [](const dvec<T, d> &x) {
     if (is_point_in_reference_triangle(x))
       return (dvec<T, e>){x(1)};
     else
       return (dvec<T, e>){0.0};
   };
 
-  f.dx = [](const dvec<T, d> &x) {
+  f.gradient = [](const dvec<T, d> &x) {
     if (is_point_in_reference_triangle(x))
       return (rmat<T, d, e>){{0, 1}};
     else

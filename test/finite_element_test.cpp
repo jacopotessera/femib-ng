@@ -16,7 +16,7 @@ TEST_CASE("testing finite_element P1_2d1d") {
     for (int j = 0; j < std::ssize(f.base_functions); ++j) {
       CAPTURE(i);
       CAPTURE(j);
-      float value = f.base_functions[j].x(f.base_nodes[i])(0);
+      float value = f.base_functions[j].value(f.base_nodes[i])(0);
       CHECK_EQ(value, doctest::Approx(i == j ? 1.0 : 0.0));
     }
   }
@@ -40,7 +40,7 @@ TEST_CASE("testing finite_element P0_2d1d") {
     for (int j = 0; j < std::ssize(f.base_functions); ++j) {
       CAPTURE(i);
       CAPTURE(j);
-      float value = f.base_functions[j].x(f.base_nodes[i])(0);
+      float value = f.base_functions[j].value(f.base_nodes[i])(0);
       CHECK_EQ(value, doctest::Approx(i == j ? 1.0 : 0.0));
     }
   }
@@ -57,7 +57,7 @@ TEST_CASE("testing finite_element P1_2d2d") {
     int node_idx = k % n_nodes;
     for (int i = 0; i < n_nodes; ++i) {
       femib::types::dvec<float, 2> value =
-          f.base_functions[k].x(f.base_nodes[i]);
+          f.base_functions[k].value(f.base_nodes[i]);
       for (int c = 0; c < 2; ++c) {
         float expected = (c == component && i == node_idx) ? 1.0f : 0.0f;
         CHECK_EQ(value(c), doctest::Approx(expected));
@@ -77,7 +77,7 @@ TEST_CASE("testing finite_element P2_2d2d") {
     int node_idx = k % n_nodes;
     for (int i = 0; i < n_nodes; ++i) {
       femib::types::dvec<float, 2> value =
-          f.base_functions[k].x(f.base_nodes[i]);
+          f.base_functions[k].value(f.base_nodes[i]);
       for (int c = 0; c < 2; ++c) {
         float expected = (c == component && i == node_idx) ? 1.0f : 0.0f;
         CAPTURE(k);
@@ -128,7 +128,7 @@ TEST_CASE("testing finite_element P1+B_2d2d") {
   for (int k = 0; k < std::ssize(f.base_functions); ++k) {
     for (int i = 0; i < n_nodes; ++i) {
       femib::types::dvec<float, 2> value =
-          f.base_functions[k].x(f.base_nodes[i]);
+          f.base_functions[k].value(f.base_nodes[i]);
       for (int c = 0; c < 2; ++c) {
         float expected = (c == component[k] && i == node_idx[k]) ? 1.0f : 0.0f;
         CHECK_EQ(value(c), doctest::Approx(expected));

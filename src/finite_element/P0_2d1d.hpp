@@ -20,7 +20,7 @@ dvec<T, d> find_center_of(const femib::types::mesh<T, d> &mesh, int n) {
 
 template <typename T, int d, int e>
 finite_element<T, d, e> create_finite_element_P0_2d1d() {
-  F<T, d, e> f;
+  function_with_gradient<T, d, e> f;
   finite_element<T, d, e> P0_2d1d;
 
   P0_2d1d.base_nodes = {{1.0 / 3.0, 1.0 / 3.0}};
@@ -37,14 +37,14 @@ finite_element<T, d, e> create_finite_element_P0_2d1d() {
     return nodes;
   };
 
-  f.x = [](const dvec<T, d> &x) {
+  f.value = [](const dvec<T, d> &x) {
     if (is_point_in_reference_triangle(x))
       return (dvec<T, e>){1.0};
     else
       return (dvec<T, e>){0.0};
   };
 
-  f.dx = [](const dvec<T, d> &) { return (rmat<T, d, e>){{0, 0}}; };
+  f.gradient = [](const dvec<T, d> &) { return (rmat<T, d, e>){{0, 0}}; };
 
   P0_2d1d.base_functions.push_back(f);
 

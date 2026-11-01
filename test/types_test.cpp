@@ -8,12 +8,12 @@ TEST_CASE("testing types") {
   CHECK_EQ(v(0), doctest::Approx(1.0));
   CHECK_EQ(v(1), doctest::Approx(2.0));
 
-  femib::types::F<float, 2, 1> f;
-  f.x = [](const femib::types::dvec<float, 2> &x) {
+  femib::types::function_with_gradient<float, 2, 1> f;
+  f.value = [](const femib::types::dvec<float, 2> &x) {
     return femib::types::dvec<float, 1>{x(0) + x(1)};
   };
   femib::types::dvec<float, 2> p = {2.0, 3.0};
-  CHECK_EQ(f.x(p)(0), doctest::Approx(5.0));
+  CHECK_EQ(f.value(p)(0), doctest::Approx(5.0));
 }
 
 TEST_CASE("testing mesh constructor populates N") {

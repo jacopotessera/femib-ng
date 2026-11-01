@@ -37,28 +37,28 @@ TEST_CASE("testing finite_element_space") {
         femib::types::dtrian<float, 2> t = s.mesh[n];
         femib::types::dmat<float, 2> Binv = femib::affine::affineBinv(t);
         femib::types::dvec<float, 2> bb = femib::affine::affineb(t);
-        femib::types::F<float, 2, 1> a =
+        femib::types::function_with_gradient<float, 2, 1> a =
             femib::util::reference_to_physical_function<float, 2, 1>(s, i, Binv,
                                                                      bb);
-        femib::types::F<float, 2, 1> b =
+        femib::types::function_with_gradient<float, 2, 1> b =
             femib::util::reference_to_physical_function<float, 2, 1>(s, j, Binv,
                                                                      bb);
 
         float m = femib::mesh::integrate<float, 2>(
             rule,
             [&a, &b](femib::types::dvec<float, 2> x) {
-              femib::types::dvec<float, 2> av = a.dx(x);
-              femib::types::dvec<float, 2> bv = b.dx(x);
+              femib::types::dvec<float, 2> av = a.gradient(x);
+              femib::types::dvec<float, 2> bv = b.gradient(x);
               return av[0] * bv[0] + av[1] * bv[1];
             },
             t);
         float f_ = femib::mesh::integrate<float, 2>(
             rule,
             [&t, &f, i](femib::types::dvec<float, 2> x) {
-              float a_0 =
-                  -40 * x(0) * x(1) *
-                  (f.base_functions[i].x(femib::affine::affineBinv(t) *
-                                         (x - femib::affine::affineb(t))))[0];
+              float a_0 = -40 * x(0) * x(1) *
+                          (f.base_functions[i].value(
+                              femib::affine::affineBinv(t) *
+                              (x - femib::affine::affineb(t))))[0];
               return a_0;
             },
             t);
@@ -142,10 +142,11 @@ TEST_CASE("plot() does not read out of bounds on a non-rectangular mesh") {
   // the triangulated region.
   //
   // plot() is only ever instantiated with e == d in production code (see
-  // femib::stokes<T,d>::V, a finite_element_space<T,d,d>), since its
-  // interior arithmetic hard-codes F<T,d,d> and a d-dimensional result
-  // vector. P1_2d1d (e=1) does not type-check through plot(), so this
-  // fixture uses the matching vector element P1_2d2d (e=d=2) instead.
+  // femib::stokes<T,d>::velocity_space, a finite_element_space<T,d,d>), since
+  // its interior arithmetic hard-codes function_with_gradient<T,d,d> and a
+  // d-dimensional result vector. P1_2d1d (e=1) does not type-check through
+  // plot(), so this fixture uses the matching vector element P1_2d2d (e=d=2)
+  // instead.
   femib::types::mesh<float, 2> mesh(
       {{0, 0}, {2, 0}, {2, 1}, {1, 1}, {1, 2}, {0, 2}},
       {{0, 1, 2}, {0, 2, 3}, {0, 3, 4}, {0, 4, 5}}, {0, 1, 2, 3, 4, 5});

@@ -35,9 +35,10 @@ spread_force(femib::finite_element_space::finite_element_space<T, d, d> &V,
     femib::types::dvec<T, d> ref =
         femib::affine::affine_inv<T, d>(t, points[k]);
     for (int j = 0; j < std::ssize(V.finite_element.base_functions); ++j) {
-      const femib::types::F<T, d, d> &phi = V.finite_element.base_functions[j];
+      const femib::types::function_with_gradient<T, d, d> &phi =
+          V.finite_element.base_functions[j];
       // variational formulation of the force spreading
-      T contribution = forces[k].dot(phi.x(ref)) * dS;
+      T contribution = forces[k].dot(phi.value(ref)) * dS;
       result(V.nodes.global_index(j, points_positions[k])) += contribution;
     }
   }

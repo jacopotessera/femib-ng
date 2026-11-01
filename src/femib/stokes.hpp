@@ -55,7 +55,8 @@ void rebuild_velocity_part_rhs(
   std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)> new_force =
       [force = s.body_force, new_time = s.time](
           const femib::types::dvec<T, d> &x) { return force(x, new_time); };
-  auto load = [new_force](femib::types::F<T, d, d> test_function) {
+  auto load = [new_force](
+                  femib::types::function_with_gradient<T, d, d> test_function) {
     return femib::stokes_steady::external_force<T, d>(test_function, new_force);
   };
   Eigen::Matrix<T, Eigen::Dynamic, 1> velocity_rhs =

@@ -20,20 +20,20 @@
 
 TEST_CASE("convection((w), (u)) matches (w . grad) u for a known polynomial "
           "field, evaluated by hand") {
-  femib::types::F<float, 2, 2> w;
-  w.x = [](const femib::types::dvec<float, 2> &) {
+  femib::types::function_with_gradient<float, 2, 2> w;
+  w.value = [](const femib::types::dvec<float, 2> &) {
     return femib::types::dvec<float, 2>(2.0f, 3.0f);
   };
-  w.dx = [](const femib::types::dvec<float, 2> &)
+  w.gradient = [](const femib::types::dvec<float, 2> &)
       -> femib::types::rmat<float, 2, 2> {
     return femib::types::rmat<float, 2, 2>::Zero();
   };
 
-  femib::types::F<float, 2, 2> u;
-  u.x = [](const femib::types::dvec<float, 2> &x) {
+  femib::types::function_with_gradient<float, 2, 2> u;
+  u.value = [](const femib::types::dvec<float, 2> &x) {
     return femib::types::dvec<float, 2>(x(0) * x(0), x(0) * x(1));
   };
-  u.dx = [](const femib::types::dvec<float, 2> &x)
+  u.gradient = [](const femib::types::dvec<float, 2> &x)
       -> femib::types::rmat<float, 2, 2> {
     femib::types::rmat<float, 2, 2> J;
     J << 2 * x(0), x(1), 0, x(0);

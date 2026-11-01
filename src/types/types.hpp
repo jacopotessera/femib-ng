@@ -17,17 +17,9 @@ template <typename T, int d> using dtrian_ = dvec<T, d>[d + 1];
 template <int d> using ditrian = Eigen::Matrix<int, d + 1, 1>;
 template <int d> using ditrian_ = Eigen::Matrix<int, d, 1>;
 
-template <typename T, int d, int e> struct xDx {
-  dvec<T, e> x;
-  rmat<T, d, e> dx;
-};
-
-template <typename T, int d, int e> struct F {
-  std::function<dvec<T, e>(dvec<T, d>)> x;
-  std::function<rmat<T, d, e>(dvec<T, d>)> dx;
-  xDx<T, d, e> operator()(const dvec<T, d> &p) {
-    return {this->x(p), this->dx(p)};
-  };
+template <typename T, int d, int e> struct function_with_gradient {
+  std::function<dvec<T, e>(dvec<T, d>)> value;
+  std::function<rmat<T, d, e>(dvec<T, d>)> gradient;
 };
 
 template <typename f, int d> struct nodes {
