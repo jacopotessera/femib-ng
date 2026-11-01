@@ -35,14 +35,16 @@ TEST_CASE("testing finite_element_space") {
     for (int i = 0; i < std::ssize(s.finite_element.base_functions); ++i) {
       for (int j = 0; j < std::ssize(s.finite_element.base_functions); ++j) {
         femib::types::dtrian<float, 2> t = s.mesh[n];
-        femib::types::dmat<float, 2> Binv = femib::affine::affineBinv(t);
-        femib::types::dvec<float, 2> bb = femib::affine::affineb(t);
+        femib::types::dmat<float, 2> inverse_jacobian =
+            femib::affine::inverse_jacobian(t);
+        femib::types::dvec<float, 2> translation =
+            femib::affine::translation(t);
         femib::types::function_with_gradient<float, 2, 1> a =
-            femib::util::reference_to_physical_function<float, 2, 1>(s, i, Binv,
-                                                                     bb);
+            femib::util::reference_to_physical_function<float, 2, 1>(
+                s, i, inverse_jacobian, translation);
         femib::types::function_with_gradient<float, 2, 1> b =
-            femib::util::reference_to_physical_function<float, 2, 1>(s, j, Binv,
-                                                                     bb);
+            femib::util::reference_to_physical_function<float, 2, 1>(
+                s, j, inverse_jacobian, translation);
 
         float m = femib::mesh::integrate<float, 2>(
             rule,
@@ -57,8 +59,8 @@ TEST_CASE("testing finite_element_space") {
             [&t, &f, i](femib::types::dvec<float, 2> x) {
               float a_0 = -40 * x(0) * x(1) *
                           (f.base_functions[i].value(
-                              femib::affine::affineBinv(t) *
-                              (x - femib::affine::affineb(t))))[0];
+                              femib::affine::inverse_jacobian(t) *
+                              (x - femib::affine::translation(t))))[0];
               return a_0;
             },
             t);

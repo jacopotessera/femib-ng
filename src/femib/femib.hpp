@@ -53,17 +53,21 @@ Eigen::SparseMatrix<T> selection_matrix(const std::vector<int> &rows,
 template <typename T, int d, int e>
 femib::types::function_with_gradient<T, d, e> reference_to_physical_function(
     const femib::finite_element_space::finite_element_space<T, d, e> &v, int i,
-    const femib::types::dmat<T, d> &Binv, const femib::types::dvec<T, d> &b) {
+    const femib::types::dmat<T, d> &inverse_jacobian,
+    const femib::types::dvec<T, d> &translation) {
   femib::types::function_with_gradient<T, d, e> a;
   a.value =
-      [&v, i, Binv, b](const femib::types::dvec<T, d> &x) {
-        return (v.finite_element.base_functions[i].value(Binv * (x - b)));
+      [&v, i, inverse_jacobian,
+       translation](const femib::types::dvec<T, d> &x) {
+        return (v.finite_element.base_functions[i].value(inverse_jacobian *
+                                                         (x - translation)));
       },
   a.gradient =
-      [&v, i, Binv,
-       b](const femib::types::dvec<T, d> &x) -> femib::types::rmat<T, d, e> {
-    return (Binv.transpose() *
-            v.finite_element.base_functions[i].gradient(Binv * (x - b)));
+      [&v, i, inverse_jacobian, translation](
+          const femib::types::dvec<T, d> &x) -> femib::types::rmat<T, d, e> {
+    return (inverse_jacobian.transpose() *
+            v.finite_element.base_functions[i].gradient(inverse_jacobian *
+                                                        (x - translation)));
   };
   return a;
 }
@@ -144,21 +148,23 @@ std::vector<Eigen::Triplet<T>> build_diagonal_block(
       std::execution::par_unseq, tri_indices.begin(), tri_indices.end(),
       [&](int n) {
         femib::types::dtrian<T, d> triangle = v.mesh[n];
-        femib::types::dmat<T, d> affine_Binv =
-            femib::affine::affineBinv(triangle);
-        femib::types::dvec<T, d> affine_b = femib::affine::affineb(triangle);
+        femib::types::dmat<T, d> inverse_jacobian =
+            femib::affine::inverse_jacobian(triangle);
+        femib::types::dvec<T, d> translation =
+            femib::affine::translation(triangle);
         for (int i = 0; i < basis_count; ++i) {
-          femib::types::function_with_gradient<T, d, e> real_function_i =
+          femib::types::function_with_gradient<T, d, e> physical_function_i =
               femib::util::reference_to_physical_function<T, d, e>(
-                  v, i, affine_Binv, affine_b);
+                  v, i, inverse_jacobian, translation);
           for (int j = 0; j < basis_count; ++j) {
-            femib::types::function_with_gradient<T, d, e> real_function_j =
+            femib::types::function_with_gradient<T, d, e> physical_function_j =
                 femib::util::reference_to_physical_function<T, d, e>(
-                    v, j, affine_Binv, affine_b);
+                    v, j, inverse_jacobian, translation);
             T val = femib::mesh::integrate<T, d>( // TODO mesh integrate? can
                                                   // inline here?
                 integration_rule,
-                bilinear_form(real_function_i, real_function_j), triangle);
+                bilinear_form(physical_function_i, physical_function_j),
+                triangle);
             size_t idx =
                 (static_cast<size_t>(n) * basis_count + i) * basis_count + j;
             diagonal_matrix[idx] = Eigen::Triplet<T>(
@@ -207,16 +213,17 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> build_load_vector(
       std::execution::par_unseq, tri_indices.begin(), tri_indices.end(),
       [&](int n) {
         femib::types::dtrian<T, d> triangle = v.mesh[n];
-        femib::types::dmat<T, d> affine_Binv =
-            femib::affine::affineBinv(triangle);
-        femib::types::dvec<T, d> affine_b = femib::affine::affineb(triangle);
+        femib::types::dmat<T, d> inverse_jacobian =
+            femib::affine::inverse_jacobian(triangle);
+        femib::types::dvec<T, d> translation =
+            femib::affine::translation(triangle);
         for (int i = 0; i < basis_count; ++i) {
-          femib::types::function_with_gradient<T, d, e> real_function =
+          femib::types::function_with_gradient<T, d, e> physical_function =
               femib::util::reference_to_physical_function<T, d, e>(
-                  v, i, affine_Binv, affine_b);
+                  v, i, inverse_jacobian, translation);
           T val = femib::mesh::integrate<T, d>(
               quadrature_rule, // TODO mesh integrate? can inline here?
-              load(real_function), triangle);
+              load(physical_function), triangle);
           size_t idx = static_cast<size_t>(n) * basis_count + i;
           load_vector[idx] =
               Eigen::Triplet<T>(v.nodes.global_index(i, n), 0, val);
@@ -237,15 +244,17 @@ std::vector<Eigen::Triplet<T>> build_off_diagonal_block(
   std::vector<Eigen::Triplet<T>> BB;
   for (int n = 0; n < std::ssize(v.mesh.T); ++n) {
     femib::types::dtrian<T, d> t = v.mesh[n];
-    femib::types::dmat<T, d> Binv = femib::affine::affineBinv(t);
-    femib::types::dvec<T, d> bb = femib::affine::affineb(t);
+    femib::types::dmat<T, d> inverse_jacobian =
+        femib::affine::inverse_jacobian(t);
+    femib::types::dvec<T, d> translation = femib::affine::translation(t);
     for (int i = 0; i < std::ssize(v.finite_element.base_functions); ++i) {
       femib::types::function_with_gradient<T, d, d> a =
-          femib::util::reference_to_physical_function<T, d, d>(v, i, Binv, bb);
+          femib::util::reference_to_physical_function<T, d, d>(
+              v, i, inverse_jacobian, translation);
       for (int j = 0; j < std::ssize(q.finite_element.base_functions); ++j) {
         femib::types::function_with_gradient<T, d, 1> b =
-            femib::util::reference_to_physical_function<T, d, 1>(q, j, Binv,
-                                                                 bb);
+            femib::util::reference_to_physical_function<T, d, 1>(
+                q, j, inverse_jacobian, translation);
         T m = femib::mesh::integrate<T, d>(
             rule, bilinear_form(a, b),
             t); // TODO mesh integrate? can inline here?

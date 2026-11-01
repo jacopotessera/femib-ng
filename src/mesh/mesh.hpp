@@ -71,7 +71,8 @@ T integrate(const femib::gauss::rule<T, d> &rule,
             const femib::types::dtrian<T, d> &t) {
   std::function<T(femib::types::dvec<T, d>)> g =
       [&t, &f](const femib::types::dvec<T, d> &x) {
-        return femib::affine::affineBdet(t) * f(femib::affine::affine(t, x));
+        return femib::affine::abs_jacobian_determinant(t) *
+               f(femib::affine::reference_to_physical(t, x));
       };
   return femib::gauss::integrate<T, d>(rule, g);
 }

@@ -36,30 +36,32 @@ TEST_CASE("testing affine") {
   for (std::vector<dvec> triangle : triangles) {
     for (std::vector<float> c : coefficients) {
       dvec point = base_linear_combination(c);
-      dvec transformed_point = affine<float, 2>(triangle, point);
-      dvec inv_transf_point = affine_inv<float, 2>(triangle, transformed_point);
-      dmat affine_matrix = affineB<float, 2>(triangle);
-      dmat inv_affine_matrix = affineBinv<float, 2>(triangle);
+      dvec transformed_point = reference_to_physical<float, 2>(triangle, point);
+      dvec inv_transf_point =
+          physical_to_reference<float, 2>(triangle, transformed_point);
+      dmat jacobian_matrix = jacobian<float, 2>(triangle);
+      dmat inverse_jacobian_matrix = inverse_jacobian<float, 2>(triangle);
 
       CHECK_LE((transformed_point - linear_combination(triangle, c)).norm(),
                EPSILON * transformed_point.norm());
       CHECK_LE((inv_transf_point - point).norm(), EPSILON * 1);
-      CHECK_LE((affine_matrix * inv_affine_matrix).determinant() - 1,
+      CHECK_LE((jacobian_matrix * inverse_jacobian_matrix).determinant() - 1,
                EPSILON * 1);
     }
   }
 }
 
-TEST_CASE("testing affineBdet") {
+TEST_CASE("testing abs_jacobian_determinant") {
   femib::types::dtrian<float, 2> t = {{0.0, 0.0}, {2.0, 0.0}, {0.0, 2.0}};
-  // affineBdet must be twice the triangle area
-  float det = femib::affine::affineBdet<float, 2>(t);
-  CHECK_EQ(det, doctest::Approx(4.0));
+  // abs_jacobian_determinant must be twice the triangle area
+  float area_scaling = femib::affine::abs_jacobian_determinant<float, 2>(t);
+  CHECK_EQ(area_scaling, doctest::Approx(4.0));
 }
 
-TEST_CASE("testing affineBdet: degenerate triangle") {
+TEST_CASE("testing abs_jacobian_determinant: degenerate triangle") {
   femib::types::dtrian<float, 2> degenerate = {
       {0.0, 0.0}, {1.0, 0.0}, {2.0, 0.0}};
-  float det = femib::affine::affineBdet<float, 2>(degenerate);
-  CHECK_EQ(det, doctest::Approx(0.0));
+  float area_scaling =
+      femib::affine::abs_jacobian_determinant<float, 2>(degenerate);
+  CHECK_EQ(area_scaling, doctest::Approx(0.0));
 }

@@ -33,7 +33,7 @@ spread_force(femib::finite_element_space::finite_element_space<T, d, d> &V,
     }
     femib::types::dtrian<T, d> t = V.mesh[points_positions[k]];
     femib::types::dvec<T, d> ref =
-        femib::affine::affine_inv<T, d>(t, points[k]);
+        femib::affine::physical_to_reference<T, d>(t, points[k]);
     for (int j = 0; j < std::ssize(V.finite_element.base_functions); ++j) {
       const femib::types::function_with_gradient<T, d, d> &phi =
           V.finite_element.base_functions[j];

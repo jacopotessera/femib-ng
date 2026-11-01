@@ -35,8 +35,9 @@ Eigen::SparseMatrix<T> assemble_convection(
       std::execution::par_unseq, tri_indices.begin(), tri_indices.end(),
       [&](int n) {
         const femib::types::dtrian<T, d> &t = V.mesh[n];
-        femib::types::dmat<T, d> Binv = femib::affine::affineBinv(t);
-        T detB = femib::affine::affineBdet(t);
+        femib::types::dmat<T, d> inverse_jacobian =
+            femib::affine::inverse_jacobian(t);
+        T abs_jacobian_determinant = femib::affine::abs_jacobian_determinant(t);
 
         std::vector<femib::types::dvec<T, d>> phi(
             static_cast<size_t>(basis_count) * n_q);
@@ -51,7 +52,7 @@ Eigen::SparseMatrix<T> assemble_convection(
           for (int k = 0; k < basis_count; ++k) {
             size_t idx = static_cast<size_t>(k) * n_q + q;
             phi[idx] = V.finite_element.base_functions[k].value(x_ref);
-            dphi[idx] = Binv.transpose() *
+            dphi[idx] = inverse_jacobian.transpose() *
                         V.finite_element.base_functions[k].gradient(x_ref);
             int global_k = V.nodes.global_index(k, n);
             w_at_q[q] += picard_velocity_dofs(global_k) * phi[idx];
@@ -65,7 +66,7 @@ Eigen::SparseMatrix<T> assemble_convection(
               femib::types::dvec<T, d> conv_j =
                   dphi[static_cast<size_t>(j) * n_q + q].transpose() *
                   w_at_q[q];
-              m += rule.nodes[q].weight * detB *
+              m += rule.nodes[q].weight * abs_jacobian_determinant *
                    phi[static_cast<size_t>(i) * n_q + q].dot(conv_j);
             }
             size_t idx =
