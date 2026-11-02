@@ -29,7 +29,8 @@ std::function<T(femib::types::dvec<T, d>)>
 viscous_form(femib::types::function_with_gradient<T, d, d> u,
              femib::types::function_with_gradient<T, d, d> v, T mu) {
   return [u, v, mu](const femib::types::dvec<T, d> &x) {
-    return T(2.0) * mu * dpi(u, v)(x);
+    return T(2.0) * mu *
+           femib::operators::symmetric_gradient_double_dot(u, v)(x);
   };
 }
 
@@ -38,7 +39,7 @@ std::function<T(femib::types::dvec<T, d>)>
 divergence_form(femib::types::function_with_gradient<T, d, d> u,
                 femib::types::function_with_gradient<T, d, 1> q) {
   return [u, q](const femib::types::dvec<T, d> &x) {
-    return T(-1.0) * div(u)(x) * q.value(x)(0);
+    return T(-1.0) * femib::operators::divergence(u)(x) * q.value(x)(0);
   };
 }
 

@@ -2,48 +2,35 @@
 #define OPERATORS_HPP_INCLUDED_
 #include "types.hpp"
 
-template <typename T, int d>
-std::function<T(femib::types::dvec<T, d>)>
-operator*(const std::function<T(femib::types::dvec<T, d>)> &a,
-          const std::function<T(femib::types::dvec<T, d>)> &b) {
-  return ([=](const femib::types::dvec<T, d> &x) { return a(x) * b(x); });
-}
+namespace femib::operators {
 
-// divergence
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)>
-div(const femib::types::function_with_gradient<T, d, d> &a) {
+divergence(const femib::types::function_with_gradient<T, d, d> &a) {
   return
       [=](const femib::types::dvec<T, d> &x) { return a.gradient(x).trace(); };
 }
 
-template <typename T, int d, int e>
-std::function<T(femib::types::dvec<T, d>)> project(
-    const std::function<femib::types::dvec<T, e>(femib::types::dvec<T, d>)> &a,
-    int i) {
-  return ([=](const femib::types::dvec<T, d> &x) { return a(x)(i); });
-}
-
 template <typename T, int d>
 std::function<femib::types::dmat<T, d>(femib::types::dvec<T, d>)>
-symm(const femib::types::function_with_gradient<T, d, d> &a) {
+symmetric_gradient(const femib::types::function_with_gradient<T, d, d> &a) {
   return ([=](const femib::types::dvec<T, d> &x) -> femib::types::dmat<T, d> {
     return T(0.5) * (a.gradient(x) + a.gradient(x).transpose());
   });
 }
 
-// doppio prodotto interno
 template <typename T, int d>
-T dpi(const femib::types::dmat<T, d> &A, const femib::types::dmat<T, d> &B) {
+T double_dot(const femib::types::dmat<T, d> &A,
+             const femib::types::dmat<T, d> &B) {
   return (A.transpose() * B).trace();
 }
 
 template <typename T, int d>
-std::function<T(femib::types::dvec<T, d>)>
-dpi(const femib::types::function_with_gradient<T, d, d> &a,
+std::function<T(femib::types::dvec<T, d>)> symmetric_gradient_double_dot(
+    const femib::types::function_with_gradient<T, d, d> &a,
     const femib::types::function_with_gradient<T, d, d> &b) {
   return ([=](const femib::types::dvec<T, d> &x) {
-    return dpi(symm(a)(x), symm(b)(x));
+    return double_dot(symmetric_gradient(a)(x), symmetric_gradient(b)(x));
   });
 }
 
@@ -66,23 +53,14 @@ mass(femib::types::function_with_gradient<T, d, e> a,
   };
 }
 
-template <typename T, int d>
-std::function<T(femib::types::dvec<T, d>)>
-zero(femib::types::function_with_gradient<T, d, d>) {
-  return [](const femib::types::dvec<T, d> &) { return T(0); };
-}
-
 template <typename T, int d, int e>
 std::function<T(femib::types::dvec<T, d>)>
-ddot(femib::types::function_with_gradient<T, d, e> a,
-     femib::types::function_with_gradient<T, d, e> b) {
-  return [a, b](femib::types::dvec<T, d> x) {
-    T val = T(0.0);
-    for (int i = 0; i < d; ++i) {
-      val += a.gradient(x)[i] * b.gradient(x)[i];
-    }
-    return val;
+gradient_double_dot(femib::types::function_with_gradient<T, d, e> a,
+                    femib::types::function_with_gradient<T, d, e> b) {
+  return [a, b](const femib::types::dvec<T, d> &x) {
+    return a.gradient(x).cwiseProduct(b.gradient(x)).sum();
   };
 }
 
+} // namespace femib::operators
 #endif

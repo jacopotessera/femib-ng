@@ -180,17 +180,18 @@ Eigen::SparseMatrix<T> build_stiffness_matrix(
     const femib::finite_element_space::finite_element_space<T, d, e> &v,
     const femib::gauss::rule<T, d> &integration_rule) {
   return triplets2sparse(
-      build_diagonal_block(v, integration_rule, ddot<T, d, e>), v.size(),
-      v.size());
+      build_diagonal_block(v, integration_rule,
+                           femib::operators::gradient_double_dot<T, d, e>),
+      v.size(), v.size());
 }
 
 template <typename T, int d, int e>
 Eigen::SparseMatrix<T> build_mass_matrix(
     const femib::finite_element_space::finite_element_space<T, d, e> &v,
     const femib::gauss::rule<T, d> &integration_rule) {
-  return triplets2sparse(
-      build_diagonal_block(v, integration_rule, mass<T, d, e>), v.size(),
-      v.size());
+  return triplets2sparse(build_diagonal_block(v, integration_rule,
+                                              femib::operators::mass<T, d, e>),
+                         v.size(), v.size());
 }
 
 template <typename T, int d, int e>

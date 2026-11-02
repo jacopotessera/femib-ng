@@ -18,7 +18,8 @@
 
 #include "utils.hpp"
 
-TEST_CASE("convection((w), (u)) matches (w . grad) u for a known polynomial "
+TEST_CASE("femib::operators::convection((w), (u)) matches (w . grad) u for a "
+          "known polynomial "
           "field, evaluated by hand") {
   femib::types::function_with_gradient<float, 2, 2> w;
   w.value = [](const femib::types::dvec<float, 2> &) {
@@ -40,7 +41,7 @@ TEST_CASE("convection((w), (u)) matches (w . grad) u for a known polynomial "
     return J;
   };
 
-  auto conv = convection<float, 2>(w, u);
+  auto conv = femib::operators::convection<float, 2>(w, u);
   femib::types::dvec<float, 2> at(1.5f, -0.5f);
   femib::types::dvec<float, 2> result = conv(at);
 
