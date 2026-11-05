@@ -127,11 +127,11 @@ int main(int argc, char **argv) {
       femib::types::dvec<double, 2>(0.5, 0.5), radius, n_ring, k_spring);
 
   // This codebase's ring is already a zero-rest-length spring (force =
-  // k * (X[i_next] - X[i]), always pulling inward -- never reaches a
-  // zero-force state on its own except at a single point), so unlike a
-  // general nonzero-rest-length model there is no separate rest_length
-  // field to zero out here. What stops the ring from collapsing to a
-  // point is the fluid's incompressibility: the ring is a material curve
+  // spring_constant * (positions[i_next] - positions[i]), always pulling inward
+  // -- never reaches a zero-force state on its own except at a single point),
+  // so unlike a general nonzero-rest-length model there is no separate
+  // rest_length field to zero out here. What stops the ring from collapsing to
+  // a point is the fluid's incompressibility: the ring is a material curve
   // advected by a divergence-free velocity field, so the AREA it encloses
   // is conserved by the flow. Among all closed curves enclosing a FIXED
   // area, the circle uniquely minimizes total perimeter (the isoperimetric
@@ -148,9 +148,9 @@ int main(int argc, char **argv) {
   // (matching build_ring's own center above, and the domain's symmetry
   // point) so the whole problem stays symmetric under x->1-x/y->1-y --
   // together with the checkerboard mesh above, this makes the discrete
-  // problem itself symmetric, not just the continuous one. k_spring/dS
-  // (material properties of the rest configuration) are untouched; only
-  // the perturbed positions change.
+  // problem itself symmetric, not just the continuous one. spring_constant/
+  // reference_arc_length (material properties of the rest configuration) are
+  // untouched; only the perturbed positions change.
   femib::types::dvec<double, 2> center(0.5, 0.5);
   double a_axis = 1.8 * radius;
   double b_axis = radius / 1.8;
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
         cum_arc[i - 1] + speed(mid) * (theta_dense[i] - theta_dense[i - 1]);
   }
   double total_arc = cum_arc[n_dense];
-  int n_ring_actual = (int)p.structure.X.size();
+  int n_ring_actual = (int)p.structure.positions.size();
   int j = 0;
   for (int k = 0; k < n_ring_actual; ++k) {
     // Half-slot phase shift (k+0.5 instead of k): with an exactly-centered
@@ -188,11 +188,11 @@ int main(int argc, char **argv) {
       ++j;
     }
     double theta = theta_dense[j];
-    p.structure.X[k](0) = center(0) + a_axis * std::cos(theta);
-    p.structure.X[k](1) = center(1) + b_axis * std::sin(theta);
+    p.structure.positions[k](0) = center(0) + a_axis * std::cos(theta);
+    p.structure.positions[k](1) = center(1) + b_axis * std::sin(theta);
   }
 
-  double area0 = polygon_area(p.structure.X);
+  double area0 = polygon_area(p.structure.positions);
 
   femib::write::save_sim(path, "ib_ns_demo", "ring",
                          femib::write::mode::overwrite);
@@ -228,7 +228,7 @@ int main(int argc, char **argv) {
         data.q.push_back(pressure);
       }
     }
-    for (const auto &val : p.structure.X) {
+    for (const auto &val : p.structure.positions) {
       data.X.push_back(val);
     }
     femib::write::save_plot_data<double, 2>(path, data);
@@ -237,7 +237,7 @@ int main(int argc, char **argv) {
 
   auto aspect_of = [&]() {
     double xmin = 1e9, xmax = -1e9, ymin = 1e9, ymax = -1e9;
-    for (const auto &x : p.structure.X) {
+    for (const auto &x : p.structure.positions) {
       xmin = std::min(xmin, x(0));
       xmax = std::max(xmax, x(0));
       ymin = std::min(ymin, x(1));
@@ -252,7 +252,7 @@ int main(int argc, char **argv) {
     dump_step(step);
     if (step % 20 == 0 || step == 1) {
       double E = femib::ib::elastic_energy<double, 2>(p.structure);
-      double area = polygon_area(p.structure.X);
+      double area = polygon_area(p.structure.positions);
       double elapsed_s = std::chrono::duration<double>(
                              std::chrono::steady_clock::now() - t_start)
                              .count();

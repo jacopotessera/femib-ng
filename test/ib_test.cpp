@@ -80,7 +80,7 @@ float polygon_area(const std::vector<femib::types::dvec<float, 2>> &X) {
 
 TEST_CASE("a ring at its rest configuration stays motionless") {
   femib::ib::ib_problem<float, 2> p = make_ib_fixture(16, 24, 0.2f);
-  std::vector<femib::types::dvec<float, 2>> X0 = p.structure.X;
+  std::vector<femib::types::dvec<float, 2>> X0 = p.structure.positions;
 
   std::string id = get_time();
   std::string path = "/tmp/femib_ib_test_" + id + ".h5";
@@ -98,7 +98,7 @@ TEST_CASE("a ring at its rest configuration stays motionless") {
     for (const auto &d : p.fluid.plot_pressure(0.01f)) {
       plot_data.q.push_back(d.second);
     }
-    for (const auto &val : p.structure.X) {
+    for (const auto &val : p.structure.positions) {
       plot_data.X.push_back(val);
     }
     femib::write::save_plot_data(path, plot_data);
@@ -106,7 +106,7 @@ TEST_CASE("a ring at its rest configuration stays motionless") {
 
   float max_drift = 0.0f;
   for (size_t k = 0; k < X0.size(); ++k) {
-    max_drift = std::max(max_drift, (p.structure.X[k] - X0[k]).norm());
+    max_drift = std::max(max_drift, (p.structure.positions[k] - X0[k]).norm());
   }
   CHECK_LT(max_drift, 3e-3f);
 }
@@ -117,12 +117,12 @@ TEST_CASE(
   // boundary doesn't leak; k_spring=100 is unstable at this mesh and deltat
   femib::ib::ib_problem<float, 2> p = make_ib_fixture(24, 96, 0.2f, 50.0f);
   femib::types::dvec<float, 2> center(0.5f, 0.5f);
-  for (auto &x : p.structure.X) {
+  for (auto &x : p.structure.positions) {
     femib::types::dvec<float, 2> rel = x - center;
     x(0) = center(0) + 1.3f * rel(0);
     x(1) = center(1) + rel(1) / 1.3f;
   }
-  std::vector<femib::types::dvec<float, 2>> X0 = p.structure.X;
+  std::vector<femib::types::dvec<float, 2>> X0 = p.structure.positions;
   const femib::types::dvec<float, 2> extent0 = extent(X0);
   const float area0 = polygon_area(X0);
 
@@ -130,7 +130,7 @@ TEST_CASE(
   for (int step = 1; step <= 200; ++step) {
     femib::ib::advance<float, 2>(p);
     if (step % 50 == 0) {
-      const float new_aspect = moment_aspect(p.structure.X);
+      const float new_aspect = moment_aspect(p.structure.positions);
       CHECK_LT(new_aspect, aspect);
       aspect = new_aspect;
     }
@@ -139,11 +139,11 @@ TEST_CASE(
   float max_drift = 0.0f;
   femib::types::dvec<float, 2> centroid = femib::types::dvec<float, 2>::Zero();
   for (size_t k = 0; k < X0.size(); ++k) {
-    max_drift = std::max(max_drift, (p.structure.X[k] - X0[k]).norm());
-    centroid += p.structure.X[k];
+    max_drift = std::max(max_drift, (p.structure.positions[k] - X0[k]).norm());
+    centroid += p.structure.positions[k];
   }
   centroid /= static_cast<float>(X0.size());
-  const femib::types::dvec<float, 2> extent1 = extent(p.structure.X);
+  const femib::types::dvec<float, 2> extent1 = extent(p.structure.positions);
 
   CHECK_GT(max_drift, 0.015f);
   CHECK_LT(aspect, 1.62f); // starts at 1.3^2 = 1.69
@@ -151,7 +151,7 @@ TEST_CASE(
   // ring is rounding out
   CHECK_LT(extent1(0), 0.97f * extent0(0));
   CHECK_GT(extent1(1), 1.02f * extent0(1));
-  CHECK_GT(polygon_area(p.structure.X), 0.9f * area0);
+  CHECK_GT(polygon_area(p.structure.positions), 0.9f * area0);
   CHECK_LT((centroid - center).norm(), 2e-3f);
 }
 
@@ -160,7 +160,7 @@ TEST_CASE("a perturbed (elliptical) ring's elastic energy decays, not grows, "
   femib::ib::ib_problem<float, 2> p = make_ib_fixture(16, 24, 0.2f);
 
   femib::types::dvec<float, 2> center(0.5f, 0.5f);
-  for (auto &x : p.structure.X) {
+  for (auto &x : p.structure.positions) {
     femib::types::dvec<float, 2> rel = x - center;
     x(0) = center(0) + 1.3f * rel(0);
     x(1) = center(1) + rel(1) / 1.3f;
@@ -189,7 +189,7 @@ TEST_CASE("a perturbed (elliptical) ring's elastic energy decays, not grows, "
 TEST_CASE("a ring at its rest configuration stays motionless under "
           "Navier-Stokes too") {
   femib::ib::ib_problem<float, 2> p = make_ib_fixture(16, 24, 0.2f);
-  std::vector<femib::types::dvec<float, 2>> X0 = p.structure.X;
+  std::vector<femib::types::dvec<float, 2>> X0 = p.structure.positions;
 
   for (int step = 0; step < 20; ++step) {
     femib::ib::advance_navier_stokes<float, 2>(p);
@@ -197,7 +197,7 @@ TEST_CASE("a ring at its rest configuration stays motionless under "
 
   float max_drift = 0.0f;
   for (size_t k = 0; k < X0.size(); ++k) {
-    max_drift = std::max(max_drift, (p.structure.X[k] - X0[k]).norm());
+    max_drift = std::max(max_drift, (p.structure.positions[k] - X0[k]).norm());
   }
   CHECK_LT(max_drift, 3e-3f);
 }
@@ -207,7 +207,7 @@ TEST_CASE("a perturbed (elliptical) ring's elastic energy decays, not grows, "
   femib::ib::ib_problem<float, 2> p = make_ib_fixture(16, 24, 0.2f);
 
   femib::types::dvec<float, 2> center(0.5f, 0.5f);
-  for (auto &x : p.structure.X) {
+  for (auto &x : p.structure.positions) {
     femib::types::dvec<float, 2> rel = x - center;
     x(0) = center(0) + 1.3f * rel(0);
     x(1) = center(1) + rel(1) / 1.3f;
@@ -226,12 +226,13 @@ TEST_CASE("a perturbed (elliptical) ring's elastic energy decays, not grows, "
   CHECK_LT(E_max, 2.0f * E0);
 }
 
-TEST_CASE("advance() throws if structure.dS is left at its default") {
+TEST_CASE("advance() throws if structure.reference_arc_length is left at its "
+          "default") {
   femib::ib::ib_problem<float, 2> p = make_ib_fixture(16, 24, 0.2f);
   femib::ib::ring<float, 2> bad_structure;
-  bad_structure.X = p.structure.X;
-  bad_structure.k = p.structure.k;
-  // bad_structure.dS left at its default of 0
+  bad_structure.positions = p.structure.positions;
+  bad_structure.spring_constant = p.structure.spring_constant;
+  // bad_structure.reference_arc_length left at its default of 0
   p.structure = bad_structure;
 
   CHECK_THROWS_AS((femib::ib::advance<float, 2>(p)), std::invalid_argument);

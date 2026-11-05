@@ -9,6 +9,7 @@
 #include "structure.hpp"
 #include <functional>
 #include <memory>
+#include <ranges>
 #include <stdexcept>
 #include <utility>
 
@@ -43,28 +44,32 @@ void advance_common(
     ib_problem<T, d> &p,
     const std::function<void(const Eigen::Matrix<T, Eigen::Dynamic, 1> &)>
         &fluid_step) {
-  if (!(p.structure.dS > 0)) {
+  if (!(p.structure.reference_arc_length > 0)) {
     throw std::invalid_argument(
-        "femib::ib::advance_common: p.structure.dS must be positive");
+        "femib::ib::advance_common: p.structure.reference_arc_length must be "
+        "positive");
   }
 
-  std::vector<femib::types::dvec<T, d>> X =
-      p.structure.X; // pre-advance positions
-  std::vector<femib::types::dvec<T, d>> F = elastic_force<T, d>(p.structure);
-
-  // spread_force expects a force density
-  for (auto &f : F) {
-    f /= p.structure.dS;
-  }
+  std::vector<femib::types::dvec<T, d>> previous_step_positions =
+      p.structure.positions;
+  std::vector<femib::types::dvec<T, d>> force_densities =
+      elastic_force<T, d>(p.structure) |
+      std::views::transform([&p](const femib::types::dvec<T, d> &force) {
+        return femib::types::dvec<T, d>(force /
+                                        p.structure.reference_arc_length);
+      }) |
+      std::ranges::to<std::vector>();
   Eigen::Matrix<T, Eigen::Dynamic, 1> extra_rhs =
-      spread_force<T, d>(p.fluid.velocity_space, X, F, p.structure.dS);
+      spread_force<T, d>(p.fluid.velocity_space, previous_step_positions,
+                         force_densities, p.structure.reference_arc_length);
 
   fluid_step(extra_rhs);
 
-  std::vector<femib::types::dvec<T, d>> U = interpolate_velocity<T, d>(
-      p.fluid.velocity_space, p.fluid.solutions.back(), X);
+  std::vector<femib::types::dvec<T, d>> velocities = interpolate_velocity<T, d>(
+      p.fluid.velocity_space, p.fluid.solutions.back(),
+      previous_step_positions);
 
-  advance_ring(p.structure, p.fluid.time_step, U);
+  advance_ring(p.structure, p.fluid.time_step, velocities);
 }
 
 // TODO eh

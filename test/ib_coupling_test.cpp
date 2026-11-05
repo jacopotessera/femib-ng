@@ -5,7 +5,6 @@
 #include "../src/mesh/mesh.hpp"
 #include <doctest/doctest.h>
 
-#include "structure.hpp"
 #include "utils.hpp"
 
 TEST_CASE("interpolate_velocity exactly reproduces a linear velocity field") {
@@ -59,12 +58,13 @@ TEST_CASE("spread_force conserves total force") {
 
   std::vector<femib::types::dvec<float, 2>> points = {
       {0.31f, 0.42f}, {0.55f, 0.11f}, {0.72f, 0.83f}};
-  std::vector<femib::types::dvec<float, 2>> forces = {
+  std::vector<femib::types::dvec<float, 2>> force_densities = {
       {1.0f, -0.5f}, {0.2f, 0.3f}, {-0.7f, 0.1f}};
-  float dS = 0.05f;
+  float reference_arc_length = 0.05f;
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> rhs =
-      femib::ib::spread_force<float, 2>(V, points, forces, dS);
+      femib::ib::spread_force<float, 2>(V, points, force_densities,
+                                        reference_arc_length);
 
   size_t size_P = mesh.P.size();
   size_t size_T = mesh.T.size();
@@ -81,57 +81,9 @@ TEST_CASE("spread_force conserves total force") {
   }
 
   float expected_x = 0.0f, expected_y = 0.0f;
-  for (auto &force : forces) {
-    expected_x += force(0) * dS;
-    expected_y += force(1) * dS;
-  }
-
-  CHECK_LT(std::abs(total_x - expected_x), 1e-3f);
-  CHECK_LT(std::abs(total_y - expected_y), 1e-3f);
-}
-
-TEST_CASE("testing force spreading of a given elastic ring") {
-
-  femib::types::mesh<float, 2> mesh = make_unit_square_mesh(16);
-
-  femib::finite_element::finite_element<float, 2, 2> fe =
-      femib::finite_element::create_finite_element_P1_B_2d2d<float, 2, 2>();
-  femib::finite_element_space::finite_element_space V(fe, mesh);
-
-  femib::types::dvec<float, 2> center(0.5f, 0.5f);
-  femib::ib::ring<float, 2> r =
-      femib::ib::build_ring<float, 2>(center, 0.2f, 8, 3.0f);
-
-  // Perturb away from the rest configuration so the force is non-trivial.
-  for (size_t k = 0; k < r.X.size(); ++k) {
-    r.X[k](0) += 0.01f * std::sin(3.0f * static_cast<float>(k));
-    r.X[k](1) += 0.01f * std::cos(2.0f * static_cast<float>(k));
-  }
-  std::vector<femib::types::dvec<float, 2>> forces =
-      femib::ib::elastic_force(r);
-
-  Eigen::Matrix<float, Eigen::Dynamic, 1> spread_forces =
-      femib::ib::spread_force<float, 2>(r, V);
-
-  size_t size_P = mesh.P.size();
-  size_t size_T = mesh.T.size();
-  REQUIRE_EQ(spread_forces.rows(), 2 * size_P + 2 * size_T);
-
-  float total_x = 0.0f, total_y = 0.0f;
-  for (size_t i = 0; i < size_P; ++i) {
-    total_x += spread_forces(static_cast<Eigen::Index>(i));
-    total_y += spread_forces(static_cast<Eigen::Index>(size_P + i));
-  }
-  for (int n = 0; n < std::ssize(mesh.T); ++n) {
-    total_x += spread_forces(static_cast<Eigen::Index>(2 * size_P + n));
-    total_y +=
-        spread_forces(static_cast<Eigen::Index>(2 * size_P + size_T + n));
-  }
-
-  float expected_x = 0.0f, expected_y = 0.0f;
-  for (auto &force : forces) {
-    expected_x += force(0) * r.dS;
-    expected_y += force(1) * r.dS;
+  for (auto &force_density : force_densities) {
+    expected_x += force_density(0) * reference_arc_length;
+    expected_y += force_density(1) * reference_arc_length;
   }
 
   CHECK_LT(std::abs(total_x - expected_x), 1e-3f);

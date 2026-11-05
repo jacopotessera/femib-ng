@@ -19,7 +19,8 @@ template <typename T, int d>
 Eigen::Matrix<T, Eigen::Dynamic, 1>
 spread_force(femib::finite_element_space::finite_element_space<T, d, d> &V,
              std::vector<femib::types::dvec<T, d>> &points,
-             const std::vector<femib::types::dvec<T, d>> &forces, T dS) {
+             const std::vector<femib::types::dvec<T, d>> &force_densities,
+             T reference_arc_length) {
 
   Eigen::Matrix<T, Eigen::Dynamic, 1> result =
       Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(V.nodes.P.size());
@@ -38,7 +39,8 @@ spread_force(femib::finite_element_space::finite_element_space<T, d, d> &V,
       const femib::types::function_with_gradient<T, d, d> &phi =
           V.finite_element.base_functions[j];
       // variational formulation of the force spreading
-      T contribution = forces[k].dot(phi.value(ref)) * dS;
+      T contribution =
+          force_densities[k].dot(phi.value(ref)) * reference_arc_length;
       result(V.nodes.global_index(j, points_positions[k])) += contribution;
     }
   }
