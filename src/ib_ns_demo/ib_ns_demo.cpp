@@ -94,9 +94,9 @@ int main(int argc, char **argv) {
                      // the mesh spacing
   double radius = 0.15;
   double k_spring = 60.0;
-  double rho = 1.0;
-  double mu = 0.3;
-  double deltat = 0.0002;
+  double density = 1.0;
+  double viscosity = 0.3;
+  double time_step = 0.0002;
   int max_picard_iters = 5;
   double tol = 1e-4;
   int n_steps = 480;
@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
                                                                     mesh);
 
   femib::ib::ib_problem<double, 2> p(
-      v, q, rule, rho, mu, deltat,
+      v, q, rule, density, viscosity, time_step,
       [](const femib::types::dvec<double, 2> &,
          double) -> femib::types::dvec<double, 2> {
         return femib::types::dvec<double, 2>::Zero();
@@ -157,14 +157,14 @@ int main(int argc, char **argv) {
   int n_dense = 20000;
   std::vector<double> cum_arc(n_dense + 1, 0.0);
   std::vector<double> theta_dense(n_dense + 1);
-  const double PI = std::numbers::pi_v<double>;
+  const double pi = std::numbers::pi_v<double>;
   for (int i = 0; i <= n_dense; ++i) {
-    theta_dense[i] = 2.0 * PI * i / n_dense;
+    theta_dense[i] = 2.0 * pi * i / n_dense;
   }
   for (int i = 1; i <= n_dense; ++i) {
-    auto speed = [&](double th) {
-      double dx = -a_axis * std::sin(th);
-      double dy = b_axis * std::cos(th);
+    auto speed = [&](double theta) {
+      double dx = -a_axis * std::sin(theta);
+      double dy = b_axis * std::cos(theta);
       return std::sqrt(dx * dx + dy * dy);
     };
     double mid = 0.5 * (theta_dense[i - 1] + theta_dense[i]);
@@ -196,9 +196,9 @@ int main(int argc, char **argv) {
 
   femib::write::save_sim(path, "ib_ns_demo", "ring",
                          femib::write::mode::overwrite);
-  femib::write::save_metadata<double>(path, "rho", rho);
-  femib::write::save_metadata<double>(path, "mu", mu);
-  femib::write::save_metadata<double>(path, "deltat", deltat);
+  femib::write::save_metadata<double>(path, "rho", density);
+  femib::write::save_metadata<double>(path, "mu", viscosity);
+  femib::write::save_metadata<double>(path, "deltat", time_step);
   femib::write::save_metadata<double>(path, "k_spring", k_spring);
 
   // Persists the structure's position AND the velocity/pressure fields at

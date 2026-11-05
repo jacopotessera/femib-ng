@@ -17,52 +17,54 @@ namespace femib::mesh {
 template <typename T, int d>
 std::vector<int> find_points(const femib::types::mesh<T, d> &mesh,
                              std::vector<types::dvec<T, d>> &points) {
-  size_t meshSize = mesh.N.size();
+  size_t n_triangles = mesh.N.size();
 
-  femib::types::dtrian_<T, d> *devT;
+  femib::types::dtrian_<T, d> *device_triangles;
   if (mesh.device_triangles_cache) {
-    devT = static_cast<femib::types::dtrian_<T, d> *>(
+    device_triangles = static_cast<femib::types::dtrian_<T, d> *>(
         mesh.device_triangles_cache.get());
   } else {
-    femib::types::dtrian_<T, d> *T_ =
+    femib::types::dtrian_<T, d> *host_triangles =
         femib::types::vector_dtrian2pointer_dtrian_<T, d>(mesh.N);
-    devT =
-        femib::cuda::copy_to_device<femib::types::dtrian_<T, d>>(T_, meshSize);
-    delete[] T_;
-    mesh.device_triangles_cache = std::shared_ptr<void>(devT, [](void *p) {
-      femib::cuda::free_device_quiet<femib::types::dtrian_<T, d>>(
-          static_cast<femib::types::dtrian_<T, d> *>(p));
-    });
+    device_triangles = femib::cuda::copy_to_device<femib::types::dtrian_<T, d>>(
+        host_triangles, n_triangles);
+    delete[] host_triangles;
+    mesh.device_triangles_cache =
+        std::shared_ptr<void>(device_triangles, [](void *p) {
+          femib::cuda::free_device_quiet<femib::types::dtrian_<T, d>>(
+              static_cast<femib::types::dtrian_<T, d> *>(p));
+        });
   }
-  femib::types::dvec<T, d> *devX =
+  femib::types::dvec<T, d> *device_points =
       femib::cuda::copy_to_device<femib::types::dvec<T, d>>(points.data(),
                                                             points.size());
 
-  bool *devN = femib::cuda::alloc_device<bool>(points.size() * meshSize);
+  bool *device_hits =
+      femib::cuda::alloc_device<bool>(points.size() * n_triangles);
 
-  femib::cuda::parallel_accurate<T, d>(devX, points.size(), devT, meshSize,
-                                       devN);
-  const bool *NN =
-      femib::cuda::copy_to_host<bool>(devN, points.size() * meshSize);
+  femib::cuda::parallel_accurate<T, d>(
+      device_points, points.size(), device_triangles, n_triangles, device_hits);
+  const bool *hits =
+      femib::cuda::copy_to_host<bool>(device_hits, points.size() * n_triangles);
 
-  std::vector<int> NNN;
-  NNN.reserve(points.size());
+  std::vector<int> containing_triangles;
+  containing_triangles.reserve(points.size());
 
   for (size_t i = 0; i < points.size(); ++i) {
     int found = -1;
     for (int n = 0; n < std::ssize(mesh.N); ++n) {
-      if (NN[i * meshSize + n]) {
+      if (hits[i * n_triangles + n]) {
         found = n;
         break;
       }
     }
-    NNN.push_back(found);
+    containing_triangles.push_back(found);
   }
-  cuda::free_device<femib::types::dvec<T, d>>(devX);
-  cuda::free_device<bool>(devN);
-  delete[] NN;
-  NN = nullptr;
-  return NNN;
+  cuda::free_device<femib::types::dvec<T, d>>(device_points);
+  cuda::free_device<bool>(device_hits);
+  delete[] hits;
+  hits = nullptr;
+  return containing_triangles;
 }
 
 template <typename T, int d>

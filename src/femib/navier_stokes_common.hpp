@@ -17,16 +17,18 @@ namespace femib::navier_stokes_common {
 // Assembles the convection matrix linearized around a given velocity field.
 template <typename T, int d>
 Eigen::SparseMatrix<T> assemble_convection(
-    const femib::finite_element_space::finite_element_space<T, d, d> &V,
+    const femib::finite_element_space::finite_element_space<T, d, d>
+        &velocity_space,
     const femib::gauss::rule<T, d> &rule,
-    const Eigen::Matrix<T, Eigen::Dynamic, 1> &picard_velocity_dofs, T rho) {
+    const Eigen::Matrix<T, Eigen::Dynamic, 1> &picard_velocity_dofs,
+    T density) {
   const int basis_count =
-      static_cast<int>(V.finite_element.base_functions.size());
+      static_cast<int>(velocity_space.finite_element.base_functions.size());
   const int n_q = static_cast<int>(rule.nodes.size());
-  const int n_tri = static_cast<int>(V.mesh.T.size());
+  const int n_tri = static_cast<int>(velocity_space.mesh.T.size());
 
-  std::vector<Eigen::Triplet<T>> BB(static_cast<size_t>(n_tri) * basis_count *
-                                    basis_count);
+  std::vector<Eigen::Triplet<T>> triplets(static_cast<size_t>(n_tri) *
+                                          basis_count * basis_count);
 
   std::vector<int> tri_indices(n_tri);
   std::iota(tri_indices.begin(), tri_indices.end(), 0);
@@ -34,7 +36,7 @@ Eigen::SparseMatrix<T> assemble_convection(
   std::for_each(
       std::execution::par_unseq, tri_indices.begin(), tri_indices.end(),
       [&](int n) {
-        const femib::types::dtrian<T, d> &t = V.mesh[n];
+        const femib::types::dtrian<T, d> &t = velocity_space.mesh[n];
         femib::types::dmat<T, d> inverse_jacobian =
             femib::affine::inverse_jacobian(t);
         T abs_jacobian_determinant = femib::affine::abs_jacobian_determinant(t);
@@ -51,34 +53,38 @@ Eigen::SparseMatrix<T> assemble_convection(
               rule.nodes[q].quadrature_point;
           for (int k = 0; k < basis_count; ++k) {
             size_t idx = static_cast<size_t>(k) * n_q + q;
-            phi[idx] = V.finite_element.base_functions[k].value(x_ref);
-            dphi[idx] = inverse_jacobian.transpose() *
-                        V.finite_element.base_functions[k].gradient(x_ref);
-            int global_k = V.nodes.global_index(k, n);
+            phi[idx] =
+                velocity_space.finite_element.base_functions[k].value(x_ref);
+            dphi[idx] =
+                inverse_jacobian.transpose() *
+                velocity_space.finite_element.base_functions[k].gradient(x_ref);
+            int global_k = velocity_space.nodes.global_index(k, n);
             w_at_q[q] += picard_velocity_dofs(global_k) * phi[idx];
           }
         }
 
         for (int i = 0; i < basis_count; ++i) {
           for (int j = 0; j < basis_count; ++j) {
-            T m = T(0);
+            T local_entry = T(0);
             for (int q = 0; q < n_q; ++q) {
               femib::types::dvec<T, d> conv_j =
                   dphi[static_cast<size_t>(j) * n_q + q].transpose() *
                   w_at_q[q];
-              m += rule.nodes[q].weight * abs_jacobian_determinant *
-                   phi[static_cast<size_t>(i) * n_q + q].dot(conv_j);
+              local_entry += rule.nodes[q].weight * abs_jacobian_determinant *
+                             phi[static_cast<size_t>(i) * n_q + q].dot(conv_j);
             }
             size_t idx =
                 (static_cast<size_t>(n) * basis_count + i) * basis_count + j;
-            BB[idx] = Eigen::Triplet<T>(V.nodes.global_index(i, n),
-                                        V.nodes.global_index(j, n), m);
+            triplets[idx] = Eigen::Triplet<T>(
+                velocity_space.nodes.global_index(i, n),
+                velocity_space.nodes.global_index(j, n), local_entry);
           }
         }
       });
 
-  return rho *
-         femib::util::triplets2sparse(BB, V.nodes.P.size(), V.nodes.P.size());
+  return density * femib::util::triplets2sparse(triplets,
+                                                velocity_space.nodes.P.size(),
+                                                velocity_space.nodes.P.size());
 }
 
 } // namespace femib::navier_stokes_common

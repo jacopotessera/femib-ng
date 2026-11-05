@@ -46,16 +46,12 @@ divergence_form(femib::types::function_with_gradient<T, d, d> u,
 // force at time t tested against the base function a
 template <typename T, int d>
 std::function<T(femib::types::dvec<T, d>)> external_force(
-    femib::types::function_with_gradient<T, d, d> a,
+    femib::types::function_with_gradient<T, d, d> test_function,
     const std::function<femib::types::dvec<T, d>(femib::types::dvec<T, d>)>
         &force_at_t) {
-  return [a, force_at_t](const femib::types::dvec<T, d> &x) {
-    femib::types::dvec<T, d> fx = force_at_t(x);
-    T sum = 0;
-    for (int k = 0; k < d; ++k) {
-      sum += fx(k) * a.value(x)(k); // TODO ?
-    }
-    return sum;
+  return [test_function, force_at_t](const femib::types::dvec<T, d> &x) {
+    femib::types::dvec<T, d> force = force_at_t(x);
+    return force.dot(test_function.value(x));
   };
 }
 
@@ -218,14 +214,16 @@ template <typename T, int d> void rebuild_system(stokes<T, d> &s) {
 template <typename T, int d, int e>
 Eigen::Matrix<T, Eigen::Dynamic, 1> solve(const stokes<T, d> &s) {
 
-  Eigen::Matrix<T, Eigen::Dynamic, 1> x =
+  Eigen::Matrix<T, Eigen::Dynamic, 1> reduced_solution_with_multiplier =
       s.sparse_solver->solve(s.reduced_system.A, s.reduced_system.b);
 
   // drop the last row, constraint on pressure
-  Eigen::Matrix<T, Eigen::Dynamic, 1> x_no_lambda = x.topRows(x.rows() - 1);
+  Eigen::Matrix<T, Eigen::Dynamic, 1> reduced_solution =
+      reduced_solution_with_multiplier.topRows(
+          reduced_solution_with_multiplier.rows() - 1);
 
   return femib::util::build_full_solution<T>(
-      x_no_lambda, s.boundary_values_on_nodes,
+      reduced_solution, s.boundary_values_on_nodes,
       s.velocity_space.size() + s.pressure_space.size(), s.not_edge_nodes,
       s.velocity_space.nodes.E);
 }

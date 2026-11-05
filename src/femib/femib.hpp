@@ -87,19 +87,23 @@ build_reduced_system(const Eigen::SparseMatrix<T> &A,
                      const Eigen::Matrix<T, Eigen::Dynamic, 1> &boundary_values,
                      const std::vector<int> &not_edge_nodes) {
 
-  // TODO explanation of how this work (it's simple but...)
-  Eigen::Matrix<T, Eigen::Dynamic, 1> ss = A * boundary_values;
+  // the known boundary values move to the right-hand side, then only the
+  // not_edge_nodes rows and columns are kept
+  Eigen::Matrix<T, Eigen::Dynamic, 1> boundary_contribution =
+      A * boundary_values;
 
   int n = static_cast<int>(not_edge_nodes.size());
-  Eigen::Matrix<T, Eigen::Dynamic, 1> smaller_b(n);
+  Eigen::Matrix<T, Eigen::Dynamic, 1> reduced_b(n);
   for (int i = 0; i < n; ++i) {
-    smaller_b(i) = b(not_edge_nodes[i]) - ss(not_edge_nodes[i]);
+    reduced_b(i) =
+        b(not_edge_nodes[i]) - boundary_contribution(not_edge_nodes[i]);
   }
 
-  Eigen::SparseMatrix<T> P = selection_matrix<T>(not_edge_nodes, A.rows());
-  Eigen::SparseMatrix<T> smaller_A = P * A * P.transpose();
+  Eigen::SparseMatrix<T> selection =
+      selection_matrix<T>(not_edge_nodes, A.rows());
+  Eigen::SparseMatrix<T> reduced_A = selection * A * selection.transpose();
 
-  return {smaller_A, smaller_b};
+  return {reduced_A, reduced_b};
 }
 
 // inverse of build_reduced_system: rebuilds the full solution
@@ -160,15 +164,17 @@ std::vector<Eigen::Triplet<T>> build_diagonal_block(
             femib::types::function_with_gradient<T, d, e> physical_function_j =
                 femib::util::reference_to_physical_function<T, d, e>(
                     v, j, inverse_jacobian, translation);
-            T val = femib::mesh::integrate<T, d>( // TODO mesh integrate? can
-                                                  // inline here?
-                integration_rule,
-                bilinear_form(physical_function_i, physical_function_j),
-                triangle);
+            T local_entry =
+                femib::mesh::integrate<T, d>( // TODO mesh integrate? can
+                                              // inline here?
+                    integration_rule,
+                    bilinear_form(physical_function_i, physical_function_j),
+                    triangle);
             size_t idx =
                 (static_cast<size_t>(n) * basis_count + i) * basis_count + j;
-            diagonal_matrix[idx] = Eigen::Triplet<T>(
-                v.nodes.global_index(i, n), v.nodes.global_index(j, n), val);
+            diagonal_matrix[idx] =
+                Eigen::Triplet<T>(v.nodes.global_index(i, n),
+                                  v.nodes.global_index(j, n), local_entry);
           }
         }
       });
@@ -222,12 +228,12 @@ Eigen::Matrix<T, Eigen::Dynamic, 1> build_load_vector(
           femib::types::function_with_gradient<T, d, e> physical_function =
               femib::util::reference_to_physical_function<T, d, e>(
                   v, i, inverse_jacobian, translation);
-          T val = femib::mesh::integrate<T, d>(
+          T local_entry = femib::mesh::integrate<T, d>(
               quadrature_rule, // TODO mesh integrate? can inline here?
               load(physical_function), triangle);
           size_t idx = static_cast<size_t>(n) * basis_count + i;
           load_vector[idx] =
-              Eigen::Triplet<T>(v.nodes.global_index(i, n), 0, val);
+              Eigen::Triplet<T>(v.nodes.global_index(i, n), 0, local_entry);
         }
       });
   return Eigen::Matrix<T, Eigen::Dynamic, 1>(
@@ -242,7 +248,7 @@ std::vector<Eigen::Triplet<T>> build_off_diagonal_block(
     const std::function<std::function<T(femib::types::dvec<T, d>)>(
         femib::types::function_with_gradient<T, d, d>,
         femib::types::function_with_gradient<T, d, 1>)> &bilinear_form) {
-  std::vector<Eigen::Triplet<T>> BB;
+  std::vector<Eigen::Triplet<T>> triplets;
   for (int n = 0; n < std::ssize(v.mesh.T); ++n) {
     femib::types::dtrian<T, d> t = v.mesh[n];
     femib::types::dmat<T, d> inverse_jacobian =
@@ -256,15 +262,16 @@ std::vector<Eigen::Triplet<T>> build_off_diagonal_block(
         femib::types::function_with_gradient<T, d, 1> b =
             femib::util::reference_to_physical_function<T, d, 1>(
                 q, j, inverse_jacobian, translation);
-        T m = femib::mesh::integrate<T, d>(
+        T local_entry = femib::mesh::integrate<T, d>(
             rule, bilinear_form(a, b),
             t); // TODO mesh integrate? can inline here?
-        BB.push_back(Eigen::Triplet<T>(v.nodes.global_index(i, n),
-                                       q.nodes.global_index(j, n), m));
+        triplets.push_back(Eigen::Triplet<T>(v.nodes.global_index(i, n),
+                                             q.nodes.global_index(j, n),
+                                             local_entry));
       }
     }
   }
-  return BB;
+  return triplets;
 }
 
 template <typename T, int d, int e>

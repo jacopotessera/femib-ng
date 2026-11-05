@@ -144,14 +144,16 @@ TEST_CASE("poisson::solve matches sin(pi x)sin(pi y) manufactured solution") {
   femib::finite_element_space::finite_element_space<float, 2, 1> s(fe, mesh);
 
   // the manufactured forcing tested against each basis function (e=1)
-  auto ggg = [forcing](femib::types::function_with_gradient<float, 2, 1> a) {
-    return [a, forcing](const femib::types::dvec<float, 2> &x) {
-      return forcing(x) * a.value(x)(0);
-    };
-  };
+  auto load =
+      [forcing](
+          femib::types::function_with_gradient<float, 2, 1> test_function) {
+        return [test_function, forcing](const femib::types::dvec<float, 2> &x) {
+          return forcing(x) * test_function.value(x)(0);
+        };
+      };
 
   femib::poisson::poisson<float, 2, 1> problem(
-      s, rule, femib::poisson::default_boundary<float, 2>(), ggg);
+      s, rule, femib::poisson::default_boundary<float, 2>(), load);
 
   Eigen::Matrix<float, Eigen::Dynamic, 1> xx =
       femib::poisson::solve<float, 2, 1>(problem);
